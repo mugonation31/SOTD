@@ -6,7 +6,6 @@ import {
   IonContent,
   IonInput,
   IonButton,
-  IonIcon,
   IonItem,
   IonList,
   IonCard,
@@ -15,18 +14,11 @@ import {
 } from '@ionic/angular/standalone';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { addIcons } from 'ionicons';
-import {
-  logoGoogle,
-  logoFacebook,
-  logoTwitter,
-  logoInstagram,
-} from 'ionicons/icons';
 
 @Component({
-  selector: 'app-signup',
-  templateUrl: './signup.page.html',
-  styleUrls: ['./signup.page.scss'],
+  selector: 'app-otp',
+  templateUrl: './otp.page.html',
+  styleUrls: ['./otp.page.scss'],
   standalone: true,
   imports: [
     IonHeader,
@@ -35,7 +27,6 @@ import {
     IonContent,
     IonInput,
     IonButton,
-    IonIcon,
     IonItem,
     IonList,
     IonCard,
@@ -45,19 +36,14 @@ import {
     FormsModule,
   ],
 })
-export class SignupPage {
-  signupData = {
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  };
+export class OtpPage {
+  otp: string = '';
 
-  constructor() {
-    addIcons({ logoGoogle, logoFacebook, logoTwitter, logoInstagram });
+  onVerify() {
+    console.log('Verifying OTP:', this.otp);
   }
 
-  onSignup() {
-    console.log('Signup data:', this.signupData);
+  resendOTP() {
+    console.log('Resending OTP');
   }
 }

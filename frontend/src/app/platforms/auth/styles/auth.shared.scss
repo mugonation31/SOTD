@@ -1,8 +1,7 @@
-.container {
-  padding: 16px;
-}
-
-.signup-container {
+.login-container,
+.signup-container,
+.forgot-password-container,
+.otp-container {
   max-width: 400px;
   margin: 0 auto;
   padding: 20px;
@@ -39,7 +38,7 @@ ion-item {
   margin-bottom: 16px;
 }
 
-.signup-button {
+ion-button[expand="block"] {
   margin-top: 24px;
   margin-bottom: 24px;
   --border-radius: 8px;
@@ -93,7 +92,10 @@ ion-item {
   }
 }
 
-.signin-link {
+.login-link,
+.signup-link,
+.forgot-password,
+.resend-link {
   text-align: center;
   color: var(--ion-color-medium);
 
@@ -101,6 +103,7 @@ ion-item {
     color: var(--ion-color-primary);
     text-decoration: none;
     font-weight: 500;
+    cursor: pointer;
 
     &:hover {
       text-decoration: underline;
@@ -108,9 +111,31 @@ ion-item {
   }
 }
 
-// Add some responsive adjustments
+.forgot-password {
+  text-align: right;
+  margin-top: -8px;
+  margin-bottom: 16px;
+
+  a {
+    color: var(--ion-color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 8px 0;
+    display: inline-block;
+
+    &:hover {
+      text-decoration: underline;
+      opacity: 0.8;
+    }
+  }
+}
+
 @media (max-width: 480px) {
-  .signup-container {
+  .login-container,
+  .signup-container,
+  .forgot-password-container,
+  .otp-container {
     padding: 16px;
   }
 

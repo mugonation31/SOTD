@@ -24,9 +24,9 @@ import {
 } from 'ionicons/icons';
 
 @Component({
-  selector: 'app-signup',
-  templateUrl: './signup.page.html',
-  styleUrls: ['./signup.page.scss'],
+  selector: 'app-login',
+  templateUrl: './login.page.html',
+  styleUrls: ['./login.page.scss'],
   standalone: true,
   imports: [
     IonHeader,
@@ -45,19 +45,17 @@ import {
     FormsModule,
   ],
 })
-export class SignupPage {
-  signupData = {
-    fullName: '',
+export class LoginPage {
+  loginData = {
     email: '',
     password: '',
-    confirmPassword: '',
   };
 
   constructor() {
     addIcons({ logoGoogle, logoFacebook, logoTwitter, logoInstagram });
   }
 
-  onSignup() {
-    console.log('Signup data:', this.signupData);
+  onLogin() {
+    console.log('Login data:', this.loginData);
   }
 }

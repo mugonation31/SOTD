@@ -1,42 +1,36 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Sign Up
+      Login
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <div class="signup-container">
-    <h1 class="title">Create Account</h1>
-    <p class="subtitle">Sign up to get started</p>
+  <div class="login-container">
+    <h1 class="title">Welcome Back</h1>
+    <p class="subtitle">Sign in to continue</p>
 
     <ion-card>
       <ion-card-content>
         <ion-list>
           <ion-item>
-            <ion-input type="text" [(ngModel)]="signupData.fullName" placeholder="Full Name">
+            <ion-input type="email" [(ngModel)]="loginData.email" placeholder="Email">
             </ion-input>
           </ion-item>
 
           <ion-item>
-            <ion-input type="email" [(ngModel)]="signupData.email" placeholder="Email">
-            </ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="password" [(ngModel)]="signupData.password" placeholder="Password">
-            </ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="password" [(ngModel)]="signupData.confirmPassword" placeholder="Confirm Password">
+            <ion-input type="password" [(ngModel)]="loginData.password" placeholder="Password">
             </ion-input>
           </ion-item>
         </ion-list>
 
-        <ion-button expand="block" class="signup-button" (click)="onSignup()">
-          Sign Up
+        <div class="forgot-password">
+          <a routerLink="/auth/forgot-password">Forgot Password?</a>
+        </div>
+
+        <ion-button expand="block" class="login-button" (click)="onLogin()">
+          Login
         </ion-button>
 
         <div class="social-signup">
@@ -58,9 +52,9 @@
           </div>
         </div>
 
-        <div class="signin-link">
-          Already have an account?
-          <a routerLink="/auth/login">Sign In here</a>
+        <div class="signup-link">
+          Don't have an account?
+          <a routerLink="/auth/signup">Sign Up here</a>
         </div>
       </ion-card-content>
     </ion-card>
