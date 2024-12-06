@@ -21,6 +21,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'player',
+    loadChildren: () =>
+      import('./platforms/player/player.routes').then((m) => m.routes),
+  },
+  {
     path: '',
     redirectTo: 'auth/login',
     pathMatch: 'full',
