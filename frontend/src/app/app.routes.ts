@@ -2,17 +2,24 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
-    path: 'home',
-    loadComponent: () => import('./home/home.page').then((m) => m.HomePage),
-  },
-  {
     path: 'auth',
     loadChildren: () =>
       import('./platforms/auth/auth.routes').then((m) => m.routes),
   },
   {
+    path: 'group-admin',
+    loadChildren: () =>
+      import('./platforms/group-admin/group-admin.routes').then(
+        (m) => m.routes
+      ),
+  },
+  {
     path: '',
-    redirectTo: 'home',
+    redirectTo: 'auth/login',
     pathMatch: 'full',
+  },
+  {
+    path: '**', // Wildcard route for 404
+    redirectTo: 'auth/login',
   },
 ];
