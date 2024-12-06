@@ -12,14 +12,15 @@ import { addIcons } from 'ionicons';
 import {
   gridOutline,
   peopleOutline,
-  footballOutline,
+  layersOutline,
+  statsChartOutline,
   settingsOutline,
 } from 'ionicons/icons';
 
 @Component({
-  selector: 'app-group-admin-layout',
-  templateUrl: './group-admin-layout.page.html',
-  styleUrls: ['./group-admin-layout.page.scss'],
+  selector: 'app-super-admin-layout',
+  templateUrl: './super-admin-layout.page.html',
+  styleUrls: ['./super-admin-layout.page.scss'],
   standalone: true,
   imports: [
     IonTabs,
@@ -31,12 +32,13 @@ import {
     RouterModule,
   ],
 })
-export class GroupAdminLayoutPage {
+export class SuperAdminLayoutPage {
   constructor() {
     addIcons({
       gridOutline,
       peopleOutline,
-      footballOutline,
+      layersOutline,
+      statsChartOutline,
       settingsOutline,
     });
   }

@@ -14,12 +14,19 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'super-admin',
+    loadChildren: () =>
+      import('./platforms/super-admin/super-admin.routes').then(
+        (m) => m.routes
+      ),
+  },
+  {
     path: '',
     redirectTo: 'auth/login',
     pathMatch: 'full',
   },
   {
-    path: '**', // Wildcard route for 404
+    path: '**',
     redirectTo: 'auth/login',
   },
 ];
