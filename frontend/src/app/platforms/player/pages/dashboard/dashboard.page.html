@@ -5,5 +5,70 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h1>Welcome Player</h1>
+  <!-- Gameweek Card -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Gameweek {{ currentGameweek.number }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="deadline-info">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>Deadline: {{ currentGameweek.deadline | date:'medium' }}</span>
+      </div>
+
+      <ion-button expand="block" color="primary" routerLink="/player/matches"
+        [disabled]="currentGameweek.predictionsSubmitted">
+        <ion-icon name="football-outline" slot="start"></ion-icon>
+        {{ currentGameweek.predictionsSubmitted ? 'Predictions Submitted' : 'Make Predictions' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Stats Overview -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Your Stats</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <ion-icon name="trophy-outline" color="warning"></ion-icon>
+          <div class="stat-value">{{ playerStats.totalPoints }}</div>
+          <div class="stat-label">Total Points</div>
+        </div>
+        <div class="stat-item">
+          <ion-icon name="stats-chart-outline" color="success"></ion-icon>
+          <div class="stat-value">#{{ playerStats.rank }}</div>
+          <div class="stat-label">Current Rank</div>
+        </div>
+        <div class="stat-item">
+          <ion-icon name="football-outline" color="primary"></ion-icon>
+          <div class="stat-value">{{ playerStats.correctScores }}</div>
+          <div class="stat-label">Perfect Scores</div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Recent Predictions -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Recent Predictions</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <ion-item *ngFor="let pred of recentPredictions">
+          <ion-label>
+            <h2>{{ pred.match }}</h2>
+            <p>Prediction: {{ pred.prediction }}</p>
+          </ion-label>
+          <ion-badge slot="end" color="success">+{{ pred.points }} pts</ion-badge>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" fill="clear" routerLink="/player/predictions">
+        View All Predictions
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
 </ion-content>
