@@ -25,6 +25,13 @@
           </ion-item>
 
           <ion-item>
+            <ion-select [(ngModel)]="signupData.role" placeholder="Select Role">
+              <ion-select-option value="player">Player</ion-select-option>
+              <ion-select-option value="group-admin">Group Admin</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
             <ion-input type="password" [(ngModel)]="signupData.password" placeholder="Password">
             </ion-input>
           </ion-item>

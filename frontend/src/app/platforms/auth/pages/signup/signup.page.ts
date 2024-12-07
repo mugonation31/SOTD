@@ -12,6 +12,8 @@ import {
   IonCard,
   IonCardContent,
   IonText,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/angular/standalone';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +24,7 @@ import {
   logoTwitter,
   logoInstagram,
 } from 'ionicons/icons';
+import { AuthService, UserRole } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-signup',
@@ -41,6 +44,8 @@ import {
     IonCard,
     IonCardContent,
     IonText,
+    IonSelect,
+    IonSelectOption,
     RouterLink,
     FormsModule,
   ],
@@ -51,13 +56,25 @@ export class SignupPage {
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'player' as UserRole,
   };
 
-  constructor() {
-    addIcons({ logoGoogle, logoFacebook, logoTwitter, logoInstagram });
+  constructor(private authService: AuthService) {
+    addIcons({
+      logoGoogle,
+      logoFacebook,
+      logoTwitter,
+      logoInstagram,
+    });
   }
 
   onSignup() {
-    console.log('Signup data:', this.signupData);
+    if (this.signupData.password !== this.signupData.confirmPassword) {
+      // TODO: Show error message
+      console.error('Passwords do not match');
+      return;
+    }
+
+    this.authService.signup(this.signupData);
   }
 }

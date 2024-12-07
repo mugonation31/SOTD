@@ -22,6 +22,7 @@ import {
   logoTwitter,
   logoInstagram,
 } from 'ionicons/icons';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -51,11 +52,16 @@ export class LoginPage {
     password: '',
   };
 
-  constructor() {
-    addIcons({ logoGoogle, logoFacebook, logoTwitter, logoInstagram });
+  constructor(private authService: AuthService) {
+    addIcons({
+      logoGoogle,
+      logoFacebook,
+      logoTwitter,
+      logoInstagram,
+    });
   }
 
   onLogin() {
-    console.log('Login data:', this.loginData);
+    this.authService.login(this.loginData.email, this.loginData.password);
   }
 }
