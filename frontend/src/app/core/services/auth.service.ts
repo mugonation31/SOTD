@@ -11,7 +11,9 @@ export interface User {
   role: UserRole;
 }
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   currentUser$ = this.currentUserSubject.asObservable();
@@ -82,7 +84,7 @@ export class AuthService {
     this.router.navigate(['/auth/login']);
   }
 
-  private navigateByRole(role: UserRole) {
+  public navigateByRole(role: UserRole) {
     switch (role) {
       case 'super-admin':
         this.router.navigate(['/super-admin/dashboard']);
