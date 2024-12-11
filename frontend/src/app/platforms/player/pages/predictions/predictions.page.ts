@@ -48,7 +48,7 @@ interface Prediction {
 }
 
 @Component({
-  selector: 'app-predictions',
+  selector: 'app-player-predictions',
   templateUrl: './predictions.page.html',
   styleUrls: ['./predictions.page.scss'],
   standalone: true,

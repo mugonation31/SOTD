@@ -27,7 +27,7 @@ import {
 } from 'ionicons/icons';
 
 @Component({
-  selector: 'app-dashboard',
+  selector: 'app-player-dashboard',
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss'],
   standalone: true,

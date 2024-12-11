@@ -18,6 +18,7 @@ import {
 } from '@ionic/angular/standalone';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
   logoGoogle,
@@ -64,6 +65,7 @@ interface ValidationErrors {
     IonNote,
     RouterLink,
     FormsModule,
+    NgIf,
   ],
 })
 export class SignupPage {

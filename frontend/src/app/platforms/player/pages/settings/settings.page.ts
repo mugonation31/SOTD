@@ -7,7 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 
 @Component({
-  selector: 'app-super-admin-settings',
+  selector: 'app-player-settings',
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
   standalone: true,

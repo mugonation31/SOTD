@@ -7,7 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 
 @Component({
-  selector: 'app-settings',
+  selector: 'app-group-admin-settings',
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
   standalone: true,

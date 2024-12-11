@@ -7,7 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 
 @Component({
-  selector: 'app-predictions',
+  selector: 'app-super-admin-predictions',
   templateUrl: './predictions.page.html',
   styleUrls: ['./predictions.page.scss'],
   standalone: true,
