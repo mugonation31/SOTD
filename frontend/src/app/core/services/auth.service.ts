@@ -1,13 +1,19 @@
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
-export type UserRole = 'super-admin' | 'group-admin' | 'player';
+export type UserRole = 'player' | 'group-admin' | 'super-admin';
 
-export interface User {
-  id: string;
+interface AuthResponse {
+  token: string;
+  role: UserRole;
+}
+
+export interface SignupData {
+  username?: string;
+  firstName: string;
+  surname: string;
   email: string;
-  fullName: string;
+  password: string;
   role: UserRole;
 }
 
@@ -15,108 +21,34 @@ export interface User {
   providedIn: 'root',
 })
 export class AuthService {
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
-  currentUser$ = this.currentUserSubject.asObservable();
-
-  constructor(private router: Router) {
-    // Check localStorage for existing session
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      this.currentUserSubject.next(JSON.parse(savedUser));
-    }
+  // This is a mock implementation - replace with real API calls
+  login(email: string, password: string): Observable<AuthResponse> {
+    // Mock response - replace with actual API call
+    return of({
+      token: 'mock-token',
+      role: 'player' as UserRole,
+    });
   }
 
-  login(email: string, password: string) {
-    // TODO: Replace with actual API call
-    let user: User;
+  signup(userData: SignupData): Observable<AuthResponse> {
+    // Mock response - replace with actual API call
+    console.log('Signup data:', {
+      ...userData,
+      displayName: userData.username || userData.surname,
+    });
 
-    // Temporary logic for super admin
-    if (email === 'super@admin.com') {
-      user = {
-        id: '1',
-        email,
-        fullName: 'Super Admin',
-        role: 'super-admin',
-      };
-    } else {
-      // Simulate API response for other users
-      user = {
-        id: '2',
-        email,
-        fullName: 'Test User',
-        role: 'player', // Default to player for now
-      };
-    }
-
-    // Store user details
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    this.currentUserSubject.next(user);
-
-    // Navigate based on role
-    this.navigateByRole(user.role);
-  }
-
-  signup(userData: {
-    email: string;
-    fullName: string;
-    password: string;
-    role: UserRole;
-  }) {
-    // TODO: Replace with actual API call
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      email: userData.email,
-      fullName: userData.fullName,
+    return of({
+      token: 'mock-token',
       role: userData.role,
-    };
-
-    // Store user details
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    this.currentUserSubject.next(user);
-
-    // Navigate based on role
-    this.navigateByRole(user.role);
+    });
   }
 
   logout() {
-    localStorage.removeItem('currentUser');
-    this.currentUserSubject.next(null);
-    this.router.navigate(['/auth/login']);
-  }
-
-  public navigateByRole(role: UserRole) {
-    switch (role) {
-      case 'super-admin':
-        this.router.navigate(['/super-admin/dashboard']);
-        break;
-      case 'group-admin':
-        this.router.navigate(['/group-admin/dashboard']);
-        break;
-      case 'player':
-        this.router.navigate(['/player/dashboard']);
-        break;
-      default:
-        this.router.navigate(['/auth/login']);
-    }
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('token');
   }
 
   isAuthenticated(): boolean {
-    return this.currentUserSubject.value !== null;
-  }
-
-  getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
-  }
-
-  forgotPassword(email: string) {
-    // TODO: Implement actual forgot password logic
-    console.log('Password reset requested for:', email);
-    this.router.navigate(['/auth/otp']);
-  }
-
-  verifyOTP(otp: string) {
-    // TODO: Implement actual OTP verification
-    console.log('OTP verification:', otp);
-    this.router.navigate(['/auth/login']);
+    return !!localStorage.getItem('token');
   }
 }

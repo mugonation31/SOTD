@@ -1,9 +1,113 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Leaderboard</ion-title>
+    <ion-title>Standings</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h1>Current Standings</h1>
+  <!-- Segment Control -->
+  <ion-segment [(ngModel)]="selectedSegment" class="standings-segment">
+    <ion-segment-button value="overall">
+      <ion-icon name="trophy-outline"></ion-icon>
+      Overall League
+    </ion-segment-button>
+    <ion-segment-button value="group">
+      <ion-icon name="people-outline"></ion-icon>
+      My Group
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Overall Standings -->
+  <div *ngIf="selectedSegment === 'overall'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Overall League Standings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let player of overallStandings" [class.current-user]="isCurrentUser(player.userId)">
+            <div class="standing-container">
+              <div class="position">
+                <span class="number">{{ player.position }}</span>
+                <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
+                  [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))">
+                </ion-icon>
+              </div>
+              <div class="player-info">
+                <ion-avatar *ngIf="player.avatar">
+                  <img [src]="player.avatar" alt="avatar">
+                </ion-avatar>
+                <span class="name">{{ player.name }}</span>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <span class="label">Played</span>
+                  <span class="value">{{ player.played }}</span>
+                </div>
+                <div class="stat">
+                  <span class="label">Perfect</span>
+                  <span class="value">{{ player.correctScores }}</span>
+                </div>
+                <div class="stat">
+                  <span class="label">Results</span>
+                  <span class="value">{{ player.correctResults }}</span>
+                </div>
+                <div class="stat points">
+                  <span class="label">Points</span>
+                  <span class="value">{{ player.points }}</span>
+                </div>
+              </div>
+            </div>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Group Standings -->
+  <div *ngIf="selectedSegment === 'group'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Group Standings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let player of groupStandings" [class.current-user]="isCurrentUser(player.userId)">
+            <div class="standing-container">
+              <div class="position">
+                <span class="number">{{ player.position }}</span>
+                <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
+                  [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))">
+                </ion-icon>
+              </div>
+              <div class="player-info">
+                <ion-avatar *ngIf="player.avatar">
+                  <img [src]="player.avatar" alt="avatar">
+                </ion-avatar>
+                <span class="name">{{ player.name }}</span>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <span class="label">Played</span>
+                  <span class="value">{{ player.played }}</span>
+                </div>
+                <div class="stat">
+                  <span class="label">Perfect</span>
+                  <span class="value">{{ player.correctScores }}</span>
+                </div>
+                <div class="stat">
+                  <span class="label">Results</span>
+                  <span class="value">{{ player.correctResults }}</span>
+                </div>
+                <div class="stat points">
+                  <span class="label">Points</span>
+                  <span class="value">{{ player.points }}</span>
+                </div>
+              </div>
+            </div>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

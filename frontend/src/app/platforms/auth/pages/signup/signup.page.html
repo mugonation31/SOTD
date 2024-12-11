@@ -1,75 +1,101 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>
-      Sign Up
-    </ion-title>
+    <ion-title>Sign Up</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <div class="signup-container">
-    <h1 class="title">Create Account</h1>
-    <p class="subtitle">Sign up to get started</p>
+<ion-content class="ion-padding">
+  <ion-card class="auth-card">
+    <ion-card-content>
+      <div class="auth-header">
+        <h1>Create Account</h1>
+        <p>Join us and start predicting matches</p>
+      </div>
 
-    <ion-card>
-      <ion-card-content>
-        <ion-list>
+      <form (ngSubmit)="onSignup()">
+        <ion-list class="auth-form">
           <ion-item>
-            <ion-input type="text" [(ngModel)]="signupData.fullName" placeholder="Full Name">
+            <ion-input placeholder="Username (Optional)" [(ngModel)]="signupData.username" name="username" type="text">
+            </ion-input>
+            <ion-note slot="helper">Leave blank to use surname as display name</ion-note>
+          </ion-item>
+
+          <ion-item>
+            <ion-input placeholder="First Name" [(ngModel)]="signupData.firstName"
+              (ionInput)="validateRequired('firstName', signupData.firstName)"
+              [class.ion-invalid]="validationErrors.firstName" name="firstName" required type="text">
+            </ion-input>
+            <ion-note slot="error" *ngIf="validationErrors.firstName">
+              {{ validationErrors.firstName }}
+            </ion-note>
+          </ion-item>
+
+          <ion-item>
+            <ion-input placeholder="Surname" [(ngModel)]="signupData.surname" name="surname" required type="text">
             </ion-input>
           </ion-item>
 
           <ion-item>
-            <ion-input type="email" [(ngModel)]="signupData.email" placeholder="Email">
+            <ion-input placeholder="Email" [(ngModel)]="signupData.email" name="email" required type="email">
             </ion-input>
           </ion-item>
 
           <ion-item>
-            <ion-select [(ngModel)]="signupData.role" placeholder="Select Role">
+            <ion-select placeholder="Select Role" [(ngModel)]="signupData.role" name="role" required>
               <ion-select-option value="player">Player</ion-select-option>
               <ion-select-option value="group-admin">Group Admin</ion-select-option>
+              <ion-select-option value="super-admin">Super Admin</ion-select-option>
             </ion-select>
           </ion-item>
 
           <ion-item>
-            <ion-input type="password" [(ngModel)]="signupData.password" placeholder="Password">
+            <ion-input placeholder="Password" [(ngModel)]="signupData.password" (ionInput)="validatePassword()"
+              [class.ion-invalid]="validationErrors.password" name="password" required type="password">
             </ion-input>
+            <ion-note slot="error" *ngIf="validationErrors.password">
+              {{ validationErrors.password }}
+            </ion-note>
           </ion-item>
 
           <ion-item>
-            <ion-input type="password" [(ngModel)]="signupData.confirmPassword" placeholder="Confirm Password">
+            <ion-input placeholder="Confirm Password" [(ngModel)]="signupData.confirmPassword" name="confirmPassword"
+              required type="password">
             </ion-input>
           </ion-item>
         </ion-list>
 
-        <ion-button expand="block" class="signup-button" (click)="onSignup()">
-          Sign Up
-        </ion-button>
+        <div class="auth-actions">
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Create Account</ion-button>
+        </div>
 
-        <div class="social-signup">
-          <p class="divider">or continue with</p>
+        <div class="auth-footer">
+          <div class="divider">
+            <span>Or sign up with</span>
+          </div>
 
           <div class="social-buttons">
-            <ion-button fill="clear" class="social-button">
+            <ion-button fill="clear">
               <ion-icon name="logo-google"></ion-icon>
             </ion-button>
-            <ion-button fill="clear" class="social-button">
+            <ion-button fill="clear">
               <ion-icon name="logo-facebook"></ion-icon>
             </ion-button>
-            <ion-button fill="clear" class="social-button">
-              <ion-icon name="logo-twitter"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" class="social-button">
+            <ion-button fill="clear">
               <ion-icon name="logo-instagram"></ion-icon>
             </ion-button>
+            <ion-button fill="clear">
+              <ion-icon name="logo-x"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="auth-link">
+            <ion-text color="medium">
+              Already have an account?
+              <a routerLink="/auth/login">Login</a>
+            </ion-text>
           </div>
         </div>
-
-        <div class="signin-link">
-          Already have an account?
-          <a routerLink="/auth/login">Sign In here</a>
-        </div>
-      </ion-card-content>
-    </ion-card>
-  </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
 </ion-content>
