@@ -41,57 +41,57 @@ Role Based Access Control Implementation Steps:
 
 1. Initial Super Admin Setup
 
-- Create a secure registration endpoint specifically for super admin signup
-- This endpoint should only be accessible once when initializing the application
-- Store super admin credentials securely with proper encryption
-- Implement super admin login functionality
+- [ ] Create a secure registration endpoint specifically for super admin signup
+- [ ] This endpoint should only be accessible once when initializing the application
+- [ ] Store super admin credentials securely with proper encryption
+- [ ] Implement super admin login functionality
 
 2. Group Admin Access Management
 
-- Create an interface for super admin to generate unique invitation links for group admins
-- Implement a secure token system for these invitation links
-- Add endpoints to:
-  - Generate invitation tokens
-  - Validate tokens during group admin registration
-  - Store group admin details with proper role assignment
-- Add UI for super admin to manage and revoke group admin access
+- [ ] Create an interface for super admin to generate unique invitation links for group admins
+- [ ] Implement a secure token system for these invitation links
+- [ ] Add endpoints to:
+  - [ ] Generate invitation tokens
+  - [ ] Validate tokens during group admin registration
+  - [ ] Store group admin details with proper role assignment
+- [ ] Add UI for super admin to manage and revoke group admin access
 
 3. Player Access Management
 
-- Create interfaces for both super admin and group admins to manage player invites
-- Implement player invitation system with:
-  - Unique invitation link generation
-  - Token validation
-  - Group assignment during registration
-- Add UI components for:
-  - Generating player invitation links
-  - Managing pending invitations
-  - Revoking player access
+- [ ] Create interfaces for both super admin and group admins to manage player invites
+- [ ] Implement player invitation system with:
+  - [ ] Unique invitation link generation
+  - [ ] Token validation
+  - [ ] Group assignment during registration
+- [ ] Add UI components for:
+  - [ ] Generating player invitation links
+  - [ ] Managing pending invitations
+  - [ ] Revoking player access
 
 4. Security Implementation
 
-- Implement token-based authentication system
-- Add token expiration and validation
-- Create secure API endpoints for:
-  - Invitation link generation
-  - User registration with role verification
-  - Access management
-- Add proper error handling for invalid/expired invitations
+- [ ] Implement token-based authentication system
+- [ ] Add token expiration and validation
+- [ ] Create secure API endpoints for:
+  - [ ] Invitation link generation
+  - [ ] User registration with role verification
+  - [ ] Access management
+- [ ] Add proper error handling for invalid/expired invitations
 
 5. Database Schema Updates
 
-- Add tables/collections for:
-  - User roles and permissions
-  - Invitation tokens
-  - Group memberships
-  - Access control lists
+- [ ] Add tables/collections for:
+  - [ ] User roles and permissions
+  - [ ] Invitation tokens
+  - [ ] Group memberships
+  - [ ] Access control lists
 
 6. UI/UX Components
 
-- Create invitation management dashboards for super admin and group admins
-- Add user management interfaces
-- Implement role-specific navigation and access restrictions
-- Add proper feedback for invitation processes
+- [ ] Create invitation management dashboards for super admin and group admins
+- [ ] Add user management interfaces
+- [ ] Implement role-specific navigation and access restrictions
+- [ ] Add proper feedback for invitation processes
 
 Future Phases Will Include:
 
