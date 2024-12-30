@@ -36,7 +36,7 @@ import {
 interface ValidationErrors {
   username: string;
   firstName: string;
-  surname: string;
+  lastName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -72,7 +72,7 @@ export class SignupPage {
   signupData = {
     username: '',
     firstName: '',
-    surname: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -82,7 +82,7 @@ export class SignupPage {
   validationErrors: ValidationErrors = {
     username: '',
     firstName: '',
-    surname: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -91,13 +91,13 @@ export class SignupPage {
   get canSubmit(): boolean {
     return Boolean(
       this.signupData.firstName &&
-        this.signupData.surname &&
+        this.signupData.lastName &&
         this.signupData.email &&
         this.signupData.password &&
         this.signupData.confirmPassword &&
         this.signupData.role &&
         !this.validationErrors.firstName &&
-        !this.validationErrors.surname &&
+        !this.validationErrors.lastName &&
         !this.validationErrors.email &&
         !this.validationErrors.password &&
         !this.validationErrors.confirmPassword
@@ -155,7 +155,7 @@ export class SignupPage {
 
   onSignup() {
     this.validateRequired('firstName', this.signupData.firstName);
-    this.validateRequired('surname', this.signupData.surname);
+    this.validateRequired('lastName', this.signupData.lastName);
     this.validateEmail();
     this.validatePassword();
     this.validateConfirmPassword();
@@ -163,23 +163,29 @@ export class SignupPage {
     if (!this.canSubmit) return;
 
     const { confirmPassword, ...signupPayload } = this.signupData;
-    this.authService.signup(signupPayload).subscribe((response) => {
-      localStorage.setItem('userRole', response.role);
-      localStorage.setItem('token', response.token);
+    this.authService.signup(signupPayload).subscribe({
+      next: (response) => {
+        localStorage.setItem('userRole', response.user.role);
+        localStorage.setItem('token', response.token);
 
-      switch (response.role) {
-        case 'player':
-          this.router.navigate(['/player/dashboard']);
-          break;
-        case 'group-admin':
-          this.router.navigate(['/group-admin/dashboard']);
-          break;
-        case 'super-admin':
-          this.router.navigate(['/super-admin/dashboard']);
-          break;
-        default:
-          this.router.navigate(['/auth/login']);
-      }
+        switch (response.user.role) {
+          case 'super-admin':
+            this.router.navigate(['/super-admin/dashboard']);
+            break;
+          case 'group-admin':
+            this.router.navigate(['/group-admin/dashboard']);
+            break;
+          case 'player':
+            this.router.navigate(['/player/dashboard']);
+            break;
+          default:
+            console.error('Invalid role');
+            break;
+        }
+      },
+      error: (error) => {
+        console.error('Signup error:', error);
+      },
     });
   }
 }

@@ -58,6 +58,8 @@ export class LoginPage {
   loginData = {
     email: '',
     password: '',
+    securityQuestion: '',
+    securityAnswer: '',
   };
 
   validationErrors = {
@@ -109,11 +111,14 @@ export class LoginPage {
 
     if (!this.canSubmit) return;
 
-    this.authService
-      .login(this.loginData.email, this.loginData.password)
-      .subscribe(() => {
+    this.authService.login(this.loginData).subscribe({
+      next: (response) => {
         // For now, just navigate to super-admin dashboard
         this.router.navigate(['/super-admin/dashboard']);
-      });
+      },
+      error: (error) => {
+        console.error('Login error:', error);
+      },
+    });
   }
 }

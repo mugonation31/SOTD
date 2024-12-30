@@ -21,7 +21,8 @@
     "useDefineForClassFields": false,
     "paths": {
       "@core/*": ["src/app/core/*"]
-    }
+    },
+    "types": ["crypto-js"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

@@ -1,8 +1,24 @@
 import { Routes } from '@angular/router';
+import { SuperAdminRegistrationGuard } from './guards/super-admin-registration.guard';
+import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
 
 export const routes: Routes = [
   {
+    path: 'register',
+    canActivate: [SuperAdminRegistrationGuard],
+    loadComponent: () =>
+      import('./pages/register/register.page').then(
+        (m) => m.SuperAdminRegisterPage
+      ),
+  },
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./pages/login/login.page').then((m) => m.SuperAdminLoginPage),
+  },
+  {
     path: '',
+    canActivate: [SuperAdminAuthGuard],
     loadComponent: () =>
       import('./layout/super-admin-layout.page').then(
         (m) => m.SuperAdminLayoutPage

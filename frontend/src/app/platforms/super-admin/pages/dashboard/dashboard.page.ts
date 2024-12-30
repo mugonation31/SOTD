@@ -7,7 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 
 @Component({
-  selector: 'app-super-admin-dashboard',
+  selector: 'app-dashboard',
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss'],
   standalone: true,

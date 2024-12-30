@@ -31,8 +31,13 @@
           </ion-item>
 
           <ion-item>
-            <ion-input placeholder="Surname" [(ngModel)]="signupData.surname" name="surname" required type="text">
+            <ion-input placeholder="Last Name" [(ngModel)]="signupData.lastName"
+              (ionBlur)="validateRequired('lastName', signupData.lastName)"
+              [class.ion-invalid]="validationErrors.lastName" name="lastName" required type="text">
             </ion-input>
+            <ion-note slot="error" *ngIf="validationErrors.lastName">
+              {{ validationErrors.lastName }}
+            </ion-note>
           </ion-item>
 
           <ion-item>
