@@ -32,6 +32,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'group-admin-invites',
+        loadComponent: () =>
+          import('./pages/group-admin-invites/group-admin-invites.page').then(
+            (m) => m.GroupAdminInvitesPage
+          ),
+      },
+      {
         path: 'groups',
         loadComponent: () =>
           import('./pages/groups/groups.page').then((m) => m.GroupsPage),

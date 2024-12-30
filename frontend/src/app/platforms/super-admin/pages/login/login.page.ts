@@ -87,29 +87,22 @@ export class SuperAdminLoginPage implements OnInit {
   onSubmit() {
     if (this.loginForm.valid) {
       this.isLoading = true;
-      const formValue = this.loginForm.value;
 
-      const loginData = {
-        ...formValue,
-        securityQuestion: this.currentSecurityQuestion,
-      };
+      // Frontend-only implementation
+      const isSuperAdmin =
+        localStorage.getItem('superAdminRegistered') === 'true';
 
-      this.authService.login(loginData).subscribe({
-        next: (response) => {
-          if (response.user.role === 'super-admin') {
-            this.router.navigate(['/super-admin/dashboard']);
-          } else {
-            console.error('Invalid role for super admin login');
-          }
-        },
-        error: (error) => {
-          console.error('Login error:', error);
-          this.isLoading = false;
-        },
-        complete: () => {
-          this.isLoading = false;
-        },
-      });
+      if (isSuperAdmin) {
+        // Simulate successful login
+        localStorage.setItem('userRole', 'super-admin');
+        localStorage.setItem('isLoggedIn', 'true');
+        this.router.navigate(['/super-admin/dashboard']);
+      } else {
+        console.error('No super admin registered');
+        // Show error message to user
+      }
+
+      this.isLoading = false;
     }
   }
 }

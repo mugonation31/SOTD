@@ -4,15 +4,42 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
 } from '@ionic/angular/standalone';
 
 @Component({
   selector: 'app-groups',
-  templateUrl: './groups.page.html',
-  styleUrls: ['./groups.page.scss'],
+  template: `
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Groups Management</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>All Groups</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <!-- Groups content -->
+        </ion-card-content>
+      </ion-card>
+    </ion-content>
+  `,
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+  ],
 })
-export class GroupsPage {
-  constructor() {}
-}
+export class GroupsPage {}

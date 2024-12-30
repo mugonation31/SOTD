@@ -126,9 +126,12 @@ export class SuperAdminRegisterPage {
 
   onSubmit() {
     if (this.registrationForm.valid) {
-      // Simulate successful registration
+      // After successful registration, we should:
       localStorage.setItem('superAdminRegistered', 'true');
-      this.router.navigate(['/super-admin/login']);
+      // Add role information
+      localStorage.setItem('userRole', 'super-admin');
+      // Navigate to dashboard
+      this.router.navigate(['/super-admin/dashboard']);
     }
   }
 

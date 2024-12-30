@@ -1,20 +1,25 @@
 import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import {
+  IonApp,
   IonTabs,
   IonTabBar,
   IonTabButton,
   IonIcon,
   IonLabel,
   IonRouterOutlet,
+  IonMenu,
+  IonContent,
 } from '@ionic/angular/standalone';
-import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   gridOutline,
-  peopleOutline,
   layersOutline,
+  peopleOutline,
   statsChartOutline,
   settingsOutline,
+  homeOutline,
+  personAddOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -23,23 +28,28 @@ import {
   styleUrls: ['./super-admin-layout.page.scss'],
   standalone: true,
   imports: [
+    RouterModule,
+    IonApp,
     IonTabs,
     IonTabBar,
     IonTabButton,
     IonIcon,
     IonLabel,
     IonRouterOutlet,
-    RouterModule,
+    IonMenu,
+    IonContent,
   ],
 })
 export class SuperAdminLayoutPage {
   constructor() {
     addIcons({
       gridOutline,
-      peopleOutline,
       layersOutline,
+      peopleOutline,
       statsChartOutline,
       settingsOutline,
+      homeOutline,
+      personAddOutline,
     });
   }
 }

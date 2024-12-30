@@ -1,29 +1,41 @@
-<ion-tabs>
-  <ion-router-outlet></ion-router-outlet>
-  <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="dashboard" href="/super-admin/dashboard">
-      <ion-icon name="grid-outline"></ion-icon>
-      <ion-label>Dashboard</ion-label>
-    </ion-tab-button>
+<ion-app>
+  <ion-menu contentId="main-content">
+    <!-- Menu content -->
+  </ion-menu>
 
-    <ion-tab-button tab="groups" href="/super-admin/groups">
-      <ion-icon name="layers-outline"></ion-icon>
-      <ion-label>Groups</ion-label>
-    </ion-tab-button>
+  <div class="ion-page" id="main-content">
+    <ion-tabs>
+      <ion-tab-bar slot="bottom">
+        <ion-tab-button tab="dashboard" routerLink="dashboard" routerDirection="root">
+          <ion-icon name="grid-outline"></ion-icon>
+          <ion-label>Dashboard</ion-label>
+        </ion-tab-button>
 
-    <ion-tab-button tab="users" href="/super-admin/users">
-      <ion-icon name="people-outline"></ion-icon>
-      <ion-label>Users</ion-label>
-    </ion-tab-button>
+        <ion-tab-button tab="group-admin-invites" routerLink="group-admin-invites" routerDirection="root">
+          <ion-icon name="person-add-outline"></ion-icon>
+          <ion-label>Admin Invites</ion-label>
+        </ion-tab-button>
 
-    <ion-tab-button tab="predictions" href="/super-admin/predictions">
-      <ion-icon name="stats-chart-outline"></ion-icon>
-      <ion-label>Predictions</ion-label>
-    </ion-tab-button>
+        <ion-tab-button tab="groups" routerLink="groups" routerDirection="root">
+          <ion-icon name="layers-outline"></ion-icon>
+          <ion-label>Groups</ion-label>
+        </ion-tab-button>
 
-    <ion-tab-button tab="settings" href="/super-admin/settings">
-      <ion-icon name="settings-outline"></ion-icon>
-      <ion-label>Settings</ion-label>
-    </ion-tab-button>
-  </ion-tab-bar>
-</ion-tabs>
+        <ion-tab-button tab="users" routerLink="users" routerDirection="root">
+          <ion-icon name="people-outline"></ion-icon>
+          <ion-label>Users</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="predictions" routerLink="predictions" routerDirection="root">
+          <ion-icon name="stats-chart-outline"></ion-icon>
+          <ion-label>Predictions</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="settings" routerLink="settings" routerDirection="root">
+          <ion-icon name="settings-outline"></ion-icon>
+          <ion-label>Settings</ion-label>
+        </ion-tab-button>
+      </ion-tab-bar>
+    </ion-tabs>
+  </div>
+</ion-app>

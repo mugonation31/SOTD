@@ -1,15 +1,18 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SuperAdminAuthGuard implements CanActivate {
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private router: Router) {}
 
   canActivate(): boolean {
-    if (this.authService.isAuthenticated() && this.authService.isSuperAdmin()) {
+    // Frontend-only implementation
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isSuperAdmin = localStorage.getItem('userRole') === 'super-admin';
+
+    if (isLoggedIn && isSuperAdmin) {
       return true;
     }
 
