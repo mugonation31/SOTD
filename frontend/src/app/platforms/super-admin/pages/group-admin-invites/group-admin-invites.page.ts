@@ -251,7 +251,7 @@ export class GroupAdminInvitesPage implements OnInit {
         return;
       }
 
-      const link = `${window.location.origin}/auth/register?token=${token}&role=group-admin`;
+      const link = `${window.location.origin}/group-admin/register?token=${token}`;
       await navigator.clipboard.writeText(link);
       await this.toastService.showToast(
         'Invitation link copied to clipboard',

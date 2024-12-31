@@ -61,6 +61,13 @@ export const routes: Routes = [
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'group-admins',
+        loadComponent: () =>
+          import('./pages/group-admins/group-admins.page').then(
+            (m) => m.GroupAdminsPage
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
