@@ -41,32 +41,49 @@ Role Based Access Control Implementation Steps:
 
 1. Initial Super Admin Setup
 
-- [ ] Create a secure registration endpoint specifically for super admin signup
-- [ ] This endpoint should only be accessible once when initializing the application
-- [ ] Store super admin credentials securely with proper encryption
-- [ ] Implement super admin login functionality
+- [x] Create a secure registration endpoint specifically for super admin signup
+- [x] This endpoint should only be accessible once when initializing the application
+- [x] Store super admin credentials securely with proper encryption
+- [x] Implement super admin login functionality
 
 2. Group Admin Access Management
 
-- [ ] Create an interface for super admin to generate unique invitation links for group admins
-- [ ] Implement a secure token system for these invitation links
-- [ ] Add endpoints to:
+- [x] Create an interface for super admin to generate unique invitation links for group admins
+- [x] Implement a secure token system for these invitation links
+- [ ] Add endpoints to: [BACKEND]
   - [ ] Generate invitation tokens
+  - [ ] Send invitation emails with registration links
   - [ ] Validate tokens during group admin registration
   - [ ] Store group admin details with proper role assignment
-- [ ] Add UI for super admin to manage and revoke group admin access
+- [x] Create dedicated group admin registration page:
+  - [x] Form for new group admin signup
+  - [x] Token validation on registration
+  - [x] Proper role assignment during account creation
+- [x] Implement separate group admin login page:
+  - [x] Group admin specific authentication
+  - [x] Redirect to group admin dashboard on success
+- [x] Add UI for super admin to manage and revoke group admin access
 
 3. Player Access Management
 
-- [ ] Create interfaces for both super admin and group admins to manage player invites
-- [ ] Implement player invitation system with:
-  - [ ] Unique invitation link generation
-  - [ ] Token validation
-  - [ ] Group assignment during registration
-- [ ] Add UI components for:
-  - [ ] Generating player invitation links
-  - [ ] Managing pending invitations
-  - [ ] Revoking player access
+- [ ] Implement automatic group code generation system:
+  - [x] Generate unique permanent group code when group admin creates a group (frontend mock)
+  - [ ] Validate code uniqueness across system (will be backend)
+  - [ ] Store code securely with group details (will be backend)
+- [ ] Create player group joining flow:
+  - [ ] Add group code input field after player signup/login
+  - [ ] Validate group code and assign player to group
+  - [ ] Handle invalid group codes gracefully
+- [ ] Add UI components for group admins:
+  - [ ] Display group's unique code for sharing
+  - [ ] View list of players who joined via code
+  - [ ] Promoting players to group admin role
+  - [ ] Removing players from group
+- [ ] Add UI components for super admin:
+  - [ ] View all groups and their codes
+  - [ ] View all group members
+  - [ ] Override group admin decisions
+  - [ ] Remove players from groups system-wide
 
 4. Security Implementation
 

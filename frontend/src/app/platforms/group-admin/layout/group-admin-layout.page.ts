@@ -14,6 +14,7 @@ import {
   peopleOutline,
   footballOutline,
   settingsOutline,
+  peopleCircleOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -38,6 +39,7 @@ export class GroupAdminLayoutPage {
       peopleOutline,
       footballOutline,
       settingsOutline,
+      peopleCircleOutline,
     });
   }
 }

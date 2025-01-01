@@ -45,6 +45,11 @@ export const routes: Routes = [
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'groups',
+        loadComponent: () =>
+          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
