@@ -33,81 +33,71 @@ import { InvitationStorageService } from '@core/services/invitation-storage.serv
 @Component({
   selector: 'app-group-admin-invites',
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Group Admin Invitations</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Generate New Invitation</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="invite-form">
+          <ion-item>
+            <ion-input
+              type="email"
+              [(ngModel)]="newInviteEmail"
+              placeholder="Enter email address"
+              label="Email"
+              labelPlacement="floating"
+            ></ion-input>
+          </ion-item>
+          <ion-button
+            (click)="generateInvitation()"
+            [disabled]="!newInviteEmail"
+            expand="block"
+          >
+            <ion-icon name="person-add-outline" slot="start"></ion-icon>
+            Generate Invitation
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
 
-    <ion-content class="ion-padding">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Generate New Invitation</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <div class="invite-form">
-            <ion-item>
-              <ion-input
-                type="email"
-                [(ngModel)]="newInviteEmail"
-                placeholder="Enter email address"
-                label="Email"
-                labelPlacement="floating"
-              ></ion-input>
-            </ion-item>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Active Invitations</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let invite of invitations">
+            <ion-label>
+              <h2>{{ invite.email }}</h2>
+              <p>Expires: {{ invite.expiresAt | date : 'medium' }}</p>
+              <p>
+                Status:
+                <ion-badge
+                  [color]="invite.status === 'pending' ? 'warning' : 'success'"
+                >
+                  {{ invite.status }}
+                </ion-badge>
+              </p>
+            </ion-label>
             <ion-button
-              (click)="generateInvitation()"
-              [disabled]="!newInviteEmail"
-              expand="block"
+              slot="end"
+              fill="clear"
+              (click)="copyInviteLink(invite.token)"
             >
-              <ion-icon name="person-add-outline" slot="start"></ion-icon>
-              Generate Invitation
+              <ion-icon name="copy-outline"></ion-icon>
             </ion-button>
-          </div>
-        </ion-card-content>
-      </ion-card>
-
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Active Invitations</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            <ion-item *ngFor="let invite of invitations">
-              <ion-label>
-                <h2>{{ invite.email }}</h2>
-                <p>Expires: {{ invite.expiresAt | date : 'medium' }}</p>
-                <p>
-                  Status:
-                  <ion-badge
-                    [color]="
-                      invite.status === 'pending' ? 'warning' : 'success'
-                    "
-                  >
-                    {{ invite.status }}
-                  </ion-badge>
-                </p>
-              </ion-label>
-              <ion-button
-                slot="end"
-                fill="clear"
-                (click)="copyInviteLink(invite.token)"
-              >
-                <ion-icon name="copy-outline"></ion-icon>
-              </ion-button>
-              <ion-button
-                slot="end"
-                fill="clear"
-                color="danger"
-                (click)="revokeInvitation(invite.id)"
-              >
-                <ion-icon name="trash-outline"></ion-icon>
-              </ion-button>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
-    </ion-content>
+            <ion-button
+              slot="end"
+              fill="clear"
+              color="danger"
+              (click)="revokeInvitation(invite.id)"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
   `,
   standalone: true,
   imports: [

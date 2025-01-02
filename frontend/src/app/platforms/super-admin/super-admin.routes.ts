@@ -32,11 +32,23 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'group-admin-invites',
-        loadComponent: () =>
-          import('./pages/group-admin-invites/group-admin-invites.page').then(
-            (m) => m.GroupAdminInvitesPage
-          ),
+        path: 'group-admins',
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./pages/group-admins/group-admins.page').then(
+                (m) => m.GroupAdminsPage
+              ),
+          },
+          {
+            path: 'invites',
+            loadComponent: () =>
+              import(
+                './pages/group-admin-invites/group-admin-invites.page'
+              ).then((m) => m.GroupAdminInvitesPage),
+          },
+        ],
       },
       {
         path: 'groups',
@@ -59,13 +71,6 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
-      },
-      {
-        path: 'group-admins',
-        loadComponent: () =>
-          import('./pages/group-admins/group-admins.page').then(
-            (m) => m.GroupAdminsPage
-          ),
       },
       {
         path: '',
