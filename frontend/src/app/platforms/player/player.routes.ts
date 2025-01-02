@@ -33,9 +33,11 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'groups',
+        path: 'join-group',
         loadComponent: () =>
-          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+          import('./pages/join-group/join-group.page').then(
+            (m) => m.JoinGroupPage
+          ),
       },
       {
         path: '',

@@ -7,19 +7,20 @@ import {
   IonLabel,
   IonRouterOutlet,
 } from '@ionic/angular/standalone';
+import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
-  homeOutline,
+  gridOutline,
   footballOutline,
-  barChartOutline,
+  analyticsOutline,
   trophyOutline,
-  peopleOutline,
+  peopleCircleOutline,
 } from 'ionicons/icons';
-import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-player-layout',
   templateUrl: './player-layout.page.html',
+  styleUrls: ['./player-layout.page.scss'],
   standalone: true,
   imports: [
     IonTabs,
@@ -34,11 +35,11 @@ import { RouterModule } from '@angular/router';
 export class PlayerLayoutPage {
   constructor() {
     addIcons({
-      homeOutline,
+      gridOutline,
       footballOutline,
-      barChartOutline,
+      analyticsOutline,
       trophyOutline,
-      peopleOutline,
+      peopleCircleOutline,
     });
   }
 }

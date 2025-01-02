@@ -70,15 +70,15 @@ Role Based Access Control Implementation Steps:
   - [x] Generate unique permanent group code when group admin creates a group (frontend mock)
   - [ ] Validate code uniqueness across system (will be backend)
   - [ ] Store code securely with group details (will be backend)
-- [ ] Create player group joining flow:
-  - [ ] Add group code input field after player signup/login
-  - [ ] Validate group code and assign player to group
-  - [ ] Handle invalid group codes gracefully
-- [ ] Add UI components for group admins:
-  - [ ] Display group's unique code for sharing
-  - [ ] View list of players who joined via code
-  - [ ] Promoting players to group admin role
-  - [ ] Removing players from group
+- [x] Create player group joining flow:
+  - [x] Add group code input field after player signup/login
+  - [x] Validate group code and assign player to group (frontend mock)
+  - [x] Handle invalid group codes gracefully
+- [x] Add UI components for group admins:
+  - [x] Display group's unique code for sharing
+  - [x] View list of players who joined via code
+  - [x] Promoting players to group admin role
+  - [x] Removing players from group
 - [ ] Add UI components for super admin:
   - [ ] View all groups and their codes
   - [ ] View all group members
