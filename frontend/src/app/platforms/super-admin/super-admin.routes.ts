@@ -52,13 +52,18 @@ export const routes: Routes = [
       },
       {
         path: 'groups',
-        loadComponent: () =>
-          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
-      },
-      {
-        path: 'users',
-        loadComponent: () =>
-          import('./pages/users/users.page').then((m) => m.UsersPage),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+          },
+          {
+            path: 'users',
+            loadComponent: () =>
+              import('./pages/users/users.page').then((m) => m.UsersPage),
+          },
+        ],
       },
       {
         path: 'predictions',

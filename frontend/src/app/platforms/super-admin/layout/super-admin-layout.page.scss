@@ -1,1 +1,16 @@
 // Super Admin Layout Styles
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.profile-icon {
+  font-size: 18px;
+}
+
+.settings-icon {
+  font-size: 16px;
+  margin-bottom: 2px; // Align with person icon
+}

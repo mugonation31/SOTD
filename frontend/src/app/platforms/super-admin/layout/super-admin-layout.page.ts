@@ -1,55 +1,60 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
 import {
   IonApp,
+  IonMenu,
+  IonHeader,
+  IonToolbar,
+  IonButtons,
+  IonButton,
+  IonIcon,
   IonTabs,
   IonTabBar,
   IonTabButton,
-  IonIcon,
   IonLabel,
-  IonRouterOutlet,
-  IonMenu,
-  IonContent,
 } from '@ionic/angular/standalone';
+import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
+  settingsOutline,
   gridOutline,
   layersOutline,
-  peopleOutline,
   statsChartOutline,
-  settingsOutline,
-  homeOutline,
-  personAddOutline,
+  peopleCircleOutline,
+  personCircleOutline,
+  personOutline,
+  cogOutline,
 } from 'ionicons/icons';
 
 @Component({
   selector: 'app-super-admin-layout',
   templateUrl: './super-admin-layout.page.html',
-  styleUrls: ['./super-admin-layout.page.scss'],
   standalone: true,
   imports: [
-    RouterModule,
     IonApp,
+    IonMenu,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonIcon,
     IonTabs,
     IonTabBar,
     IonTabButton,
-    IonIcon,
     IonLabel,
-    IonRouterOutlet,
-    IonMenu,
-    IonContent,
+    RouterModule,
   ],
 })
 export class SuperAdminLayoutPage {
   constructor() {
     addIcons({
+      settingsOutline,
       gridOutline,
       layersOutline,
-      peopleOutline,
       statsChartOutline,
-      settingsOutline,
-      homeOutline,
-      personAddOutline,
+      peopleCircleOutline,
+      personCircleOutline,
+      personOutline,
+      cogOutline,
     });
   }
 }

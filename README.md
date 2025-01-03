@@ -80,10 +80,10 @@ Role Based Access Control Implementation Steps:
   - [x] Promoting players to group admin role
   - [x] Removing players from group
 - [ ] Add UI components for super admin:
-  - [ ] View all groups and their codes
-  - [ ] View all group members
-  - [ ] Override group admin decisions
-  - [ ] Remove players from groups system-wide
+  - [x] View all groups and their codes
+  - [x] View all group members
+  - [x] Override group admin decisions
+  - [x] Remove players from groups system-wide
 
 4. Security Implementation
 

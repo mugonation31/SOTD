@@ -4,6 +4,16 @@
   </ion-menu>
 
   <div class="ion-page" id="main-content">
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="end">
+          <ion-button routerLink="/super-admin/settings">
+            <ion-icon name="person-outline" class="profile-icon"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
     <ion-tabs>
       <ion-tab-bar slot="bottom">
         <ion-tab-button tab="dashboard" href="/super-admin/dashboard">
@@ -13,12 +23,7 @@
 
         <ion-tab-button tab="groups" href="/super-admin/groups">
           <ion-icon name="layers-outline"></ion-icon>
-          <ion-label>Groups</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="users" href="/super-admin/users">
-          <ion-icon name="people-outline"></ion-icon>
-          <ion-label>Users</ion-label>
+          <ion-label>Groups & Users</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="predictions" href="/super-admin/predictions">
@@ -29,11 +34,6 @@
         <ion-tab-button tab="group-admins" href="/super-admin/group-admins">
           <ion-icon name="people-circle-outline"></ion-icon>
           <ion-label>Admins</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="settings" href="/super-admin/settings">
-          <ion-icon name="settings-outline"></ion-icon>
-          <ion-label>Settings</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
