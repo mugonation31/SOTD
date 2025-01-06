@@ -1,86 +1,129 @@
 import { Component } from '@angular/core';
 import {
   IonApp,
-  IonMenu,
   IonHeader,
   IonToolbar,
   IonButtons,
   IonButton,
   IonIcon,
-  IonTabs,
-  IonTabBar,
-  IonTabButton,
   IonLabel,
   IonTitle,
+  IonRouterOutlet,
+  IonFooter,
+  IonContent,
 } from '@ionic/angular/standalone';
 import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   settingsOutline,
-  gridOutline,
-  layersOutline,
-  statsChartOutline,
-  peopleCircleOutline,
-  personCircleOutline,
   personOutline,
-  cogOutline,
   footballOutline,
+  logoTwitter,
+  logoFacebook,
+  logoInstagram,
 } from 'ionicons/icons';
 
 @Component({
   selector: 'app-super-admin-layout',
   template: `
-    <ion-app>
-      <ion-menu contentId="main-content">
-        <!-- Menu content -->
-      </ion-menu>
-
-      <div class="ion-page" id="main-content">
-        <ion-header>
-          <ion-toolbar>
-            <div class="logo-container" routerLink="/super-admin/dashboard">
-              <ion-icon
-                name="football-outline"
-                class="football-icon"
-              ></ion-icon>
-              <div class="logo-text">
-                <span class="logo-sotd">SOTD</span>
-                <span class="logo-subtitle">Scores On The Doors</span>
-              </div>
+    <div class="page-wrapper">
+      <ion-header>
+        <ion-toolbar>
+          <div class="logo-container" routerLink="/super-admin/dashboard">
+            <ion-icon name="football-outline" class="football-icon"></ion-icon>
+            <div class="logo-text">
+              <span class="logo-sotd">SOTD</span>
+              <span class="logo-subtitle">Scores On The Doors</span>
             </div>
-            <ion-buttons slot="end">
-              <ion-button routerLink="/super-admin/settings">
-                <ion-icon name="person-outline" class="profile-icon"></ion-icon>
-              </ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
+          </div>
+          <ion-buttons slot="end">
+            <ion-button routerLink="/super-admin/settings">
+              <ion-icon name="person-outline" class="profile-icon"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
 
-        <ion-tabs>
-          <!-- ... rest of the tabs content ... -->
-        </ion-tabs>
-      </div>
-    </ion-app>
+      <ion-content>
+        <div class="content-wrapper">
+          <div class="main-content">
+            <ion-router-outlet></ion-router-outlet>
+          </div>
+
+          <ion-footer class="footer-container">
+            <ion-toolbar>
+              <div class="footer-content">
+                <nav class="footer-nav">
+                  <a href="/about">About</a>
+                  <span>•</span>
+                  <a href="/contact">Contact</a>
+                  <span>•</span>
+                  <a href="/help">Help</a>
+                  <span>•</span>
+                  <a href="/privacy">Privacy</a>
+                </nav>
+                <div class="social">
+                  <a href="https://twitter.com/sotd" target="_blank">
+                    <ion-icon name="logo-twitter"></ion-icon>
+                  </a>
+                  <a href="https://facebook.com/sotd" target="_blank">
+                    <ion-icon name="logo-facebook"></ion-icon>
+                  </a>
+                  <a href="https://instagram.com/sotd" target="_blank">
+                    <ion-icon name="logo-instagram"></ion-icon>
+                  </a>
+                </div>
+                <div class="copyright">
+                  © {{ getCurrentYear() }} Scores On The Doors
+                </div>
+              </div>
+            </ion-toolbar>
+          </ion-footer>
+        </div>
+      </ion-content>
+    </div>
   `,
   styles: [
     `
+      .page-wrapper {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: white;
+      }
+
+      .content-wrapper {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding-right: calc(100vw - 100%);
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .footer-container {
+        position: relative !important;
+        margin-top: auto;
+        width: 100%;
+      }
+
       .logo-container {
         display: flex;
         align-items: center;
         gap: 8px;
         padding: 8px 16px;
         cursor: pointer;
-        transition: opacity 0.2s ease;
-      }
-
-      .logo-container:hover {
-        opacity: 0.8;
       }
 
       .football-icon {
         font-size: 24px;
         color: var(--ion-color-primary);
-        animation: spin 4s linear infinite;
       }
 
       .logo-text {
@@ -92,50 +135,75 @@ import {
         font-size: 20px;
         font-weight: 700;
         color: var(--ion-color-primary);
-        letter-spacing: 2px;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
       }
 
       .logo-subtitle {
         font-size: 10px;
         color: var(--ion-color-medium);
-        letter-spacing: 0.5px;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        25% {
-          transform: rotate(10deg);
-        }
-        75% {
-          transform: rotate(-10deg);
-        }
-        100% {
-          transform: rotate(0deg);
-        }
       }
 
       .profile-icon {
         font-size: 20px;
+      }
+
+      .footer-content {
+        text-align: center;
+        padding: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .footer-nav {
+        margin-bottom: 1rem;
+      }
+
+      .footer-nav a {
+        color: var(--ion-color-medium);
+        text-decoration: none;
+        padding: 0 0.5rem;
+        font-size: 0.9rem;
+      }
+
+      .footer-nav span {
+        color: var(--ion-color-medium);
+        font-size: 0.8rem;
+      }
+
+      .social {
+        margin: 0.5rem 0;
+      }
+
+      .social a {
+        color: var(--ion-color-medium);
+        margin: 0 0.5rem;
+        font-size: 1.2rem;
+      }
+
+      .copyright {
+        color: var(--ion-color-medium);
+        font-size: 0.8rem;
+      }
+
+      .footer-nav a:hover,
+      .social a:hover {
+        color: var(--ion-color-primary);
       }
     `,
   ],
   standalone: true,
   imports: [
     IonApp,
-    IonMenu,
     IonHeader,
     IonToolbar,
     IonButtons,
     IonButton,
     IonIcon,
-    IonTabs,
-    IonTabBar,
-    IonTabButton,
     IonLabel,
     IonTitle,
+    IonRouterOutlet,
+    IonFooter,
+    IonContent,
     RouterModule,
   ],
 })
@@ -143,14 +211,15 @@ export class SuperAdminLayoutPage {
   constructor() {
     addIcons({
       settingsOutline,
-      gridOutline,
-      layersOutline,
-      statsChartOutline,
-      peopleCircleOutline,
-      personCircleOutline,
       personOutline,
-      cogOutline,
       footballOutline,
+      logoTwitter,
+      logoFacebook,
+      logoInstagram,
     });
+  }
+
+  getCurrentYear(): number {
+    return new Date().getFullYear();
   }
 }

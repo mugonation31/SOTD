@@ -150,38 +150,38 @@ interface Group {
                   <div class="range-container">
                     <ion-range
                       class="fee-range"
-                      [min]="5"
+                      [min]="1"
                       [max]="100"
-                      [step]="5"
+                      [step]="1"
                       [pin]="true"
                       [ticks]="true"
                       [snaps]="true"
                       formControlName="entryFee"
                       (ionChange)="onEntryFeeChange($event)"
                     >
-                      <div slot="start" class="range-label">£5</div>
+                      <div slot="start" class="range-label">£1</div>
                       <div slot="end" class="range-label">£100</div>
                     </ion-range>
                   </div>
 
                   <!-- Manual Input -->
                   <div class="manual-fee-input">
+                    <div class="currency-symbol">£</div>
                     <ion-input
                       type="number"
-                      [min]="5"
+                      [min]="1"
                       [max]="100"
-                      [step]="5"
                       formControlName="entryFee"
                       (ionInput)="onManualFeeInput($event)"
                       class="fee-input"
-                      placeholder="Enter fee"
+                      clearInput="true"
+                      placeholder="0"
                     >
-                      <div slot="start">£</div>
                     </ion-input>
                   </div>
                 </div>
 
-                <ion-note>Move the slider or enter amount (£5 - £100)</ion-note>
+                <ion-note>Set entry fee between £1 and £100</ion-note>
               </ion-item>
 
               <div
@@ -235,7 +235,17 @@ interface Group {
                   class="prize-info"
                   *ngIf="!groupForm.get('entryFee')?.value"
                 >
-                  <p>Set an entry fee to see potential prize distribution</p>
+                  <p>
+                    Set an entry fee (£1 - £100) to see potential prize
+                    distribution
+                  </p>
+                  <p class="prize-note">
+                    Prize breakdown adjusts based on number of members:
+                    <br />• 3-5 members: Winner takes all <br />• 6-10 members:
+                    1st (70%), 2nd (30%) <br />• 11-20 members: 1st (50%), 2nd
+                    (30%), 3rd (20%) <br />• 21+ members: 1st (45%), 2nd (35%),
+                    3rd (20%)
+                  </p>
                 </div>
               </div>
             </div>
@@ -779,24 +789,55 @@ interface Group {
       }
 
       .manual-fee-input {
-        width: 100px;
-        margin-left: 1rem;
-      }
-
-      .fee-input {
-        --background: var(--ion-color-light);
-        --border-radius: 8px;
-        --padding-start: 8px;
-        --padding-end: 8px;
-        --padding-top: 6px;
-        --padding-bottom: 6px;
-        font-weight: 500;
-        font-size: 1rem;
+        width: 90px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: var(--ion-color-light);
+        border-radius: 8px;
         border: 1px solid var(--ion-color-light-shade);
       }
 
-      .fee-input:focus {
-        border-color: var(--ion-color-primary);
+      .currency-symbol {
+        padding-left: 8px;
+        color: var(--ion-color-medium);
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .fee-input {
+        --background: transparent;
+        --border-radius: 8px;
+        --padding-start: 4px;
+        --padding-end: 8px;
+        --padding-top: 8px;
+        --padding-bottom: 8px;
+        --placeholder-color: var(--ion-color-medium);
+        --placeholder-opacity: 0.6;
+        --placeholder-font-weight: 400;
+        font-size: 0.95rem;
+        font-weight: 500;
+      }
+
+      /* Hide spinner buttons */
+      .fee-input input[type='number']::-webkit-outer-spin-button,
+      .fee-input input[type='number']::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .fee-input input[type='number'] {
+        -moz-appearance: textfield;
+      }
+
+      /* Style clear button */
+      .fee-input ::part(clear-button) {
+        color: var(--ion-color-medium);
+        opacity: 0.7;
+      }
+
+      .fee-input ::part(clear-button):hover {
+        opacity: 1;
       }
 
       .group-details {
@@ -1080,23 +1121,36 @@ export class GroupsPage {
   }
 
   getPrizeDistribution(memberCount: number): { [key: number]: number } {
+    // For very small groups (3-5 members)
     if (memberCount <= 5) {
       return {
-        1: 0.7,
-        2: 0.3,
-        3: 0,
+        1: 1.0, // 100% for first place when very few members
+        2: 0, // No second place prize
+        3: 0, // No third place prize
       };
-    } else if (memberCount <= 10) {
+    }
+    // For small groups (6-10 members)
+    else if (memberCount <= 10) {
       return {
-        1: 0.5,
-        2: 0.3,
-        3: 0.2,
+        1: 0.7, // 70% for first place
+        2: 0.3, // 30% for second place
+        3: 0, // No third place prize
       };
-    } else {
+    }
+    // For medium groups (11-20 members)
+    else if (memberCount <= 20) {
       return {
-        1: 0.45,
-        2: 0.35,
-        3: 0.2,
+        1: 0.5, // 50% for first place
+        2: 0.3, // 30% for second place
+        3: 0.2, // 20% for third place
+      };
+    }
+    // For large groups (21+ members)
+    else {
+      return {
+        1: 0.45, // 45% for first place
+        2: 0.35, // 35% for second place
+        3: 0.2, // 20% for third place
       };
     }
   }
@@ -1324,17 +1378,23 @@ export class GroupsPage {
 
   onManualFeeInput(event: any) {
     let value = event.detail.value;
-    // Ensure the value is within bounds
-    if (value < 5) value = 5;
-    if (value > 100) value = 100;
-    // Round to nearest £5
-    const roundedValue = Math.round(value / 5) * 5;
-    if (value !== roundedValue) {
-      this.groupForm.patchValue(
-        { entryFee: roundedValue },
-        { emitEvent: false }
-      );
+
+    // Allow empty value
+    if (value === '' || value === null) {
+      this.groupForm.patchValue({ entryFee: null }, { emitEvent: false });
+      const input = event.target;
+      input.classList.remove('has-value');
+      return;
     }
+
+    // Convert to number and validate
+    value = Number(value);
+    if (value < 1) value = 1;
+    if (value > 100) value = 100;
+
+    const input = event.target;
+    input.classList.add('has-value');
+    this.groupForm.patchValue({ entryFee: value }, { emitEvent: false });
   }
 
   async copyGroupCode(code: string) {
