@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { GroupAdminLayoutPage } from './layout/group-admin-layout.page';
 
 export const routes: Routes = [
   {
@@ -15,10 +16,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    loadComponent: () =>
-      import('./layout/group-admin-layout.page').then(
-        (m) => m.GroupAdminLayoutPage
-      ),
+    component: GroupAdminLayoutPage,
     children: [
       {
         path: 'dashboard',
@@ -40,14 +38,14 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'settings',
-        loadComponent: () =>
-          import('./pages/settings/settings.page').then((m) => m.SettingsPage),
-      },
-      {
         path: 'groups',
         loadComponent: () =>
           import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./pages/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
         path: '',
