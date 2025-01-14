@@ -37,6 +37,7 @@ import {
   walletOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
@@ -384,7 +385,8 @@ export class SettingsPage {
     lastName: 'Smith',
     email: 'john.smith@example.com',
     phone: '+44 7123 456789',
-    avatar: '',
+    avatar:
+      'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyMCIgZmlsbD0iI2U0ZTRlNCIvPjxwYXRoIGQ9Ik0xMjggNjRhNDAgNDAgMCAwIDEgNDAgNDB2MTZhNDAgNDAgMCAwIDEtODAgMHYtMTZhNDAgNDAgMCAwIDEgNDAtNDB6IiBmaWxsPSIjOTk5Ii8+PGNpcmNsZSBjeD0iMTI4IiBjeT0iMTcyIiByPSI2NCIgZmlsbD0iIzk5OSIvPjwvc3ZnPg==',
   };
 
   passwordForm = {
@@ -411,7 +413,7 @@ export class SettingsPage {
     prizeDistribution: 'top3',
   };
 
-  constructor(private toastService: ToastService) {
+  constructor(private toastService: ToastService, private router: Router) {
     addIcons({
       personCircleOutline,
       keyOutline,
@@ -456,8 +458,16 @@ export class SettingsPage {
   }
 
   async logout() {
-    // Implement logout logic
-    window.location.href = '/auth/login';
+    try {
+      // Clear any stored auth data/tokens if needed
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userRole');
+
+      // Navigate to group-admin login
+      this.router.navigate(['/group-admin/login'], { replaceUrl: true });
+    } catch (error) {
+      await this.toastService.showToast('Error during logout', 'error');
+    }
   }
 
   async saveSettings() {

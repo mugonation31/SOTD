@@ -20,6 +20,9 @@ import {
   settingsOutline,
   peopleCircleOutline,
   personOutline,
+  eyeOutline,
+  addCircleOutline,
+  calendarOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -68,8 +71,6 @@ import {
             <ion-label>Groups</ion-label>
           </ion-tab-button>
         </ion-tab-bar>
-
-        <ion-router-outlet></ion-router-outlet>
       </ion-tabs>
     </div>
   `,
@@ -139,10 +140,13 @@ export class GroupAdminLayoutPage {
       settingsOutline,
       peopleCircleOutline,
       personOutline,
+      eyeOutline,
+      addCircleOutline,
+      calendarOutline,
     });
   }
 
   navigateTo(path: string) {
-    this.router.navigate([path]);
+    this.router.navigate([path], { replaceUrl: true });
   }
 }
