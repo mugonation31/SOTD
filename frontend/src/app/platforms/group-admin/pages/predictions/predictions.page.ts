@@ -19,13 +19,29 @@ import {
   IonInput,
   IonSegment,
   IonSegmentButton,
+  IonChip,
+  IonAvatar,
+  IonSearchbar,
+  IonSelect,
+  IonSelectOption,
+  IonIcon,
 } from '@ionic/angular/standalone';
-import { DatePipe, NgIf, NgFor } from '@angular/common';
+import { DatePipe, NgIf, NgFor, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { addIcons } from 'ionicons';
+import {
+  chevronBack,
+  chevronForward,
+  star,
+  checkmarkCircle,
+  closeCircle,
+} from 'ionicons/icons';
 
 interface GameWeek {
   number: number;
-  isSpecial: boolean; // true for Christmas/End of season weeks
+  isSpecial: boolean;
+  specialType?: string;
+  status: 'pending' | 'active' | 'completed';
   deadline: Date;
   matches: Match[];
 }
@@ -38,17 +54,21 @@ interface Match {
   venue: string;
   kickoff: Date;
   capacity?: string;
-  isSelected?: boolean; // For tracking user's 3 selections
+  isSelected?: boolean;
 }
 
-interface PastPrediction {
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
-  venue: string;
-  kickoff: Date;
-  result?: string;
+interface PlayerPrediction {
+  playerName: string;
+  avatar?: string;
+  totalPoints: number;
+  jokerUsed: boolean;
+  predictions: PredictionWithResult[];
+}
+
+interface PredictionWithResult extends Match {
+  points?: number;
+  isCorrectScore?: boolean;
+  isCorrectResult?: boolean;
 }
 
 @Component({
@@ -58,30 +78,38 @@ interface PastPrediction {
       <ion-toolbar>
         <ion-title>Predictions</ion-title>
       </ion-toolbar>
+      <ion-toolbar>
+        <ion-segment [(ngModel)]="selectedTab" (ionChange)="tabChanged()">
+          <ion-segment-button value="my">
+            <ion-label>Make Predictions</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="all">
+            <ion-label>All Predictions</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <ion-segment
-        [(ngModel)]="selectedTab"
-        (ionChange)="segmentChanged($event)"
-      >
-        <ion-segment-button value="make">
-          <ion-label>Make Predictions</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="all">
-          <ion-label>All Predictions</ion-label>
-        </ion-segment-button>
-      </ion-segment>
-
+    <ion-content class="ion-padding">
       <!-- Make Predictions Tab -->
-      <div *ngIf="selectedTab === 'make'">
+      <div *ngIf="selectedTab === 'my'">
         <div class="admin-note">
           As group admin, you can only view other players' predictions after the
           deadline has passed
         </div>
 
         <div class="gameweek-container">
-          <h2>Game Week {{ currentGameWeek.number }}</h2>
+          <div class="gameweek-header">
+            <h2>Game Week {{ currentGameWeek.number }}</h2>
+            <ion-button
+              size="small"
+              fill="outline"
+              class="reset-button"
+              (click)="resetPredictions()"
+            >
+              Reset All
+            </ion-button>
+          </div>
           <p class="deadline">
             Deadline:
             {{ currentGameWeek.deadline | date : 'MMM d, yyyy, h:mm a' }}
@@ -136,14 +164,16 @@ interface PastPrediction {
             </div>
           </div>
 
-          <ion-button
-            expand="full"
-            type="submit"
-            class="submit-button"
-            [disabled]="!canSubmit"
-          >
-            SUBMIT PREDICTIONS
-          </ion-button>
+          <div class="button-container">
+            <ion-button
+              expand="full"
+              type="submit"
+              class="submit-button"
+              [disabled]="!canSubmit"
+            >
+              SUBMIT PREDICTIONS
+            </ion-button>
+          </div>
         </div>
 
         <!-- Past Predictions Section -->
@@ -173,45 +203,150 @@ interface PastPrediction {
       </div>
 
       <!-- All Predictions Tab -->
-      <div *ngIf="selectedTab === 'all'" class="all-predictions">
-        <div class="gameweek-container">
-          <h2>Game Week {{ currentGameWeek }} Predictions</h2>
-
-          <div *ngIf="!hasDeadlinePassed" class="deadline-message">
-            <ion-note>
-              Predictions will be visible after the deadline:
-              {{ currentGameWeek.deadline | date : 'MMM d, yyyy, h:mm a' }}
-            </ion-note>
-          </div>
-
-          <div *ngIf="hasDeadlinePassed" class="predictions-list">
-            <div class="match-row" *ngFor="let match of matchesWithPredictions">
-              <div class="match-info">
-                <div class="venue">{{ match.venue }}</div>
-                <div class="kickoff">
-                  {{ match.kickoff | date : 'EEEE d MMM HH:mm' }}
-                </div>
-              </div>
-
-              <div class="match-header">
-                <span class="team home">{{ match.homeTeam }}</span>
-                <span>vs</span>
-                <span class="team away">{{ match.awayTeam }}</span>
-              </div>
-
-              <div class="predictions-grid">
-                <div
-                  class="prediction-row"
-                  *ngFor="let pred of match.predictions"
-                >
-                  <span class="player-name">{{ pred.playerName }}</span>
-                  <span class="prediction-score">
-                    {{ pred.homeScore }} - {{ pred.awayScore }}
-                  </span>
-                </div>
-              </div>
+      <div *ngIf="selectedTab === 'all'">
+        <!-- Gameweek Navigation -->
+        <div class="gameweek-navigation">
+          <ion-button
+            fill="clear"
+            (click)="previousGameweek()"
+            [disabled]="currentGameweekIndex === 0"
+          >
+            <ion-icon name="chevron-back"></ion-icon>
+          </ion-button>
+          <div class="gameweek-info">
+            <h2>Gameweek {{ selectedGameweek.number }}</h2>
+            <ion-chip [color]="getGameweekStatusColor(selectedGameweek.status)">
+              {{ selectedGameweek.status | titlecase }}
+            </ion-chip>
+            <div *ngIf="selectedGameweek.isSpecial" class="special-indicator">
+              <ion-icon name="star" color="warning"></ion-icon>
+              {{ getSpecialWeekLabel(selectedGameweek.specialType) }}
             </div>
           </div>
+          <ion-button
+            fill="clear"
+            (click)="nextGameweek()"
+            [disabled]="currentGameweekIndex === gameweeks.length - 1"
+          >
+            <ion-icon name="chevron-forward"></ion-icon>
+          </ion-button>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-filter">
+          <ion-searchbar
+            [(ngModel)]="searchTerm"
+            placeholder="Search players..."
+            (ionInput)="filterPredictions()"
+            class="player-search"
+          >
+          </ion-searchbar>
+          <ion-select
+            [(ngModel)]="filterStatus"
+            (ionChange)="filterPredictions()"
+            placeholder="Filter by status"
+            interface="popover"
+          >
+            <ion-select-option value="all">All Predictions</ion-select-option>
+            <ion-select-option value="submitted">Submitted</ion-select-option>
+            <ion-select-option value="pending">Pending</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Players Predictions List -->
+        <div class="players-list">
+          <ion-card
+            *ngFor="let player of filteredPredictions"
+            class="player-card"
+          >
+            <ion-card-header>
+              <div class="player-header">
+                <ion-avatar *ngIf="player.avatar">
+                  <img [src]="player.avatar" alt="avatar" />
+                </ion-avatar>
+                <div class="player-info">
+                  <h3>{{ player.playerName }}</h3>
+                  <p>Total Points: {{ player.totalPoints }}</p>
+                </div>
+                <ion-chip *ngIf="player.jokerUsed" color="warning">
+                  <ion-icon name="star"></ion-icon>
+                  <ion-label>Joker Used</ion-label>
+                </ion-chip>
+              </div>
+            </ion-card-header>
+
+            <ion-card-content>
+              <div
+                class="predictions-grid"
+                [class.special-week]="selectedGameweek.isSpecial"
+              >
+                <div
+                  *ngFor="let pred of player.predictions"
+                  class="prediction-item"
+                >
+                  <!-- Match Info -->
+                  <div class="match-info">
+                    <div class="venue-info">
+                      <span class="venue-name">{{ pred.venue }}</span>
+                      <span class="kickoff">{{
+                        pred.kickoff | date : 'EEE d MMM, HH:mm'
+                      }}</span>
+                    </div>
+                    <div class="teams-score">
+                      <span class="team home">{{ pred.homeTeam }}</span>
+                      <div
+                        class="score"
+                        [class.pending]="!pred.homeScore && !pred.awayScore"
+                      >
+                        {{ pred.homeScore ?? '-' }} -
+                        {{ pred.awayScore ?? '-' }}
+                      </div>
+                      <span class="team away">{{ pred.awayTeam }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Prediction Result -->
+                  <div
+                    class="prediction-result"
+                    *ngIf="selectedGameweek.status === 'completed'"
+                  >
+                    <div
+                      class="points"
+                      [class.high-points]="(pred.points || 0) >= 9"
+                    >
+                      {{ pred.points }} pts
+                    </div>
+                    <div class="accuracy">
+                      <div class="accuracy-item">
+                        <ion-icon
+                          [name]="
+                            pred.isCorrectScore
+                              ? 'checkmark-circle'
+                              : 'close-circle'
+                          "
+                          [color]="pred.isCorrectScore ? 'success' : 'medium'"
+                        >
+                        </ion-icon>
+                        <span>Score</span>
+                      </div>
+                      <div class="accuracy-item">
+                        <ion-icon
+                          [name]="
+                            pred.isCorrectResult
+                              ? 'checkmark-circle'
+                              : 'close-circle'
+                          "
+                          [color]="pred.isCorrectResult ? 'success' : 'medium'"
+                        >
+                        </ion-icon>
+                        <span>Result</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
         </div>
       </div>
     </ion-content>
@@ -314,9 +449,21 @@ interface PastPrediction {
 
       .submit-button {
         --background: #4a90e2;
+        --background-activated: #2171cd;
+        --background-hover: #357abd;
         --border-radius: 4px;
         margin: 20px 0;
         height: 44px;
+        transition: all 0.2s ease;
+
+        &:not([disabled]) {
+          opacity: 1;
+          --background: #2171cd;
+        }
+
+        &[disabled] {
+          opacity: 0.6;
+        }
       }
 
       .admin-note {
@@ -437,6 +584,210 @@ interface PastPrediction {
         text-align: center;
         font-weight: 500;
       }
+
+      .gameweek-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .gameweek-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .special-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #e65100;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .search-filter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .player-search {
+        width: 100%;
+        margin-right: 16px;
+      }
+
+      .players-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .player-card {
+        width: calc(50% - 8px);
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .player-header {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .player-info {
+        display: flex;
+        flex-direction: column;
+        margin-left: 12px;
+      }
+
+      .prediction-item {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .match-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .venue-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .venue-name {
+        font-weight: 600;
+      }
+
+      .kickoff {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .teams-score {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .score {
+        font-size: 14px;
+        font-weight: 500;
+        color: #424242;
+      }
+
+      .pending {
+        color: #666;
+      }
+
+      .accuracy {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .accuracy-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .accuracy-item ion-icon {
+        font-size: 16px;
+      }
+
+      .accuracy-item span {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .points {
+        font-size: 14px;
+        font-weight: 500;
+        color: #4a90e2;
+      }
+
+      .high-points {
+        color: #e65100;
+      }
+
+      .button-container {
+        display: flex;
+        gap: 16px;
+        margin: 20px 0;
+      }
+
+      .submit-button,
+      .reset-button {
+        flex: 1;
+        height: 44px;
+      }
+
+      .submit-button {
+        --background: #4a90e2;
+        --background-activated: #2171cd;
+        --background-hover: #357abd;
+        --border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:not([disabled]) {
+          opacity: 1;
+          --background: #2171cd;
+        }
+
+        &[disabled] {
+          opacity: 0.6;
+        }
+      }
+
+      .reset-button {
+        --border-radius: 4px;
+        --color: #4a90e2;
+        --color-activated: #2171cd;
+        --color-hover: #357abd;
+        --border-color: #4a90e2;
+        --border-color-activated: #2171cd;
+        --border-color-hover: #357abd;
+      }
+
+      .gameweek-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+        position: relative;
+      }
+
+      .reset-button {
+        --padding-start: 12px;
+        --padding-end: 12px;
+        --color: #666666;
+        --color-activated: #4a4a4a;
+        --color-hover: #4a4a4a;
+        --border-color: #666666;
+        --border-color-activated: #4a4a4a;
+        --border-color-hover: #4a4a4a;
+        font-size: 12px;
+        height: 28px;
+        position: absolute;
+        right: 0;
+      }
     `,
   ],
   standalone: true,
@@ -452,208 +803,389 @@ interface PastPrediction {
     IonSegmentButton,
     IonLabel,
     IonNote,
+    IonCard,
+    IonCardHeader,
+    IonCardContent,
+    IonIcon,
     DatePipe,
+    TitleCasePipe,
     NgIf,
     NgFor,
     FormsModule,
+    IonChip,
+    IonAvatar,
+    IonSearchbar,
+    IonSelect,
+    IonSelectOption,
   ],
 })
 export class PredictionsPage implements OnInit {
-  selectedTab = 'make';
-  hasDeadlinePassed = false;
-  currentGameWeek: GameWeek = {
-    number: 24,
-    isSpecial: false,
-    deadline: new Date('2024-01-20T12:30:00'),
-    matches: [
-      {
-        homeTeam: 'Arsenal',
-        awayTeam: 'Crystal Palace',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Emirates Stadium, London',
-        kickoff: new Date('2024-01-20T12:30:00'),
-        capacity: '60,704',
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Brentford',
-        awayTeam: 'Nottingham Forest',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Gtech Community Stadium',
-        kickoff: new Date('2024-01-20T15:00:00'),
-        capacity: '17,250',
-        isSelected: false,
-      },
-      // Add all 10 matches for the game week
-      {
-        homeTeam: 'Sheffield United',
-        awayTeam: 'West Ham',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Bramall Lane',
-        kickoff: new Date('2024-01-20T15:00:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Brighton',
-        awayTeam: 'Wolves',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Amex Stadium',
-        kickoff: new Date('2024-01-20T15:00:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Man United',
-        awayTeam: 'Tottenham',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Old Trafford',
-        kickoff: new Date('2024-01-20T17:30:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Newcastle',
-        awayTeam: 'Man City',
-        homeScore: null,
-        awayScore: null,
-        venue: "St James' Park",
-        kickoff: new Date('2024-01-21T17:30:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Bournemouth',
-        awayTeam: 'Liverpool',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Vitality Stadium',
-        kickoff: new Date('2024-01-21T16:30:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Chelsea',
-        awayTeam: 'Fulham',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Stamford Bridge',
-        kickoff: new Date('2024-01-21T14:00:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Aston Villa',
-        awayTeam: 'Everton',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Villa Park',
-        kickoff: new Date('2024-01-21T14:00:00'),
-        isSelected: false,
-      },
-      {
-        homeTeam: 'Burnley',
-        awayTeam: 'Luton Town',
-        homeScore: null,
-        awayScore: null,
-        venue: 'Turf Moor',
-        kickoff: new Date('2024-01-21T14:00:00'),
-        isSelected: false,
-      },
-    ],
-  };
-
-  pastPredictions: PastPrediction[] = [
-    {
-      homeTeam: 'Man United',
-      awayTeam: 'Tottenham',
-      homeScore: 2,
-      awayScore: 1,
-      venue: 'Old Trafford, Manchester',
-      kickoff: new Date('2024-01-14T16:30:00'),
-      result: 'Correct Score',
-    },
-  ];
-
-  matchesWithPredictions = [
-    {
-      homeTeam: 'Arsenal',
-      awayTeam: 'Chelsea',
-      venue: 'Emirates Stadium, London',
-      kickoff: new Date('2024-01-20T17:30:00'),
-      predictions: [
-        { playerName: 'John (Admin)', homeScore: 2, awayScore: 1 },
-        { playerName: 'Sarah', homeScore: 1, awayScore: 1 },
-        { playerName: 'Mike', homeScore: 3, awayScore: 0 },
-      ],
-    },
-    // ... more matches
-  ];
-
+  selectedTab = 'my';
+  searchTerm = '';
+  filterStatus = 'all';
+  currentGameweekIndex = 0;
+  selectedGameweek: GameWeek;
+  gameweeks: GameWeek[] = [];
+  filteredPredictions: PlayerPrediction[] = [];
+  allPredictions: PlayerPrediction[] = [];
   showTooManyPredictionsWarning = false;
+  currentGameWeek: GameWeek;
+  pastPredictions: Match[] = [];
+  canSubmit = false;
 
-  segmentChanged(event: any) {
-    this.selectedTab = event.detail.value;
+  constructor() {
+    addIcons({
+      chevronBack,
+      chevronForward,
+      star,
+      checkmarkCircle,
+      closeCircle,
+    });
+    this.gameweeks = this.getSampleGameweeks();
+    this.selectedGameweek = this.gameweeks[0];
+    this.allPredictions = this.getSamplePredictions();
+    this.filteredPredictions = [...this.allPredictions];
+    this.currentGameWeek = this.getSampleCurrentGameWeek();
   }
 
   ngOnInit() {
-    // Check if deadline has passed
-    this.hasDeadlinePassed = new Date() > this.currentGameWeek.deadline;
+    this.loadGameweekPredictions();
   }
 
-  get completedPredictions(): number {
-    return this.currentGameWeek.matches.filter(
-      (match) =>
-        match.homeScore !== null &&
-        match.homeScore !== undefined &&
-        match.awayScore !== null &&
-        match.awayScore !== undefined &&
-        match.homeScore.toString().trim() !== '' &&
-        match.awayScore.toString().trim() !== ''
-    ).length;
-  }
-
-  get canSubmit(): boolean {
-    if (this.currentGameWeek.isSpecial) {
-      // Special weeks require all matches to be predicted
-      return this.currentGameWeek.matches.every(
-        (match) =>
-          match.homeScore !== null &&
-          match.homeScore !== undefined &&
-          match.awayScore !== null &&
-          match.awayScore !== undefined &&
-          match.homeScore.toString().trim() !== '' &&
-          match.awayScore.toString().trim() !== ''
-      );
-    }
-    // Regular weeks require exactly 3 complete predictions
-    return this.completedPredictions === 3;
-  }
-
-  submitPredictions() {
-    if (!this.canSubmit) {
-      return;
-    }
-
-    const predictions = this.currentGameWeek.matches.filter(
-      (match) =>
-        match.homeScore !== null &&
-        match.homeScore !== undefined &&
-        match.awayScore !== null &&
-        match.awayScore !== undefined &&
-        match.homeScore.toString().trim() !== '' &&
-        match.awayScore.toString().trim() !== ''
-    );
-
-    if (this.currentGameWeek.isSpecial || predictions.length === 3) {
-      console.log('Submitting predictions:', predictions);
-      // Add API call here
+  tabChanged() {
+    if (this.selectedTab === 'all') {
+      this.loadGameweekPredictions();
     }
   }
 
   onScoreChange(match: Match) {
     if (!this.currentGameWeek.isSpecial) {
-      // Show warning if more than 3 predictions
-      this.showTooManyPredictionsWarning = this.completedPredictions > 3;
+      // Count predictions where at least one score is entered
+      const predictionsStarted = this.currentGameWeek.matches.filter(
+        (m) =>
+          (m.homeScore !== null && String(m.homeScore).trim() !== '') ||
+          (m.awayScore !== null && String(m.awayScore).trim() !== '')
+      ).length;
+
+      // Show warning if user starts entering more than 3 predictions
+      this.showTooManyPredictionsWarning = predictionsStarted > 3;
     }
+
+    // Validate scores are numbers
+    if (match.homeScore !== null) {
+      const homeScore = Number(match.homeScore);
+      if (
+        isNaN(homeScore) ||
+        homeScore < 0 ||
+        String(match.homeScore).trim() === ''
+      ) {
+        match.homeScore = null;
+      }
+    }
+    if (match.awayScore !== null) {
+      const awayScore = Number(match.awayScore);
+      if (
+        isNaN(awayScore) ||
+        awayScore < 0 ||
+        String(match.awayScore).trim() === ''
+      ) {
+        match.awayScore = null;
+      }
+    }
+
+    this.validateCanSubmit();
+  }
+
+  validateCanSubmit() {
+    // Count matches where both home and away scores are entered
+    const completePredictions = this.currentGameWeek.matches.filter((m) => {
+      // Consider a prediction complete if both scores are entered and are numbers
+      const hasHomeScore =
+        m.homeScore !== null &&
+        m.homeScore !== undefined &&
+        String(m.homeScore).trim() !== '';
+      const hasAwayScore =
+        m.awayScore !== null &&
+        m.awayScore !== undefined &&
+        String(m.awayScore).trim() !== '';
+      return hasHomeScore && hasAwayScore;
+    }).length;
+
+    if (this.currentGameWeek.isSpecial) {
+      // For special weeks, all 10 matches must be predicted
+      this.canSubmit = completePredictions === 10;
+    } else {
+      // For regular weeks, exactly 3 matches must be predicted
+      this.canSubmit = completePredictions === 3;
+    }
+  }
+
+  private getSampleCurrentGameWeek(): GameWeek {
+    return {
+      number: 15,
+      isSpecial: false,
+      status: 'active',
+      deadline: new Date('2024-01-20T11:30:00'),
+      matches: [
+        {
+          homeTeam: 'Manchester United',
+          awayTeam: 'Liverpool',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Old Trafford',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Arsenal',
+          awayTeam: 'Chelsea',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Emirates Stadium',
+          kickoff: new Date('2024-01-20T17:30:00'),
+        },
+        {
+          homeTeam: 'Manchester City',
+          awayTeam: 'Tottenham',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Etihad Stadium',
+          kickoff: new Date('2024-01-20T20:00:00'),
+        },
+        {
+          homeTeam: 'Newcastle',
+          awayTeam: 'Aston Villa',
+          homeScore: null,
+          awayScore: null,
+          venue: 'St. James Park',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Brighton',
+          awayTeam: 'Crystal Palace',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Amex Stadium',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Brentford',
+          awayTeam: 'Nottingham Forest',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Gtech Community Stadium',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Sheffield United',
+          awayTeam: 'West Ham',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Bramall Lane',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Bournemouth',
+          awayTeam: 'Luton Town',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Vitality Stadium',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Wolves',
+          awayTeam: 'Everton',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Molineux',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+        {
+          homeTeam: 'Burnley',
+          awayTeam: 'Fulham',
+          homeScore: null,
+          awayScore: null,
+          venue: 'Turf Moor',
+          kickoff: new Date('2024-01-20T15:00:00'),
+        },
+      ],
+    };
+  }
+
+  previousGameweek() {
+    if (this.currentGameweekIndex > 0) {
+      this.currentGameweekIndex--;
+      this.selectedGameweek = this.gameweeks[this.currentGameweekIndex];
+      this.loadGameweekPredictions();
+    }
+  }
+
+  nextGameweek() {
+    if (this.currentGameweekIndex < this.gameweeks.length - 1) {
+      this.currentGameweekIndex++;
+      this.selectedGameweek = this.gameweeks[this.currentGameweekIndex];
+      this.loadGameweekPredictions();
+    }
+  }
+
+  getGameweekStatusColor(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'completed':
+        return 'primary';
+      default:
+        return 'medium';
+    }
+  }
+
+  getSpecialWeekLabel(type: string | undefined): string {
+    if (!type) return 'Special Week';
+
+    switch (type) {
+      case 'christmas':
+        return 'Christmas Special';
+      case 'endOfSeason':
+        return 'End of Season Special';
+      default:
+        return 'Special Week';
+    }
+  }
+
+  filterPredictions() {
+    this.filteredPredictions = this.allPredictions.filter((player) => {
+      const nameMatch = player.playerName
+        .toLowerCase()
+        .includes(this.searchTerm.toLowerCase());
+      const statusMatch =
+        this.filterStatus === 'all' ||
+        (this.filterStatus === 'submitted' && player.predictions.length > 0) ||
+        (this.filterStatus === 'pending' && player.predictions.length === 0);
+      return nameMatch && statusMatch;
+    });
+  }
+
+  private loadGameweekPredictions() {
+    // Replace with actual API call to load predictions for the selected gameweek
+    this.allPredictions = this.getSamplePredictions();
+    this.filterPredictions();
+  }
+
+  private getSampleGameweeks(): GameWeek[] {
+    return [
+      {
+        number: 15,
+        isSpecial: false,
+        status: 'active',
+        deadline: new Date('2024-01-20T11:30:00'),
+        matches: [],
+      },
+      {
+        number: 16,
+        isSpecial: true,
+        specialType: 'christmas',
+        status: 'pending',
+        deadline: new Date('2024-01-27T11:30:00'),
+        matches: [],
+      },
+    ];
+  }
+
+  private getSamplePredictions(): PlayerPrediction[] {
+    return [
+      {
+        playerName: 'John Smith',
+        avatar: 'assets/avatars/john.jpg',
+        totalPoints: 156,
+        jokerUsed: true,
+        predictions: [
+          {
+            homeTeam: 'Manchester United',
+            awayTeam: 'Liverpool',
+            homeScore: 2,
+            awayScore: 1,
+            venue: 'Old Trafford',
+            kickoff: new Date('2024-01-20T15:00:00'),
+            points: 9,
+            isCorrectScore: true,
+            isCorrectResult: true,
+          },
+          {
+            homeTeam: 'Arsenal',
+            awayTeam: 'Chelsea',
+            homeScore: 1,
+            awayScore: 1,
+            venue: 'Emirates Stadium',
+            kickoff: new Date('2024-01-20T17:30:00'),
+            points: 6,
+            isCorrectScore: false,
+            isCorrectResult: true,
+          },
+          {
+            homeTeam: 'Manchester City',
+            awayTeam: 'Tottenham',
+            homeScore: 3,
+            awayScore: 0,
+            venue: 'Etihad Stadium',
+            kickoff: new Date('2024-01-20T20:00:00'),
+            points: 0,
+            isCorrectScore: false,
+            isCorrectResult: false,
+          },
+        ],
+      },
+      {
+        playerName: 'Sarah Johnson',
+        avatar: 'assets/avatars/sarah.jpg',
+        totalPoints: 178,
+        jokerUsed: false,
+        predictions: [
+          {
+            homeTeam: 'Manchester United',
+            awayTeam: 'Liverpool',
+            homeScore: 1,
+            awayScore: 2,
+            venue: 'Old Trafford',
+            kickoff: new Date('2024-01-20T15:00:00'),
+            points: 6,
+            isCorrectScore: false,
+            isCorrectResult: true,
+          },
+          {
+            homeTeam: 'Arsenal',
+            awayTeam: 'Chelsea',
+            homeScore: 2,
+            awayScore: 2,
+            venue: 'Emirates Stadium',
+            kickoff: new Date('2024-01-20T17:30:00'),
+            points: 9,
+            isCorrectScore: true,
+            isCorrectResult: true,
+          },
+          {
+            homeTeam: 'Manchester City',
+            awayTeam: 'Tottenham',
+            homeScore: 4,
+            awayScore: 1,
+            venue: 'Etihad Stadium',
+            kickoff: new Date('2024-01-20T20:00:00'),
+            points: 6,
+            isCorrectScore: false,
+            isCorrectResult: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  resetPredictions() {
+    // Reset all predictions to null
+    this.currentGameWeek.matches.forEach((match) => {
+      match.homeScore = null;
+      match.awayScore = null;
+    });
+    this.showTooManyPredictionsWarning = false;
+    this.validateCanSubmit();
   }
 }
