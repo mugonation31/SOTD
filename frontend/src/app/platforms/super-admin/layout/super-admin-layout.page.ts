@@ -9,7 +9,6 @@ import {
   IonLabel,
   IonTitle,
   IonRouterOutlet,
-  IonFooter,
   IonContent,
 } from '@ionic/angular/standalone';
 import { RouterModule } from '@angular/router';
@@ -49,36 +48,6 @@ import {
           <div class="main-content">
             <ion-router-outlet></ion-router-outlet>
           </div>
-
-          <ion-footer class="footer-container">
-            <ion-toolbar>
-              <div class="footer-content">
-                <nav class="footer-nav">
-                  <a href="/about">About</a>
-                  <span>•</span>
-                  <a href="/contact">Contact</a>
-                  <span>•</span>
-                  <a href="/help">Help</a>
-                  <span>•</span>
-                  <a href="/privacy">Privacy</a>
-                </nav>
-                <div class="social">
-                  <a href="https://twitter.com/sotd" target="_blank">
-                    <ion-icon name="logo-twitter"></ion-icon>
-                  </a>
-                  <a href="https://facebook.com/sotd" target="_blank">
-                    <ion-icon name="logo-facebook"></ion-icon>
-                  </a>
-                  <a href="https://instagram.com/sotd" target="_blank">
-                    <ion-icon name="logo-instagram"></ion-icon>
-                  </a>
-                </div>
-                <div class="copyright">
-                  © {{ getCurrentYear() }} Scores On The Doors
-                </div>
-              </div>
-            </ion-toolbar>
-          </ion-footer>
         </div>
       </ion-content>
     </div>
@@ -104,12 +73,6 @@ import {
         padding: 20px;
         max-width: 1200px;
         margin: 0 auto;
-        width: 100%;
-      }
-
-      .footer-container {
-        position: relative !important;
-        margin-top: auto;
         width: 100%;
       }
 
@@ -145,50 +108,6 @@ import {
       .profile-icon {
         font-size: 20px;
       }
-
-      .footer-content {
-        text-align: center;
-        padding: 1rem;
-        max-width: 1200px;
-        margin: 0 auto;
-        width: 100%;
-      }
-
-      .footer-nav {
-        margin-bottom: 1rem;
-      }
-
-      .footer-nav a {
-        color: var(--ion-color-medium);
-        text-decoration: none;
-        padding: 0 0.5rem;
-        font-size: 0.9rem;
-      }
-
-      .footer-nav span {
-        color: var(--ion-color-medium);
-        font-size: 0.8rem;
-      }
-
-      .social {
-        margin: 0.5rem 0;
-      }
-
-      .social a {
-        color: var(--ion-color-medium);
-        margin: 0 0.5rem;
-        font-size: 1.2rem;
-      }
-
-      .copyright {
-        color: var(--ion-color-medium);
-        font-size: 0.8rem;
-      }
-
-      .footer-nav a:hover,
-      .social a:hover {
-        color: var(--ion-color-primary);
-      }
     `,
   ],
   standalone: true,
@@ -202,7 +121,6 @@ import {
     IonLabel,
     IonTitle,
     IonRouterOutlet,
-    IonFooter,
     IonContent,
     RouterModule,
   ],
