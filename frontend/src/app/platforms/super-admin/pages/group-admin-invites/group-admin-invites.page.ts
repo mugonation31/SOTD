@@ -22,6 +22,13 @@ import {
   IonProgressBar,
   IonRefresher,
   IonRefresherContent,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonSearchbar,
+  IonSelect,
+  IonSelectOption,
+  ModalController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -34,12 +41,25 @@ import {
   checkmarkCircleOutline,
   alertCircleOutline,
   closeCircleOutline,
+  statsChartOutline,
+  filterOutline,
+  peopleOutline,
 } from 'ionicons/icons';
 import { GroupAdminInvitation } from '@core/interfaces/group-admin.interface';
 import { TokenService } from '@core/services/token.service';
 import { ToastService } from '@core/services/toast.service';
 import { InvitationStorageService } from '@core/services/invitation-storage.service';
 import { interval, Subscription } from 'rxjs';
+import { BulkInviteModalComponent } from './bulk-invite-modal/bulk-invite-modal.component';
+
+interface InvitationStats {
+  total: number;
+  pending: number;
+  accepted: number;
+  expired: number;
+  revoked: number;
+  acceptanceRate: number;
+}
 
 @Component({
   selector: 'app-group-admin-invites',
@@ -54,6 +74,111 @@ import { interval, Subscription } from 'rxjs';
       <ion-refresher slot="fixed" (ionRefresh)="refreshInvitations($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
+
+      <!-- Statistics Cards -->
+      <ion-grid>
+        <ion-row>
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-content>
+                <div class="stat-header">
+                  <ion-icon name="people-outline" color="primary"></ion-icon>
+                  <h3>Total Invitations</h3>
+                </div>
+                <div class="stat-value">{{ stats.total }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-content>
+                <div class="stat-header">
+                  <ion-icon name="time-outline" color="warning"></ion-icon>
+                  <h3>Pending</h3>
+                </div>
+                <div class="stat-value">{{ stats.pending }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-content>
+                <div class="stat-header">
+                  <ion-icon
+                    name="checkmark-circle-outline"
+                    color="success"
+                  ></ion-icon>
+                  <h3>Accepted</h3>
+                </div>
+                <div class="stat-value">{{ stats.accepted }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-content>
+                <div class="stat-header">
+                  <ion-icon
+                    name="stats-chart-outline"
+                    color="tertiary"
+                  ></ion-icon>
+                  <h3>Acceptance Rate</h3>
+                </div>
+                <div class="stat-value">{{ stats.acceptanceRate }}%</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+
+      <!-- Filters and Search -->
+      <ion-card>
+        <ion-card-content>
+          <ion-grid>
+            <ion-row>
+              <ion-col size="12" sizeMd="4">
+                <ion-searchbar
+                  [(ngModel)]="searchTerm"
+                  (ionInput)="filterInvitations()"
+                  placeholder="Search by email"
+                ></ion-searchbar>
+              </ion-col>
+              <ion-col size="12" sizeMd="4">
+                <ion-select
+                  [(ngModel)]="statusFilter"
+                  (ionChange)="filterInvitations()"
+                  placeholder="Filter by status"
+                >
+                  <ion-select-option value="all"
+                    >All Statuses</ion-select-option
+                  >
+                  <ion-select-option value="pending">Pending</ion-select-option>
+                  <ion-select-option value="accepted"
+                    >Accepted</ion-select-option
+                  >
+                  <ion-select-option value="expired">Expired</ion-select-option>
+                  <ion-select-option value="revoked">Revoked</ion-select-option>
+                </ion-select>
+              </ion-col>
+              <ion-col size="12" sizeMd="4">
+                <ion-select
+                  [(ngModel)]="sortBy"
+                  (ionChange)="filterInvitations()"
+                  placeholder="Sort by"
+                >
+                  <ion-select-option value="newest"
+                    >Newest First</ion-select-option
+                  >
+                  <ion-select-option value="oldest"
+                    >Oldest First</ion-select-option
+                  >
+                  <ion-select-option value="email">Email</ion-select-option>
+                </ion-select>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </ion-card-content>
+      </ion-card>
 
       <!-- Generate New Invitation Card -->
       <ion-card>
@@ -81,6 +206,19 @@ import { interval, Subscription } from 'rxjs';
               <ion-icon name="person-add-outline" slot="start"></ion-icon>
               {{ isLoading ? 'Generating...' : 'Generate Invitation' }}
             </ion-button>
+            <div class="bulk-invite-section">
+              <ion-button
+                fill="outline"
+                expand="block"
+                (click)="openBulkInviteModal()"
+              >
+                <ion-icon name="people-outline" slot="start"></ion-icon>
+                Bulk Invite
+              </ion-button>
+              <p class="helper-text">
+                Upload CSV file with email addresses or paste multiple emails
+              </p>
+            </div>
           </div>
         </ion-card-content>
       </ion-card>
@@ -93,7 +231,7 @@ import { interval, Subscription } from 'rxjs';
         <ion-card-content>
           <ion-list>
             <ion-item
-              *ngFor="let invite of invitations"
+              *ngFor="let invite of filteredInvitations"
               class="invitation-item"
             >
               <div class="invitation-content">
@@ -193,19 +331,38 @@ import { interval, Subscription } from 'rxjs';
     IonProgressBar,
     IonRefresher,
     IonRefresherContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonSearchbar,
+    IonSelect,
+    IonSelectOption,
   ],
 })
 export class GroupAdminInvitesPage implements OnInit, OnDestroy {
   newInviteEmail: string = '';
   invitations: GroupAdminInvitation[] = [];
+  filteredInvitations: GroupAdminInvitation[] = [];
   isLoading = false;
+  searchTerm: string = '';
+  statusFilter: string = 'all';
+  sortBy: string = 'newest';
+  stats: InvitationStats = {
+    total: 0,
+    pending: 0,
+    accepted: 0,
+    expired: 0,
+    revoked: 0,
+    acceptanceRate: 0,
+  };
 
   private refreshInterval?: Subscription;
 
   constructor(
     private tokenService: TokenService,
     private toastService: ToastService,
-    private invitationStorage: InvitationStorageService
+    private invitationStorage: InvitationStorageService,
+    private modalCtrl: ModalController
   ) {
     addIcons({
       copyOutline,
@@ -217,6 +374,9 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
       checkmarkCircleOutline,
       alertCircleOutline,
       closeCircleOutline,
+      statsChartOutline,
+      filterOutline,
+      peopleOutline,
     });
   }
 
@@ -301,6 +461,8 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
     try {
       this.invitations = this.invitationStorage.getInvitations();
       this.cleanupExpiredInvitations();
+      this.updateStats();
+      this.filterInvitations();
     } catch (error) {
       this.toastService.showToast('Error loading invitations', 'error');
     }
@@ -359,14 +521,16 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
         id: Date.now().toString(),
         email: this.newInviteEmail,
         token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         status: 'pending',
         createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
         reminderCount: 0,
       };
 
       this.invitations.push(invitation);
       this.saveInvitations();
+      this.updateStats();
+      this.filterInvitations();
       this.newInviteEmail = '';
 
       await this.toastService.showToast(
@@ -474,6 +638,109 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
 
     if (hasChanges) {
       this.saveInvitations();
+    }
+  }
+
+  private updateStats() {
+    this.stats = {
+      total: this.invitations.length,
+      pending: this.invitations.filter((i) => i.status === 'pending').length,
+      accepted: this.invitations.filter((i) => i.status === 'accepted').length,
+      expired: this.invitations.filter((i) => i.status === 'expired').length,
+      revoked: this.invitations.filter((i) => i.status === 'revoked').length,
+      acceptanceRate: this.calculateAcceptanceRate(),
+    };
+  }
+
+  private calculateAcceptanceRate(): number {
+    const accepted = this.invitations.filter(
+      (i) => i.status === 'accepted'
+    ).length;
+    const total = this.invitations.filter((i) => i.status !== 'pending').length;
+    return total === 0 ? 0 : Math.round((accepted / total) * 100);
+  }
+
+  filterInvitations() {
+    let filtered = [...this.invitations];
+
+    // Apply search filter
+    if (this.searchTerm) {
+      const search = this.searchTerm.toLowerCase();
+      filtered = filtered.filter((invite) =>
+        invite.email.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply status filter
+    if (this.statusFilter !== 'all') {
+      filtered = filtered.filter(
+        (invite) => invite.status === this.statusFilter
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (this.sortBy) {
+        case 'newest':
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        case 'oldest':
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        case 'email':
+          return a.email.localeCompare(b.email);
+        default:
+          return 0;
+      }
+    });
+
+    this.filteredInvitations = filtered;
+  }
+
+  async openBulkInviteModal() {
+    const modal = await this.modalCtrl.create({
+      component: BulkInviteModalComponent,
+    });
+
+    await modal.present();
+
+    const { data: emails } = await modal.onWillDismiss();
+    if (emails && Array.isArray(emails)) {
+      this.isLoading = true;
+      try {
+        for (const email of emails) {
+          const token = this.tokenService.generateInvitationToken(email);
+          const invitation: GroupAdminInvitation = {
+            id: Date.now().toString(),
+            email,
+            token,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            status: 'pending',
+            createdAt: new Date(),
+            reminderCount: 0,
+          };
+          this.invitations.push(invitation);
+        }
+
+        this.saveInvitations();
+        this.updateStats();
+        this.filterInvitations();
+
+        await this.toastService.showToast(
+          `Successfully generated ${emails.length} invitations`,
+          'success'
+        );
+      } catch (error) {
+        console.error('Error generating bulk invitations:', error);
+        await this.toastService.showToast(
+          'Error generating bulk invitations',
+          'error'
+        );
+      } finally {
+        this.isLoading = false;
+      }
     }
   }
 }
