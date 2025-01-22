@@ -19,6 +19,7 @@ import {
   IonAvatar,
   IonSegment,
   IonSegmentButton,
+  IonNote,
 } from '@ionic/angular/standalone';
 import { NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -34,7 +35,6 @@ import {
   settingsOutline,
   peopleOutline,
   footballOutline,
-  walletOutline,
   cameraOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
@@ -211,25 +211,29 @@ import { Router } from '@angular/router';
           </ion-card-header>
           <ion-card-content>
             <ion-item>
-              <ion-label>Auto-approve Members</ion-label>
-              <ion-toggle [(ngModel)]="groupSettings.autoApprove"></ion-toggle>
+              <ion-label>Group Visibility</ion-label>
+              <ion-select [(ngModel)]="groupSettings.visibility">
+                <ion-select-option value="public"
+                  >Public (Searchable)</ion-select-option
+                >
+                <ion-select-option value="private"
+                  >Private (Code Only)</ion-select-option
+                >
+              </ion-select>
             </ion-item>
 
             <ion-item>
-              <ion-label>Allow Member Invites</ion-label>
+              <ion-label>Show Leaderboard</ion-label>
               <ion-toggle
-                [(ngModel)]="groupSettings.allowMemberInvites"
+                [(ngModel)]="groupSettings.showLeaderboard"
               ></ion-toggle>
             </ion-item>
 
             <ion-item>
-              <ion-label>Points System</ion-label>
-              <ion-select [(ngModel)]="groupSettings.pointsSystem">
-                <ion-select-option value="standard"
-                  >Standard (3-4-6)</ion-select-option
-                >
-                <ion-select-option value="custom">Custom</ion-select-option>
-              </ion-select>
+              <ion-label>Enable Group Chat</ion-label>
+              <ion-toggle
+                [(ngModel)]="groupSettings.enableGroupChat"
+              ></ion-toggle>
             </ion-item>
           </ion-card-content>
         </ion-card>
@@ -244,71 +248,73 @@ import { Router } from '@angular/router';
           </ion-card-header>
           <ion-card-content>
             <ion-item>
-              <ion-label>Default Deadline</ion-label>
-              <ion-select [(ngModel)]="groupSettings.defaultDeadline">
-                <ion-select-option value="1">1 hour before</ion-select-option>
-                <ion-select-option value="2">2 hours before</ion-select-option>
-                <ion-select-option value="3">3 hours before</ion-select-option>
+              <ion-label>Points Distribution</ion-label>
+              <ion-select
+                [(ngModel)]="groupSettings.pointsSystem"
+                (ionChange)="onPointsSystemChange()"
+              >
+                <ion-select-option value="standard"
+                  >Standard (60-30-10)</ion-select-option
+                >
+                <ion-select-option value="custom"
+                  >Custom Split</ion-select-option
+                >
               </ion-select>
             </ion-item>
 
-            <ion-item>
-              <ion-label>Allow Late Submissions</ion-label>
-              <ion-toggle
-                [(ngModel)]="groupSettings.allowLateSubmissions"
-              ></ion-toggle>
-            </ion-item>
+            <div
+              *ngIf="groupSettings.pointsSystem === 'custom'"
+              class="custom-points"
+            >
+              <ion-item>
+                <ion-label position="stacked">Correct Score (%)</ion-label>
+                <ion-input
+                  type="number"
+                  [(ngModel)]="groupSettings.customPoints.correctScore"
+                  min="0"
+                  max="100"
+                  (ionChange)="validatePointsTotal()"
+                ></ion-input>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="stacked">Correct Result (%)</ion-label>
+                <ion-input
+                  type="number"
+                  [(ngModel)]="groupSettings.customPoints.correctResult"
+                  min="0"
+                  max="100"
+                  (ionChange)="validatePointsTotal()"
+                ></ion-input>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="stacked">Participation (%)</ion-label>
+                <ion-input
+                  type="number"
+                  [(ngModel)]="groupSettings.customPoints.participation"
+                  min="0"
+                  max="100"
+                  (ionChange)="validatePointsTotal()"
+                ></ion-input>
+              </ion-item>
+
+              <div class="points-total">
+                Total: {{ calculatePointsTotal() }}%
+                <span *ngIf="calculatePointsTotal() !== 100" class="error-text">
+                  (Must equal 100%)
+                </span>
+              </div>
+            </div>
 
             <ion-item>
-              <ion-label>Joker Rules</ion-label>
+              <ion-label>Joker Usage</ion-label>
               <ion-select [(ngModel)]="groupSettings.jokerRules">
-                <ion-select-option value="none">Disabled</ion-select-option>
                 <ion-select-option value="once"
                   >Once per season</ion-select-option
                 >
-                <ion-select-option value="multiple"
-                  >Multiple times</ion-select-option
-                >
-              </ion-select>
-            </ion-item>
-          </ion-card-content>
-        </ion-card>
-
-        <!-- Payment Settings -->
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>
-              <ion-icon name="wallet-outline"></ion-icon>
-              Payment Settings
-            </ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-item>
-              <ion-label>Entry Fee</ion-label>
-              <ion-input
-                type="number"
-                [(ngModel)]="groupSettings.entryFee"
-                placeholder="£0"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item>
-              <ion-label>Payment Due Date</ion-label>
-              <ion-input
-                type="date"
-                [(ngModel)]="groupSettings.paymentDueDate"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item>
-              <ion-label>Prize Distribution</ion-label>
-              <ion-select [(ngModel)]="groupSettings.prizeDistribution">
-                <ion-select-option value="winner"
-                  >Winner Takes All</ion-select-option
-                >
-                <ion-select-option value="top3">Top 3 Places</ion-select-option>
-                <ion-select-option value="custom"
-                  >Custom Split</ion-select-option
+                <ion-select-option value="twice"
+                  >Twice per season</ion-select-option
                 >
               </ion-select>
             </ion-item>
@@ -362,7 +368,11 @@ import { Router } from '@angular/router';
           </ion-card-content>
         </ion-card>
 
-        <ion-button expand="block" (click)="saveSettings()">
+        <ion-button
+          expand="block"
+          (click)="saveSettings()"
+          class="ion-margin-top"
+        >
           Save Settings
         </ion-button>
       </div>
@@ -476,6 +486,24 @@ import { Router } from '@angular/router';
           padding: 12px;
         }
       }
+
+      .custom-points {
+        margin-top: 16px;
+        padding: 16px;
+        background: var(--ion-color-light);
+        border-radius: 8px;
+      }
+
+      .points-total {
+        margin-top: 12px;
+        font-weight: 500;
+        color: var(--ion-color-dark);
+      }
+
+      .error-text {
+        color: var(--ion-color-danger);
+        font-size: 14px;
+      }
     `,
   ],
   standalone: true,
@@ -501,6 +529,7 @@ import { Router } from '@angular/router';
     IonSegmentButton,
     NgIf,
     FormsModule,
+    IonNote,
   ],
 })
 export class SettingsPage {
@@ -521,15 +550,16 @@ export class SettingsPage {
   };
 
   groupSettings = {
-    autoApprove: false,
-    allowMemberInvites: true,
+    visibility: 'private',
+    showLeaderboard: true,
+    enableGroupChat: true,
     pointsSystem: 'standard',
-    defaultDeadline: '2',
-    allowLateSubmissions: false,
     jokerRules: 'once',
-    entryFee: 20,
-    paymentDueDate: '',
-    prizeDistribution: 'top3',
+    customPoints: {
+      correctScore: 60,
+      correctResult: 30,
+      participation: 10,
+    },
     notificationPreferences: {
       emailNotifications: true,
       predictionReminders: true,
@@ -550,7 +580,6 @@ export class SettingsPage {
       settingsOutline,
       peopleOutline,
       footballOutline,
-      walletOutline,
       cameraOutline,
     });
   }
@@ -640,7 +669,41 @@ export class SettingsPage {
     }
   }
 
+  onPointsSystemChange() {
+    if (this.groupSettings.pointsSystem === 'standard') {
+      this.groupSettings.customPoints = {
+        correctScore: 60,
+        correctResult: 30,
+        participation: 10,
+      };
+    }
+  }
+
+  calculatePointsTotal(): number {
+    const { correctScore, correctResult, participation } =
+      this.groupSettings.customPoints;
+    return correctScore + correctResult + participation;
+  }
+
+  validatePointsTotal() {
+    const total = this.calculatePointsTotal();
+    if (total !== 100) {
+      this.toastService.showToast('Points total must equal 100%', 'warning');
+    }
+  }
+
   async saveSettings() {
+    if (
+      this.groupSettings.pointsSystem === 'custom' &&
+      this.calculatePointsTotal() !== 100
+    ) {
+      await this.toastService.showToast(
+        'Points total must equal 100% before saving',
+        'error'
+      );
+      return;
+    }
+
     try {
       // TODO: Implement settings save
       await this.toastService.showToast(
