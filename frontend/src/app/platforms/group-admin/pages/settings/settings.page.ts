@@ -35,6 +35,7 @@ import {
   peopleOutline,
   footballOutline,
   walletOutline,
+  cameraOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
@@ -49,7 +50,7 @@ import { Router } from '@angular/router';
     </ion-header>
 
     <ion-content class="ion-padding">
-      <ion-segment [(ngModel)]="selectedTab" class="ion-margin-bottom">
+      <ion-segment [(ngModel)]="activeTab" class="ion-margin-bottom">
         <ion-segment-button value="profile">
           <ion-icon name="person-circle-outline"></ion-icon>
           <ion-label>Profile</ion-label>
@@ -61,143 +62,145 @@ import { Router } from '@angular/router';
       </ion-segment>
 
       <!-- Profile Tab -->
-      <div *ngIf="selectedTab === 'profile'">
-        <!-- Profile Information -->
+      <div *ngIf="activeTab === 'profile'">
         <ion-card>
-          <ion-card-header>
-            <ion-card-title>
-              <ion-icon name="person-circle-outline"></ion-icon>
-              Profile Information
-            </ion-card-title>
-          </ion-card-header>
           <ion-card-content>
-            <div class="profile-avatar">
-              <ion-avatar>
-                <img
-                  [src]="profile.avatar || 'assets/default-avatar.png'"
-                  alt="Profile"
+            <!-- Profile Picture (Centered) -->
+            <div class="profile-picture-section">
+              <div class="profile-picture-container">
+                <div class="profile-picture">
+                  <ng-container *ngIf="profilePicture; else defaultProfileIcon">
+                    <img [src]="profilePicture" alt="Profile Picture" />
+                  </ng-container>
+                  <ng-template #defaultProfileIcon>
+                    <ion-icon
+                      name="person-outline"
+                      class="default-profile-icon"
+                    ></ion-icon>
+                  </ng-template>
+                </div>
+                <div class="camera-icon" (click)="fileInput.click()">
+                  <ion-icon name="camera-outline"></ion-icon>
+                </div>
+                <input
+                  #fileInput
+                  type="file"
+                  accept="image/*"
+                  (change)="onFileSelected($event)"
+                  style="display: none"
                 />
-              </ion-avatar>
-              <ion-button size="small" fill="clear">Change Photo</ion-button>
+              </div>
             </div>
 
-            <ion-item>
-              <ion-label position="stacked">First Name</ion-label>
-              <ion-input
-                [(ngModel)]="profile.firstName"
-                type="text"
-              ></ion-input>
-            </ion-item>
+            <!-- Profile Information (Left-aligned) -->
+            <div class="profile-info-section">
+              <ion-item>
+                <ion-label position="stacked">Name</ion-label>
+                <ion-input
+                  [(ngModel)]="profile.name"
+                  placeholder="Your name"
+                ></ion-input>
+              </ion-item>
 
-            <ion-item>
-              <ion-label position="stacked">Last Name</ion-label>
-              <ion-input [(ngModel)]="profile.lastName" type="text"></ion-input>
-            </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Email</ion-label>
+                <ion-input
+                  [(ngModel)]="profile.email"
+                  type="email"
+                  readonly
+                ></ion-input>
+              </ion-item>
 
-            <ion-item>
-              <ion-label position="stacked">Email</ion-label>
-              <ion-input
-                [(ngModel)]="profile.email"
-                type="email"
-                readonly
-              ></ion-input>
-            </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Phone</ion-label>
+                <ion-input
+                  [(ngModel)]="profile.phone"
+                  type="tel"
+                  placeholder="Your phone number"
+                ></ion-input>
+              </ion-item>
 
-            <ion-item>
-              <ion-label position="stacked">Phone</ion-label>
-              <ion-input [(ngModel)]="profile.phone" type="tel"></ion-input>
-            </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Role</ion-label>
+                <ion-input [(ngModel)]="profile.role" readonly></ion-input>
+              </ion-item>
 
-            <ion-button expand="block" (click)="updateProfile()">
-              Save Profile Changes
-            </ion-button>
+              <ion-item>
+                <ion-label position="stacked">Joined Date</ion-label>
+                <ion-input
+                  [(ngModel)]="profile.joinedDate"
+                  readonly
+                ></ion-input>
+              </ion-item>
+
+              <ion-button
+                expand="block"
+                (click)="updateProfile()"
+                class="ion-margin-top"
+              >
+                Update Profile
+              </ion-button>
+            </div>
           </ion-card-content>
         </ion-card>
 
-        <!-- Security Settings -->
         <ion-card>
           <ion-card-header>
             <ion-card-title>
               <ion-icon name="key-outline"></ion-icon>
-              Security
-            </ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-item>
-              <ion-label position="stacked">Current Password</ion-label>
-              <ion-input
-                [(ngModel)]="passwordForm.current"
-                type="password"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item>
-              <ion-label position="stacked">New Password</ion-label>
-              <ion-input
-                [(ngModel)]="passwordForm.new"
-                type="password"
-              ></ion-input>
-            </ion-item>
-
-            <ion-item>
-              <ion-label position="stacked">Confirm New Password</ion-label>
-              <ion-input
-                [(ngModel)]="passwordForm.confirm"
-                type="password"
-              ></ion-input>
-            </ion-item>
-
-            <ion-button expand="block" (click)="changePassword()">
               Change Password
-            </ion-button>
-          </ion-card-content>
-        </ion-card>
-
-        <!-- Notification Preferences -->
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>
-              <ion-icon name="notifications-outline"></ion-icon>
-              Notifications
             </ion-card-title>
           </ion-card-header>
           <ion-card-content>
-            <ion-item>
-              <ion-label>Email Notifications</ion-label>
-              <ion-toggle
-                [(ngModel)]="preferences.emailNotifications"
-              ></ion-toggle>
-            </ion-item>
+            <div class="form-section">
+              <ion-item>
+                <ion-label position="stacked">Current Password</ion-label>
+                <ion-input
+                  type="password"
+                  [(ngModel)]="passwordForm.current"
+                ></ion-input>
+              </ion-item>
 
-            <ion-item>
-              <ion-label>Prediction Reminders</ion-label>
-              <ion-toggle
-                [(ngModel)]="preferences.predictionReminders"
-              ></ion-toggle>
-            </ion-item>
+              <ion-item>
+                <ion-label position="stacked">New Password</ion-label>
+                <ion-input
+                  type="password"
+                  [(ngModel)]="passwordForm.new"
+                ></ion-input>
+              </ion-item>
 
-            <ion-item>
-              <ion-label>Results Notifications</ion-label>
-              <ion-toggle
-                [(ngModel)]="preferences.resultNotifications"
-              ></ion-toggle>
-            </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Confirm New Password</ion-label>
+                <ion-input
+                  type="password"
+                  [(ngModel)]="passwordForm.confirm"
+                ></ion-input>
+              </ion-item>
+
+              <ion-button
+                expand="block"
+                (click)="changePassword()"
+                class="ion-margin-top"
+              >
+                Change Password
+              </ion-button>
+            </div>
           </ion-card-content>
         </ion-card>
 
-        <!-- Account Actions -->
-        <ion-card>
-          <ion-card-content>
-            <ion-button expand="block" color="danger" (click)="logout()">
-              <ion-icon name="log-out-outline" slot="start"></ion-icon>
-              Logout
-            </ion-button>
-          </ion-card-content>
-        </ion-card>
+        <ion-button
+          expand="block"
+          color="danger"
+          (click)="logout()"
+          class="ion-margin-top"
+        >
+          <ion-icon name="log-out-outline" slot="start"></ion-icon>
+          Logout
+        </ion-button>
       </div>
 
       <!-- Settings Tab -->
-      <div *ngIf="selectedTab === 'settings'">
+      <div *ngIf="activeTab === 'settings'">
         <!-- Group Settings -->
         <ion-card>
           <ion-card-header>
@@ -312,6 +315,53 @@ import { Router } from '@angular/router';
           </ion-card-content>
         </ion-card>
 
+        <!-- Notification Settings -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>
+              <ion-icon name="notifications-outline"></ion-icon>
+              Notification Preferences
+            </ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-item>
+              <ion-label>Email Notifications</ion-label>
+              <ion-toggle
+                [(ngModel)]="
+                  groupSettings.notificationPreferences.emailNotifications
+                "
+              ></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Prediction Reminders</ion-label>
+              <ion-toggle
+                [(ngModel)]="
+                  groupSettings.notificationPreferences.predictionReminders
+                "
+              ></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Result Notifications</ion-label>
+              <ion-toggle
+                [(ngModel)]="
+                  groupSettings.notificationPreferences.resultNotifications
+                "
+              ></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Member Updates</ion-label>
+              <ion-toggle
+                [(ngModel)]="
+                  groupSettings.notificationPreferences.memberUpdates
+                "
+              ></ion-toggle>
+            </ion-item>
+          </ion-card-content>
+        </ion-card>
+
         <ion-button expand="block" (click)="saveSettings()">
           Save Settings
         </ion-button>
@@ -320,35 +370,111 @@ import { Router } from '@angular/router';
   `,
   styles: [
     `
-      .profile-avatar {
+      .profile-picture-section {
         display: flex;
-        flex-direction: column;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+
+      .profile-picture-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+      }
+
+      .profile-picture {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: var(--ion-color-light);
+        display: flex;
         align-items: center;
-        margin-bottom: 20px;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid var(--ion-color-medium-shade);
       }
 
-      ion-avatar {
-        width: 100px;
-        height: 100px;
-        margin-bottom: 10px;
+      .profile-picture img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
 
-      ion-card {
+      .default-profile-icon {
+        font-size: 48px;
+        color: var(--ion-color-medium);
+      }
+
+      .camera-icon {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: white;
+        border: 1px solid var(--ion-color-medium-shade);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .camera-icon ion-icon {
+        font-size: 18px;
+        color: var(--ion-color-dark);
+      }
+
+      .profile-info-section,
+      .form-section {
+        max-width: 100%;
+      }
+
+      ion-item {
+        --padding-start: 0;
+        --inner-padding-end: 0;
+        --background: transparent;
         margin-bottom: 16px;
       }
 
+      ion-card {
+        margin: 0 0 16px 0;
+        border-radius: 8px;
+        box-shadow: none;
+        border: 1px solid var(--ion-color-light-shade);
+      }
+
+      ion-card-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--ion-color-light-shade);
+      }
+
       ion-card-title {
+        font-size: 18px;
+        font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
       }
 
-      ion-icon {
+      ion-card-title ion-icon {
         font-size: 20px;
+        color: var(--ion-color-primary);
       }
 
       ion-button {
-        margin-top: 16px;
+        margin: 8px 0;
+      }
+
+      @media (max-width: 576px) {
+        ion-card-header {
+          padding: 12px;
+        }
+
+        ion-card-content {
+          padding: 12px;
+        }
       }
     `,
   ],
@@ -371,34 +497,27 @@ import { Router } from '@angular/router';
     IonSelect,
     IonSelectOption,
     IonAvatar,
-    NgIf,
-    FormsModule,
     IonSegment,
     IonSegmentButton,
+    NgIf,
+    FormsModule,
   ],
 })
 export class SettingsPage {
-  selectedTab = 'profile';
-
+  activeTab = 'profile';
+  profilePicture: string | null = null;
   profile = {
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
+    name: 'John Smith',
+    email: 'john.smith@groupadmin.com',
     phone: '+44 7123 456789',
-    avatar:
-      'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyMCIgZmlsbD0iI2U0ZTRlNCIvPjxwYXRoIGQ9Ik0xMjggNjRhNDAgNDAgMCAwIDEgNDAgNDB2MTZhNDAgNDAgMCAwIDEtODAgMHYtMTZhNDAgNDAgMCAwIDEgNDAtNDB6IiBmaWxsPSIjOTk5Ii8+PGNpcmNsZSBjeD0iMTI4IiBjeT0iMTcyIiByPSI2NCIgZmlsbD0iIzk5OSIvPjwvc3ZnPg==',
+    role: 'Group Admin',
+    joinedDate: '2024-01-01',
   };
 
   passwordForm = {
     current: '',
     new: '',
     confirm: '',
-  };
-
-  preferences = {
-    emailNotifications: true,
-    predictionReminders: true,
-    resultNotifications: true,
   };
 
   groupSettings = {
@@ -411,9 +530,15 @@ export class SettingsPage {
     entryFee: 20,
     paymentDueDate: '',
     prizeDistribution: 'top3',
+    notificationPreferences: {
+      emailNotifications: true,
+      predictionReminders: true,
+      resultNotifications: true,
+      memberUpdates: true,
+    },
   };
 
-  constructor(private toastService: ToastService, private router: Router) {
+  constructor(private router: Router, private toastService: ToastService) {
     addIcons({
       personCircleOutline,
       keyOutline,
@@ -426,11 +551,60 @@ export class SettingsPage {
       peopleOutline,
       footballOutline,
       walletOutline,
+      cameraOutline,
     });
+  }
+
+  async onFileSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      await this.toastService.showToast('Please select an image file', 'error');
+      return;
+    }
+
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      await this.toastService.showToast('Image must be less than 5MB', 'error');
+      return;
+    }
+
+    try {
+      // Create a preview of the image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.profilePicture = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+
+      // TODO: Upload the file to your server
+      // This is where you would typically make an API call to upload the image
+      await this.simulateUpload();
+      await this.toastService.showToast(
+        'Profile picture updated successfully',
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast(
+        'Error uploading profile picture',
+        'error'
+      );
+      // Reset the profile picture if upload fails
+      this.profilePicture = null;
+    }
+  }
+
+  private async simulateUpload(): Promise<void> {
+    // Simulate an API call with a delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   async updateProfile() {
     try {
+      // TODO: Implement actual profile update
       await this.toastService.showToast(
         'Profile updated successfully',
         'success'
@@ -441,12 +615,21 @@ export class SettingsPage {
   }
 
   async changePassword() {
+    if (!this.passwordForm.current) {
+      await this.toastService.showToast(
+        'Current password is required',
+        'error'
+      );
+      return;
+    }
+
     if (this.passwordForm.new !== this.passwordForm.confirm) {
-      await this.toastService.showToast('Passwords do not match', 'error');
+      await this.toastService.showToast('New passwords do not match', 'error');
       return;
     }
 
     try {
+      // TODO: Implement actual password change
       await this.toastService.showToast(
         'Password changed successfully',
         'success'
@@ -457,27 +640,25 @@ export class SettingsPage {
     }
   }
 
-  async logout() {
-    try {
-      // Clear any stored auth data/tokens if needed
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userRole');
-
-      // Navigate to group-admin login
-      this.router.navigate(['/group-admin/login'], { replaceUrl: true });
-    } catch (error) {
-      await this.toastService.showToast('Error during logout', 'error');
-    }
-  }
-
   async saveSettings() {
     try {
+      // TODO: Implement settings save
       await this.toastService.showToast(
         'Settings saved successfully',
         'success'
       );
     } catch (error) {
       await this.toastService.showToast('Error saving settings', 'error');
+    }
+  }
+
+  async logout() {
+    try {
+      // TODO: Implement proper logout
+      await this.toastService.showToast('Logging out...', 'warning');
+      this.router.navigate(['/group-admin/login']);
+    } catch (error) {
+      await this.toastService.showToast('Error during logout', 'error');
     }
   }
 }
