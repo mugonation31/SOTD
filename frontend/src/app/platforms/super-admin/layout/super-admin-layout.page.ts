@@ -1,25 +1,27 @@
 import { Component } from '@angular/core';
 import {
-  IonApp,
+  IonTabs,
+  IonTabBar,
+  IonTabButton,
+  IonIcon,
+  IonLabel,
+  IonRouterOutlet,
   IonHeader,
   IonToolbar,
   IonButtons,
   IonButton,
-  IonIcon,
-  IonLabel,
-  IonTitle,
-  IonRouterOutlet,
-  IonContent,
 } from '@ionic/angular/standalone';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   settingsOutline,
   personOutline,
   footballOutline,
-  logoTwitter,
-  logoFacebook,
-  logoInstagram,
+  gridOutline,
+  layersOutline,
+  statsChartOutline,
+  peopleOutline,
+  personAddOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -28,7 +30,10 @@ import {
     <div class="page-wrapper">
       <ion-header>
         <ion-toolbar>
-          <div class="logo-container" routerLink="/super-admin/dashboard">
+          <div
+            class="logo-container"
+            (click)="navigateTo('/super-admin/dashboard')"
+          >
             <ion-icon name="football-outline" class="football-icon"></ion-icon>
             <div class="logo-text">
               <span class="logo-sotd">SOTD</span>
@@ -36,44 +41,46 @@ import {
             </div>
           </div>
           <ion-buttons slot="end">
-            <ion-button routerLink="/super-admin/settings">
+            <ion-button (click)="navigateTo('/super-admin/settings')">
               <ion-icon name="person-outline" class="profile-icon"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
 
-      <ion-content>
-        <div class="content-wrapper">
-          <div class="main-content">
-            <ion-router-outlet></ion-router-outlet>
-          </div>
-        </div>
-      </ion-content>
+      <ion-tabs>
+        <ion-tab-bar slot="bottom">
+          <ion-tab-button tab="dashboard">
+            <ion-icon name="grid-outline"></ion-icon>
+            <ion-label>Dashboard</ion-label>
+          </ion-tab-button>
+
+          <ion-tab-button tab="groups">
+            <ion-icon name="layers-outline"></ion-icon>
+            <ion-label>Groups & Users</ion-label>
+          </ion-tab-button>
+
+          <ion-tab-button tab="predictions">
+            <ion-icon name="stats-chart-outline"></ion-icon>
+            <ion-label>Predictions</ion-label>
+          </ion-tab-button>
+
+          <ion-tab-button tab="group-admins">
+            <ion-icon name="people-outline"></ion-icon>
+            <ion-label>Admins</ion-label>
+          </ion-tab-button>
+        </ion-tab-bar>
+
+        <ion-router-outlet></ion-router-outlet>
+      </ion-tabs>
     </div>
   `,
   styles: [
     `
       .page-wrapper {
-        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        background: white;
-      }
-
-      .content-wrapper {
-        min-height: 100%;
-        display: flex;
-        flex-direction: column;
-        padding-right: calc(100vw - 100%);
-      }
-
-      .main-content {
-        flex: 1;
-        padding: 20px;
-        max-width: 1200px;
-        margin: 0 auto;
-        width: 100%;
+        height: 100%;
       }
 
       .logo-container {
@@ -95,13 +102,13 @@ import {
       }
 
       .logo-sotd {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--ion-color-primary);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--ion-color-dark);
       }
 
       .logo-subtitle {
-        font-size: 10px;
+        font-size: 12px;
         color: var(--ion-color-medium);
       }
 
@@ -112,32 +119,34 @@ import {
   ],
   standalone: true,
   imports: [
-    IonApp,
+    IonTabs,
+    IonTabBar,
+    IonTabButton,
+    IonIcon,
+    IonLabel,
+    IonRouterOutlet,
     IonHeader,
     IonToolbar,
     IonButtons,
     IonButton,
-    IonIcon,
-    IonLabel,
-    IonTitle,
-    IonRouterOutlet,
-    IonContent,
     RouterModule,
   ],
 })
 export class SuperAdminLayoutPage {
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       settingsOutline,
       personOutline,
       footballOutline,
-      logoTwitter,
-      logoFacebook,
-      logoInstagram,
+      gridOutline,
+      layersOutline,
+      statsChartOutline,
+      peopleOutline,
+      personAddOutline,
     });
   }
 
-  getCurrentYear(): number {
-    return new Date().getFullYear();
+  navigateTo(path: string) {
+    this.router.navigate([path], { replaceUrl: true });
   }
 }

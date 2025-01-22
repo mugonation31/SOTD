@@ -2,15 +2,18 @@ export interface GroupAdminInvitation {
   id: string;
   email: string;
   token: string;
-  expiresAt: Date;
   status: 'pending' | 'accepted' | 'expired' | 'revoked';
   createdAt: Date;
-  lastReminder?: Date;
-  reminderCount: number;
-  acceptedAt?: Date;
+  expiresAt: Date;
   acceptedBy?: {
     id: string;
     name: string;
     email: string;
   };
+  reminderCount: number;
+  history?: {
+    type: 'created' | 'resent' | 'accepted' | 'expired' | 'revoked';
+    message: string;
+    timestamp: Date;
+  }[];
 }

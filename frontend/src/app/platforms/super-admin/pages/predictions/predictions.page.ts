@@ -30,6 +30,8 @@ import {
   timeOutline,
   alertCircleOutline,
   checkmarkCircleOutline,
+  peopleOutline,
+  star,
 } from 'ionicons/icons';
 
 interface Prediction {
@@ -478,6 +480,8 @@ export class PredictionsPage {
       timeOutline,
       alertCircleOutline,
       checkmarkCircleOutline,
+      peopleOutline,
+      star,
     });
   }
 

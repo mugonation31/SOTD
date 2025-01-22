@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { SuperAdminRegistrationGuard } from './guards/super-admin-registration.guard';
 import { SuperAdminAuthGuard } from './guards/super-admin-auth.guard';
+import { SuperAdminLayoutPage } from './layout/super-admin-layout.page';
 
 export const routes: Routes = [
   {
@@ -19,10 +20,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [SuperAdminAuthGuard],
-    loadComponent: () =>
-      import('./layout/super-admin-layout.page').then(
-        (m) => m.SuperAdminLayoutPage
-      ),
+    component: SuperAdminLayoutPage,
     children: [
       {
         path: 'dashboard',
@@ -30,40 +28,13 @@ export const routes: Routes = [
           import('./pages/dashboard/dashboard.page').then(
             (m) => m.DashboardPage
           ),
-      },
-      {
-        path: 'group-admins',
-        children: [
-          {
-            path: '',
-            loadComponent: () =>
-              import('./pages/group-admins/group-admins.page').then(
-                (m) => m.GroupAdminsPage
-              ),
-          },
-          {
-            path: 'invites',
-            loadComponent: () =>
-              import(
-                './pages/group-admin-invites/group-admin-invites.page'
-              ).then((m) => m.GroupAdminInvitesPage),
-          },
-        ],
+        data: { preload: true },
       },
       {
         path: 'groups',
-        children: [
-          {
-            path: '',
-            loadComponent: () =>
-              import('./pages/groups/groups.page').then((m) => m.GroupsPage),
-          },
-          {
-            path: 'users',
-            loadComponent: () =>
-              import('./pages/users/users.page').then((m) => m.UsersPage),
-          },
-        ],
+        loadComponent: () =>
+          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+        data: { preload: true },
       },
       {
         path: 'predictions',
@@ -71,11 +42,21 @@ export const routes: Routes = [
           import('./pages/predictions/predictions.page').then(
             (m) => m.PredictionsPage
           ),
+        data: { preload: true },
+      },
+      {
+        path: 'group-admins',
+        loadComponent: () =>
+          import('./pages/group-admin-invites/group-admin-invites.page').then(
+            (m) => m.GroupAdminInvitesPage
+          ),
+        data: { preload: true },
       },
       {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+        data: { preload: true },
       },
       {
         path: '',
