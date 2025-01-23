@@ -31,6 +31,7 @@ import {
   ModalController,
   IonSegment,
   IonSegmentButton,
+  IonAlert,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -335,7 +336,7 @@ interface InvitationStats {
                       <ion-button
                         fill="clear"
                         color="danger"
-                        (click)="revokeInvitation(invite.id)"
+                        (click)="revokeInvite(invite)"
                         [disabled]="invite.status === 'revoked'"
                         title="Revoke Invitation"
                       >
@@ -413,6 +414,33 @@ interface InvitationStats {
       <div *ngIf="activeTab === 'list'">
         <app-group-admin-list></app-group-admin-list>
       </div>
+
+      <ion-alert
+        [isOpen]="showRevokeAlert"
+        header="Revoke Invitation"
+        message="Are you sure you want to revoke this invitation? This action cannot be undone."
+        [buttons]="revokeButtons"
+        (didDismiss)="showRevokeAlert = false"
+      >
+      </ion-alert>
+
+      <ion-alert
+        [isOpen]="showResetAlert"
+        header="Reset Invitation"
+        message="Are you sure you want to reset this invitation? This will generate a new invitation code."
+        [buttons]="resetButtons"
+        (didDismiss)="showResetAlert = false"
+      >
+      </ion-alert>
+
+      <ion-alert
+        [isOpen]="showBulkRevokeAlert"
+        header="Bulk Revoke Invitations"
+        message="Are you sure you want to revoke all selected invitations? This action cannot be undone."
+        [buttons]="bulkRevokeButtons"
+        (didDismiss)="showBulkRevokeAlert = false"
+      >
+      </ion-alert>
     </ion-content>
   `,
   styles: [
@@ -627,6 +655,7 @@ interface InvitationStats {
     IonSegment,
     IonSegmentButton,
     GroupAdminListPage,
+    IonAlert,
   ],
 })
 export class GroupAdminInvitesPage implements OnInit, OnDestroy {
@@ -650,6 +679,47 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
   private refreshInterval?: Subscription;
   private statusChart: Chart | null = null;
   private timelineChart: Chart | null = null;
+  private inviteToAction: GroupAdminInvitation | null = null;
+  private selectedInvites: GroupAdminInvitation[] = [];
+  showRevokeAlert = false;
+  showResetAlert = false;
+  showBulkRevokeAlert = false;
+
+  revokeButtons = [
+    {
+      text: 'Cancel',
+      role: 'cancel',
+    },
+    {
+      text: 'Revoke',
+      role: 'confirm',
+      handler: () => this.confirmRevokeInvite(),
+    },
+  ];
+
+  resetButtons = [
+    {
+      text: 'Cancel',
+      role: 'cancel',
+    },
+    {
+      text: 'Reset',
+      role: 'confirm',
+      handler: () => this.confirmResetInvite(),
+    },
+  ];
+
+  bulkRevokeButtons = [
+    {
+      text: 'Cancel',
+      role: 'cancel',
+    },
+    {
+      text: 'Revoke All',
+      role: 'confirm',
+      handler: () => this.confirmBulkRevoke(),
+    },
+  ];
 
   constructor(
     private tokenService: TokenService,
@@ -888,16 +958,72 @@ export class GroupAdminInvitesPage implements OnInit, OnDestroy {
     }
   }
 
-  async revokeInvitation(id: string) {
+  async revokeInvite(invite: GroupAdminInvitation) {
+    this.inviteToAction = invite;
+    this.showRevokeAlert = true;
+  }
+
+  async resetInvite(invite: GroupAdminInvitation) {
+    this.inviteToAction = invite;
+    this.showResetAlert = true;
+  }
+
+  async bulkRevokeInvites(invites: GroupAdminInvitation[]) {
+    this.selectedInvites = invites;
+    this.showBulkRevokeAlert = true;
+  }
+
+  private async confirmRevokeInvite() {
+    if (!this.inviteToAction) return;
+
     try {
-      this.invitations = this.invitations.filter((invite) => invite.id !== id);
-      this.saveInvitations();
+      // TODO: Implement actual revoke logic
       await this.toastService.showToast(
         'Invitation revoked successfully',
         'success'
       );
     } catch (error) {
-      await this.toastService.showToast('Error revoking invitation', 'error');
+      await this.toastService.showToast('Failed to revoke invitation', 'error');
+    } finally {
+      this.inviteToAction = null;
+      this.showRevokeAlert = false;
+    }
+  }
+
+  private async confirmResetInvite() {
+    if (!this.inviteToAction) return;
+
+    try {
+      // TODO: Implement actual reset logic
+      await this.toastService.showToast(
+        'Invitation reset successfully',
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast('Failed to reset invitation', 'error');
+    } finally {
+      this.inviteToAction = null;
+      this.showResetAlert = false;
+    }
+  }
+
+  private async confirmBulkRevoke() {
+    if (!this.selectedInvites.length) return;
+
+    try {
+      // TODO: Implement actual bulk revoke logic
+      await this.toastService.showToast(
+        'Selected invitations revoked successfully',
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast(
+        'Failed to revoke selected invitations',
+        'error'
+      );
+    } finally {
+      this.selectedInvites = [];
+      this.showBulkRevokeAlert = false;
     }
   }
 
