@@ -14,3 +14,42 @@
   font-size: 16px;
   margin-bottom: 2px; // Align with person icon
 }
+
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.football-icon {
+  font-size: 24px;
+  color: var(--ion-color-primary);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-sotd {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+}
+
+.logo-subtitle {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+.profile-icon {
+  font-size: 20px;
+}
