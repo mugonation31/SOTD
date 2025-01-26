@@ -14,6 +14,8 @@ import {
   IonRow,
   IonCol,
   IonBadge,
+  IonButtons,
+  IonText,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +25,9 @@ import {
   footballOutline,
   refreshOutline,
   alertCircleOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
+  personOutline,
 } from 'ionicons/icons';
 
 interface Match {
@@ -50,16 +55,18 @@ interface GameWeek {
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Game Week {{ currentGameweek.number }}</ion-title>
-        <ion-button
-          slot="end"
-          fill="clear"
-          class="reset-button"
-          (click)="resetPredictions()"
-        >
-          <ion-icon name="refresh-outline" slot="start"></ion-icon>
-          RESET ALL
-        </ion-button>
+        <div class="header-content">
+          <div class="logo-container">
+            <ion-icon class="football-icon" name="football-outline"></ion-icon>
+            <div class="logo-text">
+              <span class="logo-sotd">SOTD</span>
+              <span class="logo-subtitle">Predict 3</span>
+            </div>
+          </div>
+          <ion-button fill="clear" class="profile-button">
+            <ion-icon name="person-outline"></ion-icon>
+          </ion-button>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -67,37 +74,81 @@ interface GameWeek {
       <ion-grid>
         <ion-row class="ion-justify-content-center">
           <ion-col size="12" size-md="10" size-lg="8">
+            <!-- Gameweek Navigation -->
+            <div class="gameweek-navigation">
+              <ion-button
+                fill="clear"
+                class="nav-button"
+                [disabled]="currentGameweek.number <= 1"
+                (click)="navigateGameweek(-1)"
+              >
+                <ion-icon
+                  slot="icon-only"
+                  name="chevron-back-outline"
+                ></ion-icon>
+              </ion-button>
+
+              <div class="gameweek-title">
+                <h2>Game Week {{ currentGameweek.number }}</h2>
+                <ion-badge color="primary" class="prediction-badge"
+                  >Predict 3</ion-badge
+                >
+              </div>
+
+              <ion-button
+                fill="clear"
+                class="nav-button"
+                [disabled]="currentGameweek.number >= 38"
+                (click)="navigateGameweek(1)"
+              >
+                <ion-icon
+                  slot="icon-only"
+                  name="chevron-forward-outline"
+                ></ion-icon>
+              </ion-button>
+            </div>
+
             <!-- Deadline Info Card -->
             <ion-card class="deadline-card">
-              <ion-card-header>
-                <ion-card-title class="ion-padding-bottom">
-                  Game Week {{ currentGameweek.number }}
-                  <ion-badge color="primary" class="prediction-badge"
-                    >Predict 3</ion-badge
-                  >
-                </ion-card-title>
-              </ion-card-header>
               <ion-card-content>
                 <div class="deadline-info">
-                  <p class="deadline">
-                    <ion-icon name="time-outline"></ion-icon>
-                    Deadline:
-                    {{
-                      currentGameweek.deadline | date : 'MMM d, yyyy, h:mm a'
-                    }}
-                  </p>
-                  <p class="selection-info">
-                    Make any 3 predictions for this game week
-                  </p>
+                  <div class="deadline-section">
+                    <p class="deadline">
+                      <ion-icon name="time-outline"></ion-icon>
+                      Deadline:
+                      {{
+                        currentGameweek.deadline | date : 'MMM d, yyyy, h:mm a'
+                      }}
+                    </p>
+                    <p class="selection-info">
+                      Make any 3 predictions for this game week
+                    </p>
+                  </div>
+                  <ion-button
+                    fill="clear"
+                    class="reset-button"
+                    (click)="resetPredictions()"
+                  >
+                    <ion-icon name="refresh-outline" slot="start"></ion-icon>
+                    RESET ALL
+                  </ion-button>
                 </div>
 
                 <!-- Warning Message -->
                 <div
-                  class="warning-message"
+                  class="warning-container"
                   *ngIf="showTooManyPredictionsWarning"
                 >
-                  <ion-icon name="alert-circle-outline"></ion-icon>
-                  You can't make more than 3 predictions for this game week
+                  <div class="warning-message">
+                    <ion-icon
+                      name="alert-circle-outline"
+                      color="danger"
+                    ></ion-icon>
+                    <span
+                      >You can't make more than 3 predictions for this game
+                      week</span
+                    >
+                  </div>
                 </div>
               </ion-card-content>
             </ion-card>
@@ -171,19 +222,89 @@ interface GameWeek {
         --background: #f4f5f8;
       }
 
-      ion-grid {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: var(--page-margin);
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 16px;
       }
 
-      .reset-button {
-        margin-right: 8px;
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .football-icon {
+        font-size: 24px;
+        color: var(--ion-color-primary);
+      }
+
+      .logo-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .logo-sotd {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      .logo-subtitle {
+        font-size: 12px;
+        color: var(--ion-color-medium);
+      }
+
+      .profile-button {
+        --padding-start: 8px;
+        --padding-end: 8px;
+        font-size: 22px;
         --color: var(--ion-color-medium);
-        text-transform: uppercase;
-        font-weight: 500;
-        font-size: 14px;
+      }
+
+      .gameweek-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--page-margin);
+      }
+
+      .nav-button {
+        --padding-start: 8px;
+        --padding-end: 8px;
         height: 36px;
+        --color: var(--ion-color-medium);
+
+        &[disabled] {
+          opacity: 0.5;
+        }
+
+        ion-icon {
+          font-size: 24px;
+        }
+      }
+
+      .gameweek-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+      }
+
+      .prediction-badge {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 4px;
       }
 
       .deadline-card {
@@ -194,32 +315,15 @@ interface GameWeek {
         background: var(--card-background);
       }
 
-      .deadline-card ion-card-header {
-        padding: var(--page-margin);
-        border-bottom: 1px solid var(--ion-color-light-shade);
-        background: var(--card-background);
-      }
-
-      .deadline-card ion-card-title {
+      .deadline-info {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        font-size: 20px;
-        font-weight: 600;
-        color: var(--ion-color-dark);
-        margin: 0;
-        padding: 0;
+        align-items: flex-start;
+        margin-bottom: 12px;
       }
 
-      .prediction-badge {
-        font-size: 12px;
-        font-weight: 500;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
-
-      .deadline-info {
-        margin: var(--page-margin) 0;
+      .deadline-section {
+        flex: 1;
       }
 
       .deadline {
@@ -243,21 +347,13 @@ interface GameWeek {
         margin: 0;
       }
 
-      .warning-message {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(var(--ion-color-warning-rgb), 0.1);
-        color: var(--ion-color-warning-shade);
-        padding: 12px;
-        border-radius: 4px;
+      .reset-button {
+        --color: var(--ion-color-medium);
+        text-transform: uppercase;
+        font-weight: 500;
         font-size: 14px;
-        margin-top: 12px;
-
-        ion-icon {
-          font-size: 20px;
-          color: var(--ion-color-warning);
-        }
+        height: 36px;
+        margin: 0;
       }
 
       .matches-container {
@@ -399,6 +495,59 @@ interface GameWeek {
           height: 44px;
         }
       }
+
+      ion-buttons ion-button {
+        --padding-start: 8px;
+        --padding-end: 8px;
+        height: 36px;
+      }
+
+      ion-buttons ion-icon {
+        font-size: 24px;
+        color: var(--ion-color-medium);
+      }
+
+      .warning-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 16px;
+        background: rgba(var(--ion-color-danger-rgb), 0.1);
+        animation: slideDown 0.3s ease-out;
+      }
+
+      .warning-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: var(--ion-color-danger-contrast);
+        box-shadow: 0 2px 8px rgba(var(--ion-color-danger-rgb), 0.2);
+        border: 1px solid rgba(var(--ion-color-danger-rgb), 0.2);
+        color: var(--ion-color-danger-shade);
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .warning-message ion-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
     `,
   ],
   standalone: true,
@@ -417,6 +566,8 @@ interface GameWeek {
     IonRow,
     IonCol,
     IonBadge,
+    IonButtons,
+    IonText,
     NgFor,
     NgIf,
     DatePipe,
@@ -524,6 +675,9 @@ export class MatchesPage {
       footballOutline,
       refreshOutline,
       alertCircleOutline,
+      chevronBackOutline,
+      chevronForwardOutline,
+      personOutline,
     });
   }
 
@@ -580,5 +734,22 @@ export class MatchesPage {
   onSubmit() {
     // TODO: Implement submission logic
     console.log('Submitting predictions:', this.matches);
+  }
+
+  navigateGameweek(delta: number) {
+    const newGameweek = this.currentGameweek.number + delta;
+    if (newGameweek >= 1 && newGameweek <= 38) {
+      // TODO: Load gameweek data from service
+      this.currentGameweek = {
+        ...this.currentGameweek,
+        number: newGameweek,
+      };
+      this.loadGameweekMatches(newGameweek);
+    }
+  }
+
+  loadGameweekMatches(gameweek: number) {
+    // TODO: Implement service call to load matches for the gameweek
+    console.log('Loading matches for gameweek:', gameweek);
   }
 }
