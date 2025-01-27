@@ -25,6 +25,7 @@ import {
   IonSelect,
   IonSelectOption,
   IonIcon,
+  IonBadge,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgIf, NgFor, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -35,6 +36,9 @@ import {
   star,
   checkmarkCircle,
   closeCircle,
+  alertCircleOutline,
+  timeOutline,
+  refreshOutline,
 } from 'ionicons/icons';
 
 interface GameWeek {
@@ -91,41 +95,72 @@ interface PredictionWithResult extends Match {
     </ion-header>
 
     <ion-content class="ion-padding">
+      <!-- Warning Message -->
+      <div class="warning-container" *ngIf="showTooManyPredictionsWarning">
+        <div class="warning-message">
+          <ion-icon name="alert-circle-outline" color="danger"></ion-icon>
+          <span>You can't make more than 3 predictions for this game week</span>
+        </div>
+      </div>
+
       <!-- Make Predictions Tab -->
-      <div *ngIf="selectedTab === 'my'">
-        <div class="admin-note">
-          As group admin, you can only view other players' predictions after the
-          deadline has passed
+      <div *ngIf="selectedTab === 'my'" class="content-wrapper">
+        <!-- Gameweek Navigation and Info Tile -->
+        <div class="gameweek-navigation">
+          <ion-button
+            fill="clear"
+            class="nav-button"
+            [disabled]="currentGameWeek.number <= 1"
+            (click)="navigateGameweek(-1)"
+          >
+            <ion-icon slot="icon-only" name="chevron-back"></ion-icon>
+          </ion-button>
+
+          <div class="gameweek-title">
+            <h2>Game Week {{ currentGameWeek.number }}</h2>
+            <ion-badge color="primary" class="prediction-badge"
+              >Predict 3</ion-badge
+            >
+          </div>
+
+          <ion-button
+            fill="clear"
+            class="nav-button"
+            [disabled]="currentGameWeek.number >= 38"
+            (click)="navigateGameweek(1)"
+          >
+            <ion-icon slot="icon-only" name="chevron-forward"></ion-icon>
+          </ion-button>
         </div>
 
-        <div class="gameweek-container">
-          <div class="gameweek-header">
-            <h2>Game Week {{ currentGameWeek.number }}</h2>
-            <ion-button
-              size="small"
-              fill="outline"
-              class="reset-button"
-              (click)="resetPredictions()"
-            >
-              Reset All
-            </ion-button>
-          </div>
-          <p class="deadline">
-            Deadline:
-            {{ currentGameWeek.deadline | date : 'MMM d, yyyy, h:mm a' }}
-          </p>
-          <p class="selection-info" *ngIf="!currentGameWeek.isSpecial">
-            Make any 3 predictions for this game week
-          </p>
-          <p class="selection-info" *ngIf="currentGameWeek.isSpecial">
-            Special Game Week - Predict all 10 matches
-          </p>
+        <!-- Deadline Info Card -->
+        <ion-card class="deadline-card">
+          <ion-card-content>
+            <div class="deadline-info">
+              <div class="deadline-section">
+                <p class="deadline">
+                  <ion-icon name="time-outline"></ion-icon>
+                  Deadline:
+                  {{ currentGameWeek.deadline | date : 'MMM d, yyyy, h:mm a' }}
+                </p>
+                <p class="selection-info">
+                  Make any 3 predictions for this game week
+                </p>
+              </div>
+              <ion-button
+                fill="clear"
+                class="reset-button"
+                (click)="resetPredictions()"
+              >
+                <ion-icon name="refresh-outline" slot="start"></ion-icon>
+                RESET ALL
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
 
-          <!-- Warning Message -->
-          <div class="warning-message" *ngIf="showTooManyPredictionsWarning">
-            You can't make more than 3 predictions for this game week
-          </div>
-
+        <!-- Rest of the predictions content -->
+        <div class="matches-container">
           <div class="predictions-list">
             <div
               class="match-row"
@@ -203,7 +238,7 @@ interface PredictionWithResult extends Match {
       </div>
 
       <!-- All Predictions Tab -->
-      <div *ngIf="selectedTab === 'all'">
+      <div *ngIf="selectedTab === 'all'" class="content-wrapper">
         <!-- Gameweek Navigation -->
         <div class="gameweek-navigation">
           <ion-button
@@ -353,10 +388,120 @@ interface PredictionWithResult extends Match {
   `,
   styles: [
     `
-      .gameweek-container {
+      :host {
+        --page-margin: 16px;
+        --card-border-radius: 8px;
+        --card-background: #ffffff;
+      }
+
+      ion-content {
+        --background: #f4f5f8;
+      }
+
+      ion-content::part(scroll) {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .content-wrapper {
+        width: 100%;
         max-width: 800px;
+        padding: var(--page-margin);
         margin: 0 auto;
-        padding: 0 16px;
+      }
+
+      .gameweek-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--page-margin);
+        width: 100%;
+      }
+
+      .nav-button {
+        --padding-start: 8px;
+        --padding-end: 8px;
+        height: 36px;
+        --color: var(--ion-color-medium);
+
+        &[disabled] {
+          opacity: 0.5;
+        }
+
+        ion-icon {
+          font-size: 24px;
+        }
+      }
+
+      .gameweek-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+      }
+
+      .prediction-badge {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .deadline-card {
+        margin-bottom: var(--page-margin);
+        border-radius: var(--card-border-radius);
+        box-shadow: none;
+        border: 1px solid var(--ion-color-light-shade);
+        background: var(--card-background);
+      }
+
+      .deadline-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .deadline-section {
+        flex: 1;
+      }
+
+      .deadline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ion-color-dark);
+        margin: 0 0 8px;
+
+        ion-icon {
+          font-size: 18px;
+          color: var(--ion-color-medium);
+        }
+      }
+
+      .selection-info {
+        color: var(--ion-color-medium);
+        font-size: 14px;
+        margin: 0;
+      }
+
+      .reset-button {
+        --color: var(--ion-color-medium);
+        text-transform: uppercase;
+        font-weight: 500;
+        font-size: 14px;
+        height: 36px;
+        margin: 0;
       }
 
       .predictions-list {
@@ -788,6 +933,48 @@ interface PredictionWithResult extends Match {
         position: absolute;
         right: 0;
       }
+
+      .warning-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 16px;
+        background: rgba(var(--ion-color-danger-rgb), 0.1);
+        animation: slideDown 0.3s ease-out;
+      }
+
+      .warning-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: var(--ion-color-danger-contrast);
+        box-shadow: 0 2px 8px rgba(var(--ion-color-danger-rgb), 0.2);
+        border: 1px solid rgba(var(--ion-color-danger-rgb), 0.2);
+        color: var(--ion-color-danger-shade);
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .warning-message ion-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
     `,
   ],
   standalone: true,
@@ -817,6 +1004,7 @@ interface PredictionWithResult extends Match {
     IonSearchbar,
     IonSelect,
     IonSelectOption,
+    IonBadge,
   ],
 })
 export class PredictionsPage implements OnInit {
@@ -832,6 +1020,7 @@ export class PredictionsPage implements OnInit {
   currentGameWeek: GameWeek;
   pastPredictions: Match[] = [];
   canSubmit = false;
+  selectedPredictionCount = 0;
 
   constructor() {
     addIcons({
@@ -840,6 +1029,9 @@ export class PredictionsPage implements OnInit {
       star,
       checkmarkCircle,
       closeCircle,
+      alertCircleOutline,
+      timeOutline,
+      refreshOutline,
     });
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
@@ -859,64 +1051,28 @@ export class PredictionsPage implements OnInit {
   }
 
   onScoreChange(match: Match) {
-    if (!this.currentGameWeek.isSpecial) {
-      // Count predictions where at least one score is entered
-      const predictionsStarted = this.currentGameWeek.matches.filter(
-        (m) =>
-          (m.homeScore !== null && String(m.homeScore).trim() !== '') ||
-          (m.awayScore !== null && String(m.awayScore).trim() !== '')
-      ).length;
-
-      // Show warning if user starts entering more than 3 predictions
-      this.showTooManyPredictionsWarning = predictionsStarted > 3;
-    }
-
-    // Validate scores are numbers
-    if (match.homeScore !== null) {
-      const homeScore = Number(match.homeScore);
-      if (
-        isNaN(homeScore) ||
-        homeScore < 0 ||
-        String(match.homeScore).trim() === ''
-      ) {
-        match.homeScore = null;
-      }
-    }
-    if (match.awayScore !== null) {
-      const awayScore = Number(match.awayScore);
-      if (
-        isNaN(awayScore) ||
-        awayScore < 0 ||
-        String(match.awayScore).trim() === ''
-      ) {
-        match.awayScore = null;
-      }
-    }
-
-    this.validateCanSubmit();
-  }
-
-  validateCanSubmit() {
-    // Count matches where both home and away scores are entered
-    const completePredictions = this.currentGameWeek.matches.filter((m) => {
-      // Consider a prediction complete if both scores are entered and are numbers
-      const hasHomeScore =
+    // Count valid predictions
+    const validPredictions = this.currentGameWeek.matches.filter(
+      (m) =>
         m.homeScore !== null &&
         m.homeScore !== undefined &&
-        String(m.homeScore).trim() !== '';
-      const hasAwayScore =
         m.awayScore !== null &&
         m.awayScore !== undefined &&
-        String(m.awayScore).trim() !== '';
-      return hasHomeScore && hasAwayScore;
-    }).length;
+        String(m.homeScore).trim() !== '' &&
+        String(m.awayScore).trim() !== ''
+    ).length;
 
+    // Show warning if more than 3 predictions in regular gameweek
+    this.showTooManyPredictionsWarning =
+      !this.currentGameWeek.isSpecial && validPredictions > 3;
+
+    // Update canSubmit based on prediction count
     if (this.currentGameWeek.isSpecial) {
-      // For special weeks, all 10 matches must be predicted
-      this.canSubmit = completePredictions === 10;
+      // All matches must be predicted in special gameweeks
+      this.canSubmit = validPredictions === this.currentGameWeek.matches.length;
     } else {
-      // For regular weeks, exactly 3 matches must be predicted
-      this.canSubmit = completePredictions === 3;
+      // Exactly 3 predictions required in regular gameweeks
+      this.canSubmit = validPredictions === 3;
     }
   }
 
@@ -1180,12 +1336,29 @@ export class PredictionsPage implements OnInit {
   }
 
   resetPredictions() {
-    // Reset all predictions to null
     this.currentGameWeek.matches.forEach((match) => {
       match.homeScore = null;
       match.awayScore = null;
     });
     this.showTooManyPredictionsWarning = false;
-    this.validateCanSubmit();
+    this.selectedPredictionCount = 0;
+    this.canSubmit = false;
+  }
+
+  navigateGameweek(delta: number) {
+    const newGameweek = this.currentGameWeek.number + delta;
+    if (newGameweek >= 1 && newGameweek <= 38) {
+      // TODO: Load gameweek data from service
+      this.currentGameWeek = {
+        ...this.currentGameWeek,
+        number: newGameweek,
+      };
+      this.loadGameweekMatches(newGameweek);
+    }
+  }
+
+  loadGameweekMatches(gameweek: number) {
+    // TODO: Implement service call to load matches for the gameweek
+    console.log('Loading matches for gameweek:', gameweek);
   }
 }
