@@ -10,6 +10,7 @@ import {
   IonToolbar,
   IonButtons,
   IonButton,
+  IonTitle,
 } from '@ionic/angular/standalone';
 import { RouterModule, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
@@ -23,6 +24,7 @@ import {
   eyeOutline,
   addCircleOutline,
   calendarOutline,
+  personCircleOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -41,6 +43,7 @@ import {
     IonToolbar,
     IonButtons,
     IonButton,
+    IonTitle,
     RouterModule,
   ],
 })
@@ -56,6 +59,7 @@ export class GroupAdminLayoutPage {
       eyeOutline,
       addCircleOutline,
       calendarOutline,
+      personCircleOutline,
     });
   }
 

@@ -580,19 +580,21 @@ interface PredictionWithResult extends Match {
       }
 
       .score-input {
-        width: 32px;
-        height: 32px;
+        width: 45px;
+        height: 45px;
         text-align: center;
         border: 1px solid #d1d1d1;
         border-radius: 4px;
         background: #f5f5f5;
         color: #000000;
-        font-size: 14px;
+        font-size: 18px;
+        font-weight: 500;
       }
 
       .separator {
         color: #424242;
         font-weight: 500;
+        font-size: 18px;
       }
 
       .submit-button {

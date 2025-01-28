@@ -1,3 +1,20 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="navigateTo('/group-admin/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/group-admin/settings')">
+        <ion-icon name="person-outline" class="profile-icon"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
 <ion-tabs>
   <ion-tab-bar slot="bottom">
     <ion-tab-button tab="dashboard" href="/group-admin/dashboard">
@@ -13,11 +30,6 @@
     <ion-tab-button tab="predictions" href="/group-admin/predictions">
       <ion-icon name="football-outline"></ion-icon>
       <ion-label>Predictions</ion-label>
-    </ion-tab-button>
-
-    <ion-tab-button tab="settings" href="/group-admin/settings">
-      <ion-icon name="settings-outline"></ion-icon>
-      <ion-label>Settings</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="groups" href="/group-admin/groups">
