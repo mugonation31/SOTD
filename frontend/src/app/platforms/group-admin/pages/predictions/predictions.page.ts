@@ -67,6 +67,7 @@ interface PlayerPrediction {
   totalPoints: number;
   jokerUsed: boolean;
   predictions: PredictionWithResult[];
+  isCurrentUser?: boolean;
 }
 
 interface PredictionWithResult extends Match {
@@ -96,12 +97,21 @@ interface PredictionWithResult extends Match {
 
     <ion-content class="ion-padding">
       <!-- Warning Message -->
-      <div class="warning-container" *ngIf="showTooManyPredictionsWarning">
-        <div class="warning-message">
-          <ion-icon name="alert-circle-outline" color="danger"></ion-icon>
-          <span>You can't make more than 3 predictions for this game week</span>
-        </div>
-      </div>
+      <ion-item
+        *ngIf="showTooManyPredictionsWarning"
+        color="danger"
+        lines="none"
+        class="warning-item"
+      >
+        <ion-icon
+          slot="start"
+          name="alert-circle-outline"
+          color="danger"
+        ></ion-icon>
+        <ion-label
+          >You can't make more than 3 predictions for this game week</ion-label
+        >
+      </ion-item>
 
       <!-- Make Predictions Tab -->
       <div *ngIf="selectedTab === 'my'" class="content-wrapper">
@@ -146,6 +156,19 @@ interface PredictionWithResult extends Match {
                 <p class="selection-info">
                   Make any 3 predictions for this game week
                 </p>
+                <div
+                  *ngIf="showTooManyPredictionsWarning"
+                  class="warning-message"
+                >
+                  <ion-icon
+                    name="alert-circle-outline"
+                    color="danger"
+                  ></ion-icon>
+                  <span
+                    >You can't make more than 3 predictions for this game
+                    week</span
+                  >
+                </div>
               </div>
               <ion-button
                 fill="clear"
@@ -176,23 +199,27 @@ interface PredictionWithResult extends Match {
               <div class="match-prediction">
                 <span class="team home">{{ match.homeTeam }}</span>
                 <div class="score-container">
-                  <input
-                    type="text"
+                  <ion-input
+                    type="number"
                     class="score-input"
                     maxlength="2"
+                    min="0"
+                    max="99"
                     [(ngModel)]="match.homeScore"
                     [name]="'home' + i"
-                    (ngModelChange)="onScoreChange(match)"
-                  />
+                    (ionInput)="onScoreChange(match)"
+                  ></ion-input>
                   <span class="separator">-</span>
-                  <input
-                    type="text"
+                  <ion-input
+                    type="number"
                     class="score-input"
                     maxlength="2"
+                    min="0"
+                    max="99"
                     [(ngModel)]="match.awayScore"
                     [name]="'away' + i"
-                    (ngModelChange)="onScoreChange(match)"
-                  />
+                    (ionInput)="onScoreChange(match)"
+                  ></ion-input>
                 </div>
                 <span class="team away">{{ match.awayTeam }}</span>
               </div>
@@ -205,6 +232,7 @@ interface PredictionWithResult extends Match {
               type="submit"
               class="submit-button"
               [disabled]="!canSubmit"
+              (click)="onSubmitPredictions()"
             >
               SUBMIT PREDICTIONS
             </ion-button>
@@ -238,7 +266,10 @@ interface PredictionWithResult extends Match {
       </div>
 
       <!-- All Predictions Tab -->
-      <div *ngIf="selectedTab === 'all'" class="content-wrapper">
+      <div
+        *ngIf="selectedTab === 'all'"
+        class="content-wrapper all-predictions"
+      >
         <!-- Gameweek Navigation -->
         <div class="gameweek-navigation">
           <ion-button
@@ -283,6 +314,7 @@ interface PredictionWithResult extends Match {
             interface="popover"
           >
             <ion-select-option value="all">All Predictions</ion-select-option>
+            <ion-select-option value="my">My Predictions</ion-select-option>
             <ion-select-option value="submitted">Submitted</ion-select-option>
             <ion-select-option value="pending">Pending</ion-select-option>
           </ion-select>
@@ -296,17 +328,23 @@ interface PredictionWithResult extends Match {
           >
             <ion-card-header>
               <div class="player-header">
-                <ion-avatar *ngIf="player.avatar">
-                  <img [src]="player.avatar" alt="avatar" />
-                </ion-avatar>
-                <div class="player-info">
-                  <h3>{{ player.playerName }}</h3>
-                  <p>Total Points: {{ player.totalPoints }}</p>
+                <div class="name-section">
+                  <div class="name-and-avatar">
+                    <ion-avatar *ngIf="player.avatar">
+                      <img [src]="player.avatar" alt="avatar" />
+                    </ion-avatar>
+                    <h3>{{ player.playerName }}</h3>
+                  </div>
+                  <ion-chip *ngIf="player.jokerUsed" color="warning">
+                    <ion-icon name="star"></ion-icon>
+                    <ion-label>Joker Used</ion-label>
+                  </ion-chip>
                 </div>
-                <ion-chip *ngIf="player.jokerUsed" color="warning">
-                  <ion-icon name="star"></ion-icon>
-                  <ion-label>Joker Used</ion-label>
-                </ion-chip>
+                <div class="player-info">
+                  <div class="total-points">
+                    Total Points: {{ player.totalPoints }}
+                  </div>
+                </div>
               </div>
             </ion-card-header>
 
@@ -319,7 +357,6 @@ interface PredictionWithResult extends Match {
                   *ngFor="let pred of player.predictions"
                   class="prediction-item"
                 >
-                  <!-- Match Info -->
                   <div class="match-info">
                     <div class="venue-info">
                       <span class="venue-name">{{ pred.venue }}</span>
@@ -327,56 +364,16 @@ interface PredictionWithResult extends Match {
                         pred.kickoff | date : 'EEE d MMM, HH:mm'
                       }}</span>
                     </div>
-                    <div class="teams-score">
-                      <span class="team home">{{ pred.homeTeam }}</span>
-                      <div
-                        class="score"
-                        [class.pending]="!pred.homeScore && !pred.awayScore"
-                      >
-                        {{ pred.homeScore ?? '-' }} -
-                        {{ pred.awayScore ?? '-' }}
-                      </div>
-                      <span class="team away">{{ pred.awayTeam }}</span>
-                    </div>
                   </div>
-
-                  <!-- Prediction Result -->
-                  <div
-                    class="prediction-result"
-                    *ngIf="selectedGameweek.status === 'completed'"
-                  >
+                  <div class="teams-score">
+                    <span class="team home">{{ pred.homeTeam }}</span>
                     <div
-                      class="points"
-                      [class.high-points]="(pred.points || 0) >= 9"
+                      class="score"
+                      [class.pending]="!pred.homeScore && !pred.awayScore"
                     >
-                      {{ pred.points }} pts
+                      {{ pred.homeScore ?? '-' }} - {{ pred.awayScore ?? '-' }}
                     </div>
-                    <div class="accuracy">
-                      <div class="accuracy-item">
-                        <ion-icon
-                          [name]="
-                            pred.isCorrectScore
-                              ? 'checkmark-circle'
-                              : 'close-circle'
-                          "
-                          [color]="pred.isCorrectScore ? 'success' : 'medium'"
-                        >
-                        </ion-icon>
-                        <span>Score</span>
-                      </div>
-                      <div class="accuracy-item">
-                        <ion-icon
-                          [name]="
-                            pred.isCorrectResult
-                              ? 'checkmark-circle'
-                              : 'close-circle'
-                          "
-                          [color]="pred.isCorrectResult ? 'success' : 'medium'"
-                        >
-                        </ion-icon>
-                        <span>Result</span>
-                      </div>
-                    </div>
+                    <span class="team away">{{ pred.awayTeam }}</span>
                   </div>
                 </div>
               </div>
@@ -409,6 +406,12 @@ interface PredictionWithResult extends Match {
         max-width: 800px;
         padding: var(--page-margin);
         margin: 0 auto;
+
+        &.all-predictions {
+          max-width: 100%;
+          padding: 8px 16px;
+          margin: 0;
+        }
       }
 
       .gameweek-navigation {
@@ -721,13 +724,20 @@ interface PredictionWithResult extends Match {
       }
 
       .warning-message {
-        background: #fff3e0;
-        color: #e65100;
-        padding: 12px;
-        border-radius: 4px;
-        margin: 8px 0;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: var(--ion-color-danger-contrast);
+        box-shadow: 0 2px 8px rgba(var(--ion-color-danger-rgb), 0.2);
+        border: 1px solid rgba(var(--ion-color-danger-rgb), 0.2);
+        color: var(--ion-color-danger-shade);
         font-weight: 500;
+        font-size: 14px;
       }
 
       .gameweek-navigation {
@@ -756,119 +766,145 @@ interface PredictionWithResult extends Match {
 
       .search-filter {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
         padding: 16px;
         background: #f8f9fa;
         border-radius: 4px;
         margin-bottom: 16px;
+        gap: 16px;
       }
 
       .player-search {
-        width: 100%;
+        width: 500px;
         margin-right: 16px;
       }
 
       .players-list {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 16px;
       }
 
       .player-card {
-        width: calc(50% - 8px);
+        width: 100%;
+        max-width: 600px;
         border: 1px solid #e0e0e0;
         border-radius: 4px;
         overflow: hidden;
+        margin-bottom: 16px;
       }
 
       .player-header {
         display: flex;
-        align-items: center;
-        padding: 12px;
+        flex-direction: column;
+        padding: 8px;
         background: #f8f9fa;
         border-bottom: 1px solid #e0e0e0;
+        gap: 6px;
+      }
+
+      .name-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
+      .name-and-avatar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        h3 {
+          margin: 0;
+          font-size: 1.125rem;
+          font-weight: 600;
+        }
       }
 
       .player-info {
         display: flex;
         flex-direction: column;
-        margin-left: 12px;
+        align-items: center;
+        width: 100%;
+      }
+
+      .total-points {
+        padding: 2px 8px;
+        font-size: 0.8125rem;
       }
 
       .prediction-item {
-        padding: 12px;
+        padding: 8px 12px;
         border-bottom: 1px solid #e0e0e0;
+
+        &:last-child {
+          border-bottom: none;
+        }
       }
 
       .match-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-      }
-
-      .venue-info {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .venue-name {
-        font-weight: 600;
-      }
-
-      .kickoff {
-        font-size: 12px;
-        color: #666;
+        margin-bottom: 6px;
       }
 
       .teams-score {
         display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        padding: 4px;
+
+        .team {
+          flex: 1;
+          font-size: 0.875rem;
+          font-weight: 500;
+
+          &.home {
+            text-align: right;
+          }
+
+          &.away {
+            text-align: left;
+          }
+        }
+
+        .score {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #424242;
+          padding: 2px 8px;
+          background: #f8f9fa;
+          border-radius: 4px;
+          min-width: 50px;
+          text-align: center;
+
+          &.pending {
+            color: #9e9e9e;
+          }
+        }
+      }
+
+      .venue-info {
+        display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 8px;
-      }
+        margin-bottom: 4px;
+        width: 100%;
 
-      .score {
-        font-size: 14px;
-        font-weight: 500;
-        color: #424242;
-      }
+        .venue-name {
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: #424242;
+        }
 
-      .pending {
-        color: #666;
-      }
-
-      .accuracy {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .accuracy-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .accuracy-item ion-icon {
-        font-size: 16px;
-      }
-
-      .accuracy-item span {
-        font-size: 12px;
-        color: #666;
-      }
-
-      .points {
-        font-size: 14px;
-        font-weight: 500;
-        color: #4a90e2;
-      }
-
-      .high-points {
-        color: #e65100;
+        .kickoff {
+          font-size: 0.8125rem;
+          color: #666666;
+          margin-left: auto;
+          white-space: nowrap;
+        }
       }
 
       .button-container {
@@ -975,6 +1011,29 @@ interface PredictionWithResult extends Match {
           transform: translateY(0);
         }
       }
+
+      .warning-item {
+        margin-bottom: 16px;
+        --background: rgba(var(--ion-color-danger-rgb), 0.1);
+        --border-radius: 8px;
+        --min-height: auto;
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --padding-top: 12px;
+        --padding-bottom: 12px;
+
+        ion-label {
+          margin: 0;
+          color: var(--ion-color-danger-shade);
+          font-weight: 500;
+          font-size: 14px;
+        }
+
+        ion-icon {
+          font-size: 20px;
+          margin-right: 8px;
+        }
+      }
     `,
   ],
   standalone: true,
@@ -1005,6 +1064,7 @@ interface PredictionWithResult extends Match {
     IonSelect,
     IonSelectOption,
     IonBadge,
+    IonItem,
   ],
 })
 export class PredictionsPage implements OnInit {
@@ -1035,9 +1095,10 @@ export class PredictionsPage implements OnInit {
     });
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
-    this.allPredictions = this.getSamplePredictions();
-    this.filteredPredictions = [...this.allPredictions];
+    this.allPredictions = [];
+    this.filteredPredictions = [];
     this.currentGameWeek = this.getSampleCurrentGameWeek();
+    this.pastPredictions = [];
   }
 
   ngOnInit() {
@@ -1046,27 +1107,35 @@ export class PredictionsPage implements OnInit {
 
   tabChanged() {
     if (this.selectedTab === 'all') {
-      this.loadGameweekPredictions();
+      this.filterPredictions();
     }
   }
 
   onScoreChange(match: Match) {
-    // Count valid predictions
+    // Ensure scores are numbers or null
+    match.homeScore =
+      match.homeScore === null ||
+      match.homeScore === undefined ||
+      match.homeScore.toString() === ''
+        ? null
+        : Number(match.homeScore);
+    match.awayScore =
+      match.awayScore === null ||
+      match.awayScore === undefined ||
+      match.awayScore.toString() === ''
+        ? null
+        : Number(match.awayScore);
+
+    // Count valid predictions (both home and away scores are filled)
     const validPredictions = this.currentGameWeek.matches.filter(
-      (m) =>
-        m.homeScore !== null &&
-        m.homeScore !== undefined &&
-        m.awayScore !== null &&
-        m.awayScore !== undefined &&
-        String(m.homeScore).trim() !== '' &&
-        String(m.awayScore).trim() !== ''
+      (m) => m.homeScore !== null && m.awayScore !== null
     ).length;
 
     // Show warning if more than 3 predictions in regular gameweek
     this.showTooManyPredictionsWarning =
       !this.currentGameWeek.isSpecial && validPredictions > 3;
 
-    // Update canSubmit based on prediction count
+    // Update submit button state
     if (this.currentGameWeek.isSpecial) {
       // All matches must be predicted in special gameweeks
       this.canSubmit = validPredictions === this.currentGameWeek.matches.length;
@@ -1074,6 +1143,10 @@ export class PredictionsPage implements OnInit {
       // Exactly 3 predictions required in regular gameweeks
       this.canSubmit = validPredictions === 3;
     }
+
+    // For debugging
+    console.log('Valid predictions:', validPredictions);
+    console.log('Show warning:', this.showTooManyPredictionsWarning);
   }
 
   private getSampleCurrentGameWeek(): GameWeek {
@@ -1214,17 +1287,91 @@ export class PredictionsPage implements OnInit {
       const nameMatch = player.playerName
         .toLowerCase()
         .includes(this.searchTerm.toLowerCase());
-      const statusMatch =
-        this.filterStatus === 'all' ||
-        (this.filterStatus === 'submitted' && player.predictions.length > 0) ||
-        (this.filterStatus === 'pending' && player.predictions.length === 0);
+
+      let statusMatch = true;
+      switch (this.filterStatus) {
+        case 'my':
+          statusMatch = player.isCurrentUser === true;
+          break;
+        case 'submitted':
+          statusMatch = player.predictions.length > 0;
+          break;
+        case 'pending':
+          statusMatch = player.predictions.length === 0;
+          break;
+        default: // 'all'
+          statusMatch = true;
+      }
+
       return nameMatch && statusMatch;
     });
   }
 
+  onSubmitPredictions() {
+    // Get only the matches that have predictions
+    const predictedMatches = this.currentGameWeek.matches
+      .filter((match) => match.homeScore !== null && match.awayScore !== null)
+      .map((match) => ({
+        ...match,
+        points: 0,
+        isCorrectScore: false,
+        isCorrectResult: false,
+      }));
+
+    // Create a prediction entry for the current user
+    const currentUserPrediction: PlayerPrediction = {
+      playerName: 'You (Group Admin)', // This should come from auth service in real implementation
+      isCurrentUser: true,
+      totalPoints: 0,
+      jokerUsed: false,
+      predictions: predictedMatches,
+    };
+
+    // Add to all predictions if not exists, or update if exists
+    const existingUserIndex = this.allPredictions.findIndex(
+      (p) => p.isCurrentUser
+    );
+    if (existingUserIndex >= 0) {
+      this.allPredictions[existingUserIndex] = currentUserPrediction;
+    } else {
+      this.allPredictions.unshift(currentUserPrediction);
+    }
+
+    // Store the predictions in pastPredictions
+    this.pastPredictions = [...predictedMatches];
+
+    // Reset all match scores
+    this.currentGameWeek.matches.forEach((match) => {
+      match.homeScore = null;
+      match.awayScore = null;
+    });
+
+    // Reset submit button state
+    this.canSubmit = false;
+
+    // Force UI update
+    this.filterPredictions();
+    console.log('Current predictions:', this.allPredictions);
+    console.log('Filtered predictions:', this.filteredPredictions);
+  }
+
+  resetPredictions() {
+    // Reset all match scores
+    this.currentGameWeek.matches.forEach((match) => {
+      match.homeScore = null;
+      match.awayScore = null;
+    });
+
+    // Reset states
+    this.canSubmit = false;
+    this.showTooManyPredictionsWarning = false;
+  }
+
   private loadGameweekPredictions() {
-    // Replace with actual API call to load predictions for the selected gameweek
-    this.allPredictions = this.getSamplePredictions();
+    // Only load sample predictions if we don't have any predictions yet
+    if (this.allPredictions.length === 0) {
+      this.allPredictions = this.getSamplePredictions();
+    }
     this.filterPredictions();
   }
 
@@ -1333,16 +1480,6 @@ export class PredictionsPage implements OnInit {
         ],
       },
     ];
-  }
-
-  resetPredictions() {
-    this.currentGameWeek.matches.forEach((match) => {
-      match.homeScore = null;
-      match.awayScore = null;
-    });
-    this.showTooManyPredictionsWarning = false;
-    this.selectedPredictionCount = 0;
-    this.canSubmit = false;
   }
 
   navigateGameweek(delta: number) {
