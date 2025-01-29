@@ -38,12 +38,213 @@
   --background: var(--ion-color-light);
 }
 
+.gameweek-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.nav-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  height: 36px;
+  --color: var(--ion-color-medium);
+
+  &[disabled] {
+    opacity: 0.5;
+  }
+
+  ion-icon {
+    font-size: 24px;
+  }
+}
+
+.gameweek-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+}
+
 ion-card {
   margin: 0 0 16px 0;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.no-predictions {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--ion-color-medium);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+// New styles for current gameweek predictions
+.prediction-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.match-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.venue-info {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  text-align: left;
+}
+
+.match-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  text-align: right;
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  .live-badge {
+    font-size: 10px;
+    padding: 4px 6px;
+    margin-left: 6px;
+    --padding-start: 4px;
+    --padding-end: 4px;
+  }
+}
+
+.teams-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.team {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+
+  &.home {
+    text-align: right;
+  }
+
+  &.away {
+    text-align: left;
+  }
+}
+
+.live-score-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 0 16px;
+}
+
+.score {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 80px;
+  text-align: center;
+  padding: 8px 16px;
+  background-color: var(--ion-color-light);
+  border-radius: 8px;
+
+  &.prediction {
+    background-color: var(--ion-color-light);
+    margin: 0;
+  }
+
+  &.live {
+    background-color: rgba(var(--ion-color-danger-rgb), 0.08);
+    color: var(--ion-color-danger);
+    font-size: 16px;
+    min-width: 120px;
+    padding: 8px 20px;
+    margin: 8px 0;
+
+    .live-score-value {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 4px 0;
+    }
+
+    .match-minute {
+      font-size: 14px;
+      color: var(--ion-color-danger);
+      margin-top: 2px;
+    }
+  }
+
+  &.finished {
+    background-color: rgba(var(--ion-color-success-rgb), 0.08);
+    color: var(--ion-color-success);
+    font-size: 16px;
+    min-width: 120px;
+    padding: 8px 20px;
+    margin: 8px 0;
+
+    .live-score-value {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 4px 0;
+    }
+
+    .match-minute {
+      font-size: 14px;
+      color: var(--ion-color-success);
+      margin-top: 2px;
+    }
+
+    .points-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(var(--ion-color-success-rgb), 0.2);
+      font-size: 14px;
+      font-weight: 600;
+
+      ion-icon {
+        font-size: 16px;
+        margin-right: 2px;
+      }
+    }
+  }
+
+  .score-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    color: var(--ion-color-medium);
+  }
+}
+
+// Keep existing history styles
 .prediction-container {
   width: 100%;
   padding: 8px 0;

@@ -5,33 +5,13 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <!-- Stats Overview -->
-  <ion-card class="stats-card">
-    <ion-card-content>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <ion-icon name="trophy-outline" color="warning"></ion-icon>
-          <div class="stat-value">{{ stats.totalPoints }}</div>
-          <div class="stat-label">Total Points</div>
-        </div>
-        <div class="stat-item">
-          <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
-          <div class="stat-value">{{ stats.correctScores }}</div>
-          <div class="stat-label">Perfect Scores</div>
-        </div>
-        <div class="stat-item">
-          <ion-icon name="football-outline" color="primary"></ion-icon>
-          <div class="stat-value">{{ stats.correctResults }}</div>
-          <div class="stat-label">Correct Results</div>
-        </div>
-      </div>
-    </ion-card-content>
-  </ion-card>
+  <ion-toast [isOpen]="showNewPredictionsToast" message="New predictions loaded!" duration="2000" color="success"
+    position="top" icon="checkmark-circle-outline"></ion-toast>
 
   <!-- Segment Control -->
   <ion-segment [(ngModel)]="selectedSegment" class="predictions-segment">
     <ion-segment-button value="current">
-      Current Gameweek
+      My Predictions
     </ion-segment-button>
     <ion-segment-button value="history">
       History
@@ -40,26 +20,53 @@
 
   <!-- Current Gameweek Predictions -->
   <div *ngIf="selectedSegment === 'current'">
-    <ion-card>
+    <ion-card *ngIf="currentPredictions.length === 0">
+      <ion-card-content>
+        <div class="no-predictions">
+          No predictions submitted for the current gameweek.
+          Visit the Matches tab to make your predictions.
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="currentPredictions.length > 0">
       <ion-card-header>
-        <ion-card-title>Gameweek {{ currentGameweek.number }} Predictions</ion-card-title>
+        <ion-card-title>Gameweek {{ currentGameweek }} Predictions</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <ion-list>
-          <ion-item *ngFor="let pred of currentGameweek.predictions">
-            <div class="prediction-container">
-              <div class="match-details">
-                <div class="teams">
-                  <span class="team home">{{ pred.match.homeTeam }}</span>
-                  <span class="score">{{ pred.prediction.home }} - {{ pred.prediction.away }}</span>
-                  <span class="team away">{{ pred.match.awayTeam }}</span>
-                </div>
-                <div class="kickoff">
+          <ion-item *ngFor="let pred of currentPredictions">
+            <div class="prediction-item">
+              <div class="match-info">
+                <div class="venue-info">{{ pred.match.venue }}</div>
+                <div class="match-time">
                   <ion-icon name="time-outline"></ion-icon>
-                  {{ pred.match.kickoff | date:'MMM d, h:mm a' }}
+                  {{ pred.match.kickoff | date:'EEE d MMM, HH:mm' }}
+                  <ion-badge *ngIf="isMatchLive(pred.match)" color="danger" class="live-badge">
+                    LIVE {{ getMatchTime(pred.match) }}
+                  </ion-badge>
                 </div>
               </div>
-              <ion-badge color="warning">Pending</ion-badge>
+              <div class="teams-score">
+                <div class="team home">{{ pred.match.homeTeam }}</div>
+                <div class="score prediction">
+                  <div class="score-label">PREDICTION</div>
+                  {{ pred.prediction.home }} - {{ pred.prediction.away }}
+                </div>
+                <div class="team away">{{ pred.match.awayTeam }}</div>
+              </div>
+              <div *ngIf="pred.match.liveScore?.isLive" class="live-score-container">
+                <div class="score" [ngClass]="getScoreClass(pred.match)">
+                  <div class="score-label">{{ isMatchFinished(pred.match) ? 'FINAL SCORE' : 'LIVE SCORE' }}</div>
+                  <div class="live-score-value">{{ pred.match.liveScore?.home || 0 }} - {{ pred.match.liveScore?.away ||
+                    0 }}</div>
+                  <div class="match-minute">{{ getMatchTime(pred.match) }}</div>
+                  <div *ngIf="isMatchFinished(pred.match) && pred.points !== undefined" class="points-badge">
+                    <ion-icon [name]="getStatusIcon(pred.status)"></ion-icon>
+                    {{ pred.points }} pts
+                  </div>
+                </div>
+              </div>
             </div>
           </ion-item>
         </ion-list>
@@ -69,15 +76,35 @@
 
   <!-- Historical Predictions -->
   <div *ngIf="selectedSegment === 'history'">
-    <ion-card>
-      <ion-card-header>
-        <ion-card-title>Previous Predictions</ion-card-title>
-      </ion-card-header>
+    <div class="gameweek-navigation">
+      <ion-button fill="clear" class="nav-button" [disabled]="!canNavigateHistory('back')"
+        (click)="navigateHistoryGameweek(1)">
+        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+      </ion-button>
+
+      <div class="gameweek-title">
+        <h2>Gameweek {{ selectedHistoryGameweek }}</h2>
+      </div>
+
+      <ion-button fill="clear" class="nav-button" [disabled]="!canNavigateHistory('forward')"
+        (click)="navigateHistoryGameweek(-1)">
+        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <ion-card *ngIf="historicalPredictions.length === 0">
+      <ion-card-content>
+        <div class="no-predictions">
+          No predictions found for Gameweek {{ selectedHistoryGameweek }}.
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="historicalPredictions.length > 0">
       <ion-card-content>
         <ion-list>
           <ion-item *ngFor="let pred of historicalPredictions">
             <div class="prediction-container">
-              <div class="gameweek">Gameweek {{ pred.gameweek }}</div>
               <div class="match-details">
                 <div class="teams">
                   <span class="team home">{{ pred.match.homeTeam }}</span>
@@ -86,15 +113,15 @@
                       <span class="score-label">Your Prediction</span>
                       <span class="score">{{ pred.prediction.home }} - {{ pred.prediction.away }}</span>
                     </div>
-                    <div class="score-row final">
+                    <div class="score-row final" *ngIf="pred.match.finalScore">
                       <span class="score-label">Final Score</span>
-                      <span class="score">{{ pred.match.finalScore?.home }} - {{ pred.match.finalScore?.away }}</span>
+                      <span class="score">{{ pred.match.finalScore.home }} - {{ pred.match.finalScore.away }}</span>
                     </div>
                   </div>
                   <span class="team away">{{ pred.match.awayTeam }}</span>
                 </div>
               </div>
-              <div class="result">
+              <div class="result" *ngIf="pred.points !== undefined">
                 <ion-badge [color]="getStatusColor(pred.status)">
                   <ion-icon [name]="getStatusIcon(pred.status)"></ion-icon>
                   {{ pred.points }} pts

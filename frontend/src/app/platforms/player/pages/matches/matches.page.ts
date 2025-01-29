@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -16,6 +17,7 @@ import {
   IonBadge,
   IonButtons,
   IonText,
+  IonToast,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -208,6 +210,15 @@ interface GameWeek {
           </ion-col>
         </ion-row>
       </ion-grid>
+
+      <ion-toast
+        [isOpen]="showSuccessToast"
+        message="Predictions submitted successfully! View them in the My Predictions tab."
+        duration="3000"
+        color="success"
+        position="top"
+        icon="checkmark-circle-outline"
+      ></ion-toast>
     </ion-content>
   `,
   styles: [
@@ -572,6 +583,7 @@ interface GameWeek {
     NgIf,
     DatePipe,
     FormsModule,
+    IonToast,
   ],
 })
 export class MatchesPage {
@@ -668,8 +680,10 @@ export class MatchesPage {
 
   showTooManyPredictionsWarning = false;
   selectedPredictionCount = 0;
+  showSuccessToast = false;
+  predictionsCompleted = false;
 
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       timeOutline,
       footballOutline,
@@ -679,9 +693,37 @@ export class MatchesPage {
       chevronForwardOutline,
       personOutline,
     });
+    this.checkPredictionsStatus();
+  }
+
+  checkPredictionsStatus() {
+    // Load stored predictions
+    const storedPredictions = JSON.parse(
+      localStorage.getItem('playerPredictions') || '[]'
+    );
+
+    // Check if current gameweek predictions exist and are complete
+    const currentGameweekPredictions = storedPredictions.find(
+      (submission: any) => submission.gameweek === this.currentGameweek.number
+    );
+
+    if (currentGameweekPredictions) {
+      const predictionCount = currentGameweekPredictions.predictions.length;
+      this.predictionsCompleted = this.currentGameweek.isSpecial
+        ? predictionCount === this.matches.length
+        : predictionCount === 3;
+    }
   }
 
   onScoreChange(match: Match) {
+    if (this.predictionsCompleted) {
+      // Reset the score if predictions are completed
+      match.prediction.homeScore = null;
+      match.prediction.awayScore = null;
+      this.showTooManyPredictionsWarning = true;
+      return;
+    }
+
     // Validate scores are numbers and within range
     if (match.prediction.homeScore !== null) {
       match.prediction.homeScore = Math.max(
@@ -713,13 +755,69 @@ export class MatchesPage {
   }
 
   canSubmit(): boolean {
+    if (this.predictionsCompleted) {
+      return false;
+    }
+
     if (this.currentGameweek.isSpecial) {
-      // All matches must be predicted in special gameweeks
       return this.selectedPredictionCount === this.matches.length;
     } else {
-      // Exactly 3 predictions required in regular gameweeks
       return this.selectedPredictionCount === 3;
     }
+  }
+
+  async onSubmit() {
+    if (this.predictionsCompleted) {
+      return;
+    }
+
+    // Get matches with predictions
+    const predictedMatches = this.matches.filter(
+      (match) =>
+        match.prediction.homeScore !== null &&
+        match.prediction.awayScore !== null
+    );
+
+    // Create prediction entry
+    const submission = {
+      gameweek: this.currentGameweek.number,
+      submittedAt: new Date().toISOString(),
+      predictions: predictedMatches.map((match) => ({
+        id: match.id,
+        gameweek: this.currentGameweek.number,
+        match: {
+          homeTeam: match.homeTeam,
+          awayTeam: match.awayTeam,
+          kickoff: match.kickoff,
+          venue: match.venue,
+        },
+        prediction: {
+          home: match.prediction.homeScore,
+          away: match.prediction.awayScore,
+        },
+        status: 'pending',
+      })),
+    };
+
+    // Store in localStorage (replacing any existing predictions for current gameweek)
+    const storedPredictions = JSON.parse(
+      localStorage.getItem('playerPredictions') || '[]'
+    );
+    const updatedPredictions = storedPredictions.filter(
+      (pred: any) => pred.gameweek !== this.currentGameweek.number
+    );
+    updatedPredictions.push(submission);
+    localStorage.setItem(
+      'playerPredictions',
+      JSON.stringify(updatedPredictions)
+    );
+
+    // Reset predictions and update status
+    this.resetPredictions();
+    this.predictionsCompleted = true;
+
+    // Show success toast
+    this.showSuccessToast = true;
   }
 
   resetPredictions() {
@@ -727,24 +825,58 @@ export class MatchesPage {
       match.prediction.homeScore = null;
       match.prediction.awayScore = null;
     });
-    this.showTooManyPredictionsWarning = false;
     this.selectedPredictionCount = 0;
-  }
-
-  onSubmit() {
-    // TODO: Implement submission logic
-    console.log('Submitting predictions:', this.matches);
+    this.showTooManyPredictionsWarning = false;
   }
 
   navigateGameweek(delta: number) {
     const newGameweek = this.currentGameweek.number + delta;
     if (newGameweek >= 1 && newGameweek <= 38) {
-      // TODO: Load gameweek data from service
+      // Move current gameweek predictions to history if completed
+      if (this.predictionsCompleted) {
+        this.moveCurrentPredictionsToHistory();
+      }
+
+      // Update current gameweek
       this.currentGameweek = {
         ...this.currentGameweek,
         number: newGameweek,
       };
       this.loadGameweekMatches(newGameweek);
+
+      // Reset prediction status for new gameweek
+      this.predictionsCompleted = false;
+      this.resetPredictions();
+    }
+  }
+
+  private moveCurrentPredictionsToHistory() {
+    const storedPredictions = JSON.parse(
+      localStorage.getItem('playerPredictions') || '[]'
+    );
+    const currentPredictions = storedPredictions.find(
+      (pred: any) => pred.gameweek === this.currentGameweek.number
+    );
+
+    if (currentPredictions) {
+      // Move to history
+      const historicalPredictions = JSON.parse(
+        localStorage.getItem('historicalPredictions') || '[]'
+      );
+      historicalPredictions.push(currentPredictions);
+      localStorage.setItem(
+        'historicalPredictions',
+        JSON.stringify(historicalPredictions)
+      );
+
+      // Remove from current predictions
+      const updatedPredictions = storedPredictions.filter(
+        (pred: any) => pred.gameweek !== this.currentGameweek.number
+      );
+      localStorage.setItem(
+        'playerPredictions',
+        JSON.stringify(updatedPredictions)
+      );
     }
   }
 
