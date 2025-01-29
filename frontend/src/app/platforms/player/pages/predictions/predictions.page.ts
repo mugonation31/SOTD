@@ -139,6 +139,78 @@ export class PredictionsPage {
       this.currentPredictions = currentGameweekPredictions.predictions;
     }
 
+    // Mock historical predictions data
+    const mockHistoricalPredictions = [
+      {
+        gameweek: 14,
+        predictions: [
+          {
+            id: 1,
+            gameweek: 14,
+            match: {
+              homeTeam: 'Arsenal',
+              awayTeam: 'Brighton',
+              kickoff: '2024-01-17T19:45:00',
+              venue: 'Emirates Stadium',
+              finalScore: {
+                home: 2,
+                away: 1,
+              },
+            },
+            prediction: {
+              home: 2,
+              away: 1,
+            },
+            status: 'correct',
+          },
+          {
+            id: 2,
+            gameweek: 14,
+            match: {
+              homeTeam: 'Brentford',
+              awayTeam: 'Chelsea',
+              kickoff: '2024-01-17T20:00:00',
+              venue: 'Gtech Community Stadium',
+              finalScore: {
+                home: 0,
+                away: 2,
+              },
+            },
+            prediction: {
+              home: 1,
+              away: 1,
+            },
+            status: 'incorrect',
+          },
+          {
+            id: 3,
+            gameweek: 14,
+            match: {
+              homeTeam: 'Manchester City',
+              awayTeam: 'Tottenham',
+              kickoff: '2024-01-17T20:15:00',
+              venue: 'Etihad Stadium',
+              finalScore: {
+                home: 3,
+                away: 3,
+              },
+            },
+            prediction: {
+              home: 2,
+              away: 1,
+            },
+            status: 'incorrect',
+          },
+        ],
+      },
+    ];
+
+    // Store mock historical data
+    localStorage.setItem(
+      'historicalPredictions',
+      JSON.stringify(mockHistoricalPredictions)
+    );
+
     // Load historical predictions
     const historicalPredictions = JSON.parse(
       localStorage.getItem('historicalPredictions') || '[]'
@@ -175,9 +247,26 @@ export class PredictionsPage {
       (submission: any) => submission.gameweek === this.selectedHistoryGameweek
     );
 
-    this.historicalPredictions = selectedGameweekPredictions
+    // Get base predictions
+    let predictions = selectedGameweekPredictions
       ? selectedGameweekPredictions.predictions
       : [];
+
+    // Add points and status based on prediction vs final score
+    this.historicalPredictions = predictions.map((pred: Prediction) => {
+      if (pred.match.finalScore) {
+        const isCorrect =
+          pred.prediction.home === pred.match.finalScore.home &&
+          pred.prediction.away === pred.match.finalScore.away;
+
+        return {
+          ...pred,
+          points: isCorrect ? 3 : 0,
+          status: isCorrect ? 'correct' : 'incorrect',
+        };
+      }
+      return pred;
+    });
   }
 
   navigateHistoryGameweek(delta: number) {

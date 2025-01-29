@@ -104,28 +104,33 @@
       <ion-card-content>
         <ion-list>
           <ion-item *ngFor="let pred of historicalPredictions">
-            <div class="prediction-container">
-              <div class="match-details">
-                <div class="teams">
-                  <span class="team home">{{ pred.match.homeTeam }}</span>
-                  <div class="score-details">
-                    <div class="score-row">
-                      <span class="score-label">Your Prediction</span>
-                      <span class="score">{{ pred.prediction.home }} - {{ pred.prediction.away }}</span>
-                    </div>
-                    <div class="score-row final" *ngIf="pred.match.finalScore">
-                      <span class="score-label">Final Score</span>
-                      <span class="score">{{ pred.match.finalScore.home }} - {{ pred.match.finalScore.away }}</span>
-                    </div>
-                  </div>
-                  <span class="team away">{{ pred.match.awayTeam }}</span>
+            <div class="prediction-item">
+              <div class="match-info">
+                <div class="venue-info">{{ pred.match.venue }}</div>
+                <div class="match-time">
+                  <ion-icon name="time-outline"></ion-icon>
+                  {{ pred.match.kickoff | date:'EEE d MMM, HH:mm' }}
                 </div>
               </div>
-              <div class="result" *ngIf="pred.points !== undefined">
-                <ion-badge [color]="getStatusColor(pred.status)">
-                  <ion-icon [name]="getStatusIcon(pred.status)"></ion-icon>
-                  {{ pred.points }} pts
-                </ion-badge>
+              <div class="teams-score">
+                <div class="team home">{{ pred.match.homeTeam }}</div>
+                <div class="score prediction">
+                  <div class="score-label">PREDICTION</div>
+                  {{ pred.prediction.home }} - {{ pred.prediction.away }}
+                </div>
+                <div class="team away">{{ pred.match.awayTeam }}</div>
+              </div>
+              <div class="live-score-container">
+                <div class="score finished">
+                  <div class="score-label">FINAL SCORE</div>
+                  <div class="live-score-value">{{ pred.match.finalScore?.home || 0 }} - {{ pred.match.finalScore?.away
+                    || 0 }}</div>
+                  <div class="match-minute">FT</div>
+                  <div class="points-badge">
+                    <ion-icon [name]="getStatusIcon(pred.status)"></ion-icon>
+                    {{ pred.points }} pts
+                  </div>
+                </div>
               </div>
             </div>
           </ion-item>
