@@ -39,6 +39,10 @@ import {
   alertCircleOutline,
   timeOutline,
   refreshOutline,
+  footballOutline,
+  closeCircleOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
 } from 'ionicons/icons';
 
 interface GameWeek {
@@ -51,14 +55,26 @@ interface GameWeek {
 }
 
 interface Match {
+  id: number;
+  gameweek: number;
   homeTeam: string;
   awayTeam: string;
-  homeScore: number | null;
-  awayScore: number | null;
+  kickoff: string;
   venue: string;
-  kickoff: Date;
-  capacity?: string;
-  isSelected?: boolean;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  liveScore?: {
+    home: number;
+    away: number;
+    isLive: boolean;
+    minute: number;
+    additionalTime?: number;
+  };
+  finalScore?: {
+    home: number;
+    away: number;
+  };
+  status: 'scheduled' | 'live' | 'finished';
 }
 
 interface PlayerPrediction {
@@ -1083,6 +1099,12 @@ export class PredictionsPage implements OnInit {
   pastPredictions: Match[] = [];
   canSubmit = false;
   selectedPredictionCount = 0;
+  currentGameweek = 15; // This should come from a service
+  currentMatches: Match[] = [];
+  historicalMatches: Match[] = [];
+  selectedHistoryGameweek = 14;
+  historicalGameweeks: number[] = [];
+  liveScoreUpdateInterval: any;
 
   constructor() {
     addIcons({
@@ -1094,6 +1116,10 @@ export class PredictionsPage implements OnInit {
       alertCircleOutline,
       timeOutline,
       refreshOutline,
+      footballOutline,
+      closeCircleOutline,
+      chevronBackOutline,
+      chevronForwardOutline,
     });
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
@@ -1159,84 +1185,114 @@ export class PredictionsPage implements OnInit {
       deadline: new Date('2024-01-20T11:30:00'),
       matches: [
         {
+          id: 1,
+          gameweek: 15,
           homeTeam: 'Manchester United',
           awayTeam: 'Liverpool',
           homeScore: null,
           awayScore: null,
           venue: 'Old Trafford',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 2,
+          gameweek: 15,
           homeTeam: 'Arsenal',
           awayTeam: 'Chelsea',
           homeScore: null,
           awayScore: null,
           venue: 'Emirates Stadium',
-          kickoff: new Date('2024-01-20T17:30:00'),
+          kickoff: '2024-01-20T17:30:00',
+          status: 'scheduled',
         },
         {
+          id: 3,
+          gameweek: 15,
           homeTeam: 'Manchester City',
           awayTeam: 'Tottenham',
           homeScore: null,
           awayScore: null,
           venue: 'Etihad Stadium',
-          kickoff: new Date('2024-01-20T20:00:00'),
+          kickoff: '2024-01-20T20:00:00',
+          status: 'scheduled',
         },
         {
+          id: 4,
+          gameweek: 15,
           homeTeam: 'Newcastle',
           awayTeam: 'Aston Villa',
           homeScore: null,
           awayScore: null,
           venue: 'St. James Park',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 5,
+          gameweek: 15,
           homeTeam: 'Brighton',
           awayTeam: 'Crystal Palace',
           homeScore: null,
           awayScore: null,
           venue: 'Amex Stadium',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 6,
+          gameweek: 15,
           homeTeam: 'Brentford',
           awayTeam: 'Nottingham Forest',
           homeScore: null,
           awayScore: null,
           venue: 'Gtech Community Stadium',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 7,
+          gameweek: 15,
           homeTeam: 'Sheffield United',
           awayTeam: 'West Ham',
           homeScore: null,
           awayScore: null,
           venue: 'Bramall Lane',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 8,
+          gameweek: 15,
           homeTeam: 'Bournemouth',
           awayTeam: 'Luton Town',
           homeScore: null,
           awayScore: null,
           venue: 'Vitality Stadium',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 9,
+          gameweek: 15,
           homeTeam: 'Wolves',
           awayTeam: 'Everton',
           homeScore: null,
           awayScore: null,
           venue: 'Molineux',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
         {
+          id: 10,
+          gameweek: 15,
           homeTeam: 'Burnley',
           awayTeam: 'Fulham',
           homeScore: null,
           awayScore: null,
           venue: 'Turf Moor',
-          kickoff: new Date('2024-01-20T15:00:00'),
+          kickoff: '2024-01-20T15:00:00',
+          status: 'scheduled',
         },
       ],
     };
@@ -1406,37 +1462,46 @@ export class PredictionsPage implements OnInit {
         jokerUsed: true,
         predictions: [
           {
+            id: 1,
+            gameweek: 15,
             homeTeam: 'Manchester United',
             awayTeam: 'Liverpool',
             homeScore: 2,
             awayScore: 1,
             venue: 'Old Trafford',
-            kickoff: new Date('2024-01-20T15:00:00'),
+            kickoff: '2024-01-20T15:00:00',
             points: 9,
             isCorrectScore: true,
             isCorrectResult: true,
+            status: 'finished',
           },
           {
+            id: 2,
+            gameweek: 15,
             homeTeam: 'Arsenal',
             awayTeam: 'Chelsea',
             homeScore: 1,
             awayScore: 1,
             venue: 'Emirates Stadium',
-            kickoff: new Date('2024-01-20T17:30:00'),
+            kickoff: '2024-01-20T17:30:00',
             points: 6,
             isCorrectScore: false,
             isCorrectResult: true,
+            status: 'finished',
           },
           {
+            id: 3,
+            gameweek: 15,
             homeTeam: 'Manchester City',
             awayTeam: 'Tottenham',
             homeScore: 3,
             awayScore: 0,
             venue: 'Etihad Stadium',
-            kickoff: new Date('2024-01-20T20:00:00'),
+            kickoff: '2024-01-20T20:00:00',
             points: 0,
             isCorrectScore: false,
             isCorrectResult: false,
+            status: 'finished',
           },
         ],
       },
@@ -1447,37 +1512,46 @@ export class PredictionsPage implements OnInit {
         jokerUsed: false,
         predictions: [
           {
+            id: 1,
+            gameweek: 15,
             homeTeam: 'Manchester United',
             awayTeam: 'Liverpool',
             homeScore: 1,
             awayScore: 2,
             venue: 'Old Trafford',
-            kickoff: new Date('2024-01-20T15:00:00'),
+            kickoff: '2024-01-20T15:00:00',
             points: 6,
             isCorrectScore: false,
             isCorrectResult: true,
+            status: 'finished',
           },
           {
+            id: 2,
+            gameweek: 15,
             homeTeam: 'Arsenal',
             awayTeam: 'Chelsea',
             homeScore: 2,
             awayScore: 2,
             venue: 'Emirates Stadium',
-            kickoff: new Date('2024-01-20T17:30:00'),
+            kickoff: '2024-01-20T17:30:00',
             points: 9,
             isCorrectScore: true,
             isCorrectResult: true,
+            status: 'finished',
           },
           {
+            id: 3,
+            gameweek: 15,
             homeTeam: 'Manchester City',
             awayTeam: 'Tottenham',
             homeScore: 4,
             awayScore: 1,
             venue: 'Etihad Stadium',
-            kickoff: new Date('2024-01-20T20:00:00'),
+            kickoff: '2024-01-20T20:00:00',
             points: 6,
             isCorrectScore: false,
             isCorrectResult: true,
+            status: 'finished',
           },
         ],
       },
@@ -1499,5 +1573,256 @@ export class PredictionsPage implements OnInit {
   loadGameweekMatches(gameweek: number) {
     // TODO: Implement service call to load matches for the gameweek
     console.log('Loading matches for gameweek:', gameweek);
+  }
+
+  ionViewWillEnter() {
+    this.loadMatches();
+    // Start live score updates
+    this.startLiveScoreUpdates();
+  }
+
+  ionViewWillLeave() {
+    // Clean up interval when leaving the page
+    if (this.liveScoreUpdateInterval) {
+      clearInterval(this.liveScoreUpdateInterval);
+    }
+  }
+
+  loadMatches() {
+    // Mock current matches data
+    const mockCurrentMatches: Match[] = [
+      {
+        id: 1,
+        gameweek: 15,
+        homeTeam: 'Manchester United',
+        awayTeam: 'Liverpool',
+        kickoff: '2024-01-20T15:00:00',
+        venue: 'Old Trafford',
+        status: 'scheduled',
+      },
+      // Add more mock matches as needed
+    ];
+
+    this.currentMatches = mockCurrentMatches;
+
+    // Mock historical matches data
+    const mockHistoricalMatches = [
+      {
+        gameweek: 14,
+        matches: [
+          {
+            id: 1,
+            gameweek: 14,
+            homeTeam: 'Arsenal',
+            awayTeam: 'Brighton',
+            kickoff: '2024-01-17T19:45:00',
+            venue: 'Emirates Stadium',
+            finalScore: {
+              home: 2,
+              away: 1,
+            },
+            status: 'finished',
+          },
+          {
+            id: 2,
+            gameweek: 14,
+            homeTeam: 'Brentford',
+            awayTeam: 'Chelsea',
+            kickoff: '2024-01-17T20:00:00',
+            venue: 'Gtech Community Stadium',
+            finalScore: {
+              home: 0,
+              away: 2,
+            },
+            status: 'finished',
+          },
+          {
+            id: 3,
+            gameweek: 14,
+            homeTeam: 'Manchester City',
+            awayTeam: 'Tottenham',
+            kickoff: '2024-01-17T20:15:00',
+            venue: 'Etihad Stadium',
+            finalScore: {
+              home: 3,
+              away: 3,
+            },
+            status: 'finished',
+          },
+        ],
+      },
+    ];
+
+    // Store mock historical data
+    localStorage.setItem(
+      'historicalMatches',
+      JSON.stringify(mockHistoricalMatches)
+    );
+
+    // Get unique gameweeks from history
+    this.historicalGameweeks = Array.from(
+      new Set(mockHistoricalMatches.map((gw) => gw.gameweek))
+    ).sort((a, b) => b - a);
+
+    // If we have historical gameweeks, set the selected one
+    if (this.historicalGameweeks.length > 0) {
+      this.selectedHistoryGameweek = this.historicalGameweeks[0];
+    }
+
+    // Get matches for selected historical gameweek
+    this.updateHistoricalMatches();
+  }
+
+  updateHistoricalMatches() {
+    const historicalMatches = JSON.parse(
+      localStorage.getItem('historicalMatches') || '[]'
+    );
+    const selectedGameweekMatches = historicalMatches.find(
+      (gw: any) => gw.gameweek === this.selectedHistoryGameweek
+    );
+
+    this.historicalMatches = selectedGameweekMatches
+      ? selectedGameweekMatches.matches
+      : [];
+  }
+
+  startLiveScoreUpdates() {
+    // Update live scores every minute
+    this.liveScoreUpdateInterval = setInterval(() => {
+      this.updateLiveScores();
+    }, 60000); // 60000ms = 1 minute
+
+    // Initial update
+    this.updateLiveScores();
+  }
+
+  updateLiveScores() {
+    // TODO: Replace with actual API call
+    // For now, using mock data to demonstrate
+    const mockLiveScores = [
+      {
+        homeTeam: 'Manchester United',
+        awayTeam: 'Liverpool',
+        home: 1,
+        away: 0,
+        isLive: true,
+        minute: this.calculateMatchMinute('2024-01-20T15:00:00'),
+        additionalTime: 2,
+      },
+    ];
+
+    // Update current matches with live scores
+    this.currentMatches = this.currentMatches.map((match) => {
+      const liveMatch = mockLiveScores.find(
+        (score) =>
+          score.homeTeam === match.homeTeam && score.awayTeam === match.awayTeam
+      );
+
+      if (liveMatch) {
+        return {
+          ...match,
+          liveScore: {
+            home: liveMatch.home,
+            away: liveMatch.away,
+            isLive: true,
+            minute: liveMatch.minute,
+            additionalTime: liveMatch.additionalTime,
+          },
+          status: this.isMatchFinished(match) ? 'finished' : 'live',
+        };
+      }
+      return match;
+    });
+  }
+
+  calculateMatchMinute(kickoff: string): number {
+    const kickoffTime = new Date(kickoff);
+    const now = new Date();
+    const diffInMinutes = Math.floor(
+      (now.getTime() - kickoffTime.getTime()) / 60000
+    );
+
+    // Handle half time (45-60 minutes shows as 45+)
+    if (diffInMinutes >= 45 && diffInMinutes < 60) {
+      return 45;
+    }
+
+    // Handle full time (90+ minutes)
+    if (diffInMinutes >= 90) {
+      return 90;
+    }
+
+    // Handle second half (subtract 15 minutes for half time)
+    if (diffInMinutes > 60) {
+      return diffInMinutes - 15;
+    }
+
+    return diffInMinutes;
+  }
+
+  getMatchTime(match: Match): string {
+    if (!match.liveScore?.isLive) return '';
+
+    // Check if match is finished
+    if (this.isMatchFinished(match)) {
+      return 'FT';
+    }
+
+    const minute = match.liveScore.minute;
+    const additionalTime = match.liveScore.additionalTime;
+
+    if (minute === 45 && additionalTime) {
+      return `45+${additionalTime}'`;
+    }
+    if (minute === 90 && additionalTime) {
+      return `90+${additionalTime}'`;
+    }
+    return `${minute}'`;
+  }
+
+  isMatchFinished(match: Match): boolean {
+    const kickoff = new Date(match.kickoff);
+    const now = new Date();
+    // Match is finished if it's more than 2 hours after kickoff
+    return now > new Date(kickoff.getTime() + 2 * 60 * 60 * 1000);
+  }
+
+  isMatchLive(match: Match): boolean {
+    const kickoff = new Date(match.kickoff);
+    const now = new Date();
+    // Match is live if it's within the 2-hour window after kickoff and not finished
+    return (
+      now >= kickoff &&
+      now <= new Date(kickoff.getTime() + 2 * 60 * 60 * 1000) &&
+      !this.isMatchFinished(match)
+    );
+  }
+
+  getScoreClass(match: Match): string {
+    if (this.isMatchFinished(match)) {
+      return 'finished';
+    }
+    return 'live';
+  }
+
+  navigateHistoryGameweek(delta: number) {
+    const currentIndex = this.historicalGameweeks.indexOf(
+      this.selectedHistoryGameweek
+    );
+    const newIndex = currentIndex + delta;
+
+    if (newIndex >= 0 && newIndex < this.historicalGameweeks.length) {
+      this.selectedHistoryGameweek = this.historicalGameweeks[newIndex];
+      this.updateHistoricalMatches();
+    }
+  }
+
+  canNavigateHistory(direction: 'back' | 'forward'): boolean {
+    const currentIndex = this.historicalGameweeks.indexOf(
+      this.selectedHistoryGameweek
+    );
+    return direction === 'back'
+      ? currentIndex < this.historicalGameweeks.length - 1
+      : currentIndex > 0;
   }
 }

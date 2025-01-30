@@ -38,6 +38,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'live',
+        loadComponent: () =>
+          import('./pages/live/live.page').then((m) => m.LivePage),
+      },
+      {
         path: 'groups',
         loadComponent: () =>
           import('./pages/groups/groups.page').then((m) => m.GroupsPage),

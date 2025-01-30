@@ -1,9 +1,123 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Group Predictions</ion-title>
+    <ion-title>Match Results</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h1>View Group Predictions</h1>
+  <!-- Segment Control -->
+  <ion-segment [(ngModel)]="selectedSegment" class="predictions-segment">
+    <ion-segment-button value="current">
+      Current Matches
+    </ion-segment-button>
+    <ion-segment-button value="history">
+      History
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Current Gameweek Matches -->
+  <div *ngIf="selectedSegment === 'current'">
+    <ion-card *ngIf="currentMatches.length === 0">
+      <ion-card-content>
+        <div class="no-matches">
+          No matches scheduled for the current gameweek.
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="currentMatches.length > 0">
+      <ion-card-header>
+        <ion-card-title>Gameweek {{ currentGameweek }} Matches</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let match of currentMatches">
+            <div class="match-item">
+              <div class="match-info">
+                <div class="venue-info">{{ match.venue }}</div>
+                <div class="match-time">
+                  <ion-icon name="time-outline"></ion-icon>
+                  {{ match.kickoff | date:'EEE d MMM, HH:mm' }}
+                  <ion-badge *ngIf="isMatchLive(match)" color="danger" class="live-badge">
+                    LIVE {{ getMatchTime(match) }}
+                  </ion-badge>
+                </div>
+              </div>
+              <div class="teams-score">
+                <div class="team home">{{ match.homeTeam }}</div>
+                <div class="score scheduled" *ngIf="!match.liveScore && !match.finalScore">
+                  <div class="score-label">SCHEDULED</div>
+                  - vs -
+                </div>
+                <div class="team away">{{ match.awayTeam }}</div>
+              </div>
+              <div *ngIf="match.liveScore?.isLive" class="live-score-container">
+                <div class="score" [ngClass]="getScoreClass(match)">
+                  <div class="score-label">{{ isMatchFinished(match) ? 'FINAL SCORE' : 'LIVE SCORE' }}</div>
+                  <div class="live-score-value">{{ match.liveScore?.home || 0 }} - {{ match.liveScore?.away || 0 }}
+                  </div>
+                  <div class="match-minute">{{ getMatchTime(match) }}</div>
+                </div>
+              </div>
+            </div>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Historical Matches -->
+  <div *ngIf="selectedSegment === 'history'">
+    <div class="gameweek-navigation">
+      <ion-button fill="clear" class="nav-button" [disabled]="!canNavigateHistory('back')"
+        (click)="navigateHistoryGameweek(1)">
+        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+      </ion-button>
+
+      <div class="gameweek-title">
+        <h2>Gameweek {{ selectedHistoryGameweek }}</h2>
+      </div>
+
+      <ion-button fill="clear" class="nav-button" [disabled]="!canNavigateHistory('forward')"
+        (click)="navigateHistoryGameweek(-1)">
+        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <ion-card *ngIf="historicalMatches.length === 0">
+      <ion-card-content>
+        <div class="no-matches">
+          No matches found for Gameweek {{ selectedHistoryGameweek }}.
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="historicalMatches.length > 0">
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let match of historicalMatches">
+            <div class="match-item">
+              <div class="match-info">
+                <div class="venue-info">{{ match.venue }}</div>
+                <div class="match-time">
+                  <ion-icon name="time-outline"></ion-icon>
+                  {{ match.kickoff | date:'EEE d MMM, HH:mm' }}
+                </div>
+              </div>
+              <div class="teams-score">
+                <div class="team home">{{ match.homeTeam }}</div>
+                <div class="score finished">
+                  <div class="score-label">FINAL SCORE</div>
+                  <div class="live-score-value">{{ match.finalScore?.home || 0 }} - {{ match.finalScore?.away || 0 }}
+                  </div>
+                  <div class="match-minute">FT</div>
+                </div>
+                <div class="team away">{{ match.awayTeam }}</div>
+              </div>
+            </div>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>
