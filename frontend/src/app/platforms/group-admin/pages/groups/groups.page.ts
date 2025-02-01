@@ -54,6 +54,7 @@ import {
   shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
+import { Router } from '@angular/router';
 
 interface GroupMember {
   id: string;
@@ -389,7 +390,7 @@ interface Group {
                   </div>
 
                   <div class="group-stats">
-                    <span class="members">
+                    <span class="members" (click)="viewGroupMembers(group)">
                       <ion-icon name="people-outline"></ion-icon>
                       {{ group.memberCount }} Members
                     </span>
@@ -974,6 +975,23 @@ interface Group {
       .group-admin {
         font-weight: 500;
       }
+
+      .members {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--ion-color-medium);
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .members:hover {
+        color: var(--ion-color-primary);
+      }
+
+      .members ion-icon {
+        font-size: 1.1rem;
+      }
     `,
   ],
   standalone: true,
@@ -1032,7 +1050,11 @@ export class GroupsPage {
     email: 'john@example.com',
   };
 
-  constructor(private fb: FormBuilder, private toastService: ToastService) {
+  constructor(
+    private fb: FormBuilder,
+    private toastService: ToastService,
+    private router: Router
+  ) {
     addIcons({
       copyOutline,
       addOutline,
@@ -1454,5 +1476,11 @@ export class GroupsPage {
 
     document.body.appendChild(alert);
     await alert.present();
+  }
+
+  viewGroupMembers(group: Group) {
+    this.selectedGroup = group;
+    this.selectedTab = 'members';
+    this.filteredMembers = [...group.members];
   }
 }

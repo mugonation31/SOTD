@@ -18,20 +18,19 @@ import {
   IonItem,
   IonLabel,
   IonCardSubtitle,
+  IonRippleEffect,
 } from '@ionic/angular/standalone';
 import { NgFor, NgIf, DatePipe, CurrencyPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
   cashOutline,
   trophyOutline,
   statsChartOutline,
-  alertCircleOutline,
-  checkmarkCircleOutline,
   timeOutline,
   peopleCircleOutline,
-  personAddOutline,
+  footballOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -48,7 +47,7 @@ import {
       <ion-grid class="stats-grid">
         <ion-row>
           <ion-col size="12" size-md="6" size-lg="3">
-            <ion-card class="stat-card">
+            <ion-card class="stat-card clickable" (click)="navigateToGroups()">
               <ion-card-content>
                 <div class="stat-icon">
                   <ion-icon name="people-outline" color="primary"></ion-icon>
@@ -58,6 +57,7 @@ import {
                   <p class="stat-value">{{ totalGroups }}</p>
                   <p class="stat-label">Active Groups</p>
                 </div>
+                <ion-ripple-effect></ion-ripple-effect>
               </ion-card-content>
             </ion-card>
           </ion-col>
@@ -98,15 +98,12 @@ import {
             <ion-card class="stat-card">
               <ion-card-content>
                 <div class="stat-icon">
-                  <ion-icon
-                    name="people-circle-outline"
-                    color="tertiary"
-                  ></ion-icon>
+                  <ion-icon name="football-outline" color="tertiary"></ion-icon>
                 </div>
                 <div class="stat-info">
-                  <h3>Group Members</h3>
-                  <p class="stat-value">{{ paidMembers }}/{{ totalPlayers }}</p>
-                  <p class="stat-label">Confirmed Members</p>
+                  <h3>Current Gameweek</h3>
+                  <p class="stat-value">{{ currentGameweek }}</p>
+                  <p class="stat-label">Premier League</p>
                 </div>
               </ion-card-content>
             </ion-card>
@@ -114,7 +111,6 @@ import {
         </ion-row>
       </ion-grid>
 
-      <!-- Recent Activity & Actions -->
       <ion-grid>
         <ion-row>
           <!-- Recent Groups -->
@@ -143,43 +139,12 @@ import {
             </ion-card>
           </ion-col>
 
-          <!-- Pending Actions -->
+          <!-- Quick Actions -->
           <ion-col size="12" size-lg="6">
             <ion-card>
               <ion-card-header>
-                <ion-card-title>Pending Actions</ion-card-title>
-                <ion-card-subtitle>Items requiring attention</ion-card-subtitle>
-              </ion-card-header>
-              <ion-card-content>
-                <ion-list>
-                  <ion-item *ngFor="let action of pendingActions">
-                    <ion-icon
-                      [name]="
-                        action.type === 'join'
-                          ? 'person-add-outline'
-                          : 'alert-circle-outline'
-                      "
-                      slot="start"
-                      [color]="action.type === 'join' ? 'success' : 'warning'"
-                    ></ion-icon>
-                    <ion-label>
-                      <h2>{{ action.message }}</h2>
-                      <p>{{ action.group }}</p>
-                    </ion-label>
-                    <ion-button fill="clear" size="small"> Review </ion-button>
-                  </ion-item>
-                </ion-list>
-              </ion-card-content>
-            </ion-card>
-          </ion-col>
-        </ion-row>
-
-        <!-- Quick Actions -->
-        <ion-row>
-          <ion-col size="12">
-            <ion-card>
-              <ion-card-header>
                 <ion-card-title>Quick Actions</ion-card-title>
+                <ion-card-subtitle>Manage your groups</ion-card-subtitle>
               </ion-card-header>
               <ion-card-content>
                 <div class="quick-actions">
@@ -187,20 +152,26 @@ import {
                     <ion-icon name="people-outline" slot="start"></ion-icon>
                     Manage Groups
                   </ion-button>
-                  <ion-button color="success">
-                    <ion-icon name="trophy-outline" slot="start"></ion-icon>
-                    Prize Groups
+                  <ion-button
+                    routerLink="/group-admin/predictions"
+                    color="success"
+                  >
+                    <ion-icon name="football-outline" slot="start"></ion-icon>
+                    Match Results
                   </ion-button>
-                  <ion-button color="warning">
-                    <ion-icon name="person-add-outline" slot="start"></ion-icon>
-                    Member Requests
+                  <ion-button routerLink="/group-admin/live" color="warning">
+                    <ion-icon name="time-outline" slot="start"></ion-icon>
+                    Live Scores
                   </ion-button>
-                  <ion-button color="tertiary">
+                  <ion-button
+                    routerLink="/group-admin/settings"
+                    color="tertiary"
+                  >
                     <ion-icon
                       name="stats-chart-outline"
                       slot="start"
                     ></ion-icon>
-                    Reports
+                    Settings
                   </ion-button>
                 </div>
               </ion-card-content>
@@ -219,6 +190,22 @@ import {
       .stat-card {
         margin: 0;
         height: 100%;
+
+        &.clickable {
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
       }
 
       .stat-card ion-card-content {
@@ -262,6 +249,7 @@ import {
 
       ion-card {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin: 1rem;
       }
 
       .quick-actions {
@@ -282,17 +270,13 @@ import {
         --padding-bottom: 0.5rem;
       }
 
-      ion-list {
-        background: transparent;
-      }
-
       @media (max-width: 768px) {
         .quick-actions {
           flex-direction: column;
-        }
 
-        .quick-actions ion-button {
-          width: 100%;
+          ion-button {
+            width: 100%;
+          }
         }
       }
     `,
@@ -317,6 +301,7 @@ import {
     IonItem,
     IonLabel,
     IonCardSubtitle,
+    IonRippleEffect,
     NgFor,
     NgIf,
     DatePipe,
@@ -325,63 +310,46 @@ import {
   ],
 })
 export class DashboardPage implements OnInit {
-  // Mock data
   totalGroups = 5;
   totalPrizePools = 2500;
-  totalPlayers = 47;
-  paidMembers = 47; // All members are paid since payment is required to join
+  totalPlayers = 87;
+  currentGameweek = 15;
 
   recentGroups = [
     {
-      name: 'Premier League 2024',
-      createdAt: new Date(),
+      name: 'Premier Predictions',
+      createdAt: new Date('2024-01-15'),
       type: 'prize',
     },
     {
-      name: 'Champions League',
-      createdAt: new Date(Date.now() - 86400000),
+      name: 'Office League',
+      createdAt: new Date('2024-01-14'),
       type: 'casual',
     },
     {
-      name: 'World Cup Predictions',
-      createdAt: new Date(Date.now() - 172800000),
+      name: 'Friends & Family',
+      createdAt: new Date('2024-01-13'),
       type: 'prize',
     },
   ];
 
-  pendingActions = [
-    {
-      type: 'join',
-      message: '2 new join requests',
-      group: 'Champions League',
-    },
-    {
-      type: 'group',
-      message: 'Group starting soon',
-      group: 'Premier League 2024',
-    },
-    {
-      type: 'prize',
-      message: 'Prize distribution ready',
-      group: 'FA Cup Predictions',
-    },
-  ];
-
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       peopleOutline,
       cashOutline,
       trophyOutline,
       statsChartOutline,
-      alertCircleOutline,
-      checkmarkCircleOutline,
       timeOutline,
       peopleCircleOutline,
-      personAddOutline,
+      footballOutline,
     });
   }
 
   ngOnInit() {
-    // Initialize dashboard data
+    // Load dashboard data
+  }
+
+  navigateToGroups() {
+    this.router.navigate(['/group-admin/groups']);
   }
 }

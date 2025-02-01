@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
-import { describe, beforeEach, it, expect } from '@jest/globals';
+// These testing functions are already provided by Angular's TestBed
+// No need to import from @jest/globals
 
 describe('AppComponent', () => {
   beforeEach(async () => {
