@@ -58,40 +58,75 @@ interface GroupLeaderboardEntry {
           </div>
         </ion-card-header>
         <ion-card-content>
-          <ion-list>
-            <ion-item *ngFor="let entry of sortedLeaderboard">
-              <div class="standing-container">
-                <div class="position">
-                  <span class="number">{{ entry.position }}</span>
-                </div>
-                <div class="player-info">
-                  <div class="player-details">
-                    <span class="name">{{ entry.name }}</span>
-                  </div>
-                </div>
-                <div class="stats">
-                  <div class="stat">
-                    <span class="label">Played</span>
-                    <span class="value">{{ entry.played }}</span>
-                  </div>
-                  <div class="stat">
-                    <span class="label">Jokers</span>
-                    <span class="value">{{ entry.jokerUsed }}/2</span>
-                  </div>
-                  <div class="stat points">
-                    <span class="label">Points</span>
-                    <span class="value">{{ entry.totalPoints }}</span>
-                  </div>
-                </div>
-              </div>
-            </ion-item>
-          </ion-list>
+          <!-- Table Header -->
+          <div class="table-header">
+            <div class="position-col">Position</div>
+            <div class="name-col">Name</div>
+            <div class="gameweek-col">Game Week</div>
+            <div class="joker-col">Played Joker</div>
+            <div class="points-col">Points</div>
+          </div>
+
+          <!-- Table Body -->
+          <div class="table-body">
+            <div class="table-row" *ngFor="let entry of sortedLeaderboard">
+              <div class="position-col">{{ entry.position }}</div>
+              <div class="name-col">{{ entry.name }}</div>
+              <div class="gameweek-col">{{ entry.played }}</div>
+              <div class="joker-col">{{ entry.jokerUsed }}/2</div>
+              <div class="points-col">{{ entry.totalPoints }}</div>
+            </div>
+          </div>
         </ion-card-content>
       </ion-card>
     </ion-content>
   `,
   styles: [
     `
+      .table-header {
+        display: grid;
+        grid-template-columns: 80px 1fr 100px 100px 80px;
+        padding: 12px 16px;
+        background: var(--ion-color-light);
+        font-weight: 600;
+        border-bottom: 2px solid var(--ion-color-medium);
+        gap: 16px;
+      }
+
+      .table-body {
+        .table-row {
+          display: grid;
+          grid-template-columns: 80px 1fr 100px 100px 80px;
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--ion-color-light);
+          gap: 16px;
+          align-items: center;
+
+          &:hover {
+            background: var(--ion-color-light-tint);
+          }
+        }
+      }
+
+      .position-col {
+        font-weight: 600;
+      }
+
+      .name-col {
+        font-weight: 500;
+      }
+
+      .gameweek-col,
+      .joker-col {
+        text-align: center;
+      }
+
+      .points-col {
+        text-align: right;
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+
       .season-info {
         display: flex;
         align-items: center;
@@ -102,77 +137,6 @@ interface GroupLeaderboardEntry {
 
         ion-icon {
           font-size: 1.2rem;
-        }
-      }
-
-      .standing-container {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-
-      .position {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        min-width: 50px;
-
-        .number {
-          font-size: 1.1rem;
-          font-weight: 600;
-          min-width: 24px;
-        }
-      }
-
-      .player-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-
-        .player-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .name {
-          font-weight: 500;
-        }
-      }
-
-      .stats {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-
-        .stat {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          min-width: 50px;
-
-          .label {
-            font-size: 0.7rem;
-            color: var(--ion-color-medium);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          .value {
-            font-weight: 600;
-            font-size: 0.95rem;
-          }
-
-          &.points {
-            min-width: 60px;
-
-            .value {
-              color: var(--ion-color-primary);
-              font-size: 1.1rem;
-            }
-          }
         }
       }
     `,
