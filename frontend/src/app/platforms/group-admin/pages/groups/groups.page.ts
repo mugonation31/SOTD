@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -52,6 +52,11 @@ import {
   personRemoveOutline,
   shieldOutline,
   shieldCheckmarkOutline,
+  peopleOutline,
+  trophyOutline,
+  cashOutline,
+  createOutline,
+  closeOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
@@ -72,6 +77,14 @@ interface GroupSettings {
   allowMemberChat: boolean;
 }
 
+interface GroupLeaderboardEntry {
+  position: number;
+  name: string;
+  played: number;
+  jokerUsed: number;
+  totalPoints: number;
+}
+
 interface Group {
   id: string;
   name: string;
@@ -85,6 +98,14 @@ interface Group {
   paidMembers: number;
   totalPrizePool?: number;
   adminName: string;
+  leaderboard: GroupLeaderboardEntry[];
+}
+
+interface CurrentAdmin {
+  id: string;
+  name: string;
+  email: string;
+  members: GroupMember[];
 }
 
 @Component({
@@ -393,6 +414,14 @@ interface Group {
                     <span class="members" (click)="viewGroupMembers(group)">
                       <ion-icon name="people-outline"></ion-icon>
                       {{ group.memberCount }} Members
+                    </span>
+
+                    <span
+                      class="leaderboard"
+                      (click)="viewGroupLeaderboard(group)"
+                    >
+                      <ion-icon name="trophy-outline"></ion-icon>
+                      View Leaderboard
                     </span>
 
                     <span *ngIf="group.type === 'prize'" class="entry-fee">
@@ -976,7 +1005,8 @@ interface Group {
         font-weight: 500;
       }
 
-      .members {
+      .members,
+      .leaderboard {
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -985,11 +1015,13 @@ interface Group {
         transition: color 0.2s ease;
       }
 
-      .members:hover {
+      .members:hover,
+      .leaderboard:hover {
         color: var(--ion-color-primary);
       }
 
-      .members ion-icon {
+      .members ion-icon,
+      .leaderboard ion-icon {
         font-size: 1.1rem;
       }
     `,
@@ -1034,9 +1066,10 @@ interface Group {
     CurrencyPipe,
   ],
 })
-export class GroupsPage {
-  groupForm: FormGroup;
+export class GroupsPage implements OnInit {
+  groupForm!: FormGroup;
   isLoading = false;
+  isCreateModalOpen = false;
   groups: Group[] = [];
   selectedGroup: Group | null = null;
   selectedTab = 'members';
@@ -1044,10 +1077,20 @@ export class GroupsPage {
   filteredMembers: GroupMember[] = [];
   entryFeeOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   currentMemberCount = 0;
-  currentAdmin = {
+  currentAdmin: CurrentAdmin = {
     id: '1',
     name: 'John Smith',
     email: 'john@example.com',
+    members: [
+      {
+        id: '1',
+        name: 'John Smith',
+        email: 'john@example.com',
+        joinedAt: new Date(),
+        status: 'active',
+        role: 'admin',
+      },
+    ],
   };
 
   constructor(
@@ -1056,27 +1099,60 @@ export class GroupsPage {
     private router: Router
   ) {
     addIcons({
-      copyOutline,
-      addOutline,
-      starOutline,
+      peopleOutline,
+      trophyOutline,
+      cashOutline,
+      createOutline,
       trashOutline,
-      settingsOutline,
-      searchOutline,
-      banOutline,
-      checkmarkCircleOutline,
-      personRemoveOutline,
-      shieldOutline,
-      shieldCheckmarkOutline,
+      addOutline,
+      closeOutline,
     });
-
-    this.groupForm = this.fb.group({
-      type: ['casual', Validators.required],
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      entryFee: [null],
-    });
-
-    // Load mock data
+    this.initForm();
     this.loadMockGroups();
+  }
+
+  ngOnInit() {
+    this.initForm();
+    this.loadMockGroups();
+  }
+
+  private initForm() {
+    this.groupForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(3)]],
+      type: ['casual', Validators.required],
+      entryFee: [{ value: 10, disabled: true }],
+      settings: this.fb.group({
+        allowPlayerInvites: [true],
+        autoApproveJoins: [false],
+        showLeaderboard: [true],
+        allowMemberChat: [true],
+      }),
+    });
+
+    // Listen to type changes to enable/disable entry fee
+    this.groupForm.get('type')?.valueChanges.subscribe((type) => {
+      const entryFeeControl = this.groupForm.get('entryFee');
+      if (type === 'prize') {
+        entryFeeControl?.enable();
+      } else {
+        entryFeeControl?.disable();
+      }
+    });
+  }
+
+  showCreateGroupModal() {
+    this.groupForm.reset({
+      name: '',
+      type: 'casual',
+      entryFee: 10,
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: false,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+    });
+    this.isCreateModalOpen = true;
   }
 
   private loadMockGroups() {
@@ -1098,6 +1174,7 @@ export class GroupsPage {
         paidMembers: 0,
         totalPrizePool: 0,
         adminName: 'Current Admin',
+        leaderboard: [],
       },
       {
         id: '2',
@@ -1116,6 +1193,7 @@ export class GroupsPage {
         paidMembers: 0,
         totalPrizePool: 0,
         adminName: 'Current Admin',
+        leaderboard: [],
       },
     ];
   }
@@ -1179,14 +1257,19 @@ export class GroupsPage {
 
   async createGroup() {
     if (this.groupForm.valid) {
-      this.isLoading = true;
       try {
-        const groupData: Group = {
-          ...this.groupForm.value,
-          id: Date.now().toString(),
+        this.isLoading = true;
+        const formValue = this.groupForm.value;
+
+        // Create initial leaderboard with members in alphabetical order
+        const initialLeaderboard: GroupLeaderboardEntry[] = [];
+
+        const newGroup: Group = {
+          id: crypto.randomUUID(),
+          name: formValue.name,
           code: this.generateGroupCode(),
-          createdAt: new Date(),
           memberCount: 1,
+          createdAt: new Date(),
           members: [
             {
               id: this.currentAdmin.id,
@@ -1197,38 +1280,44 @@ export class GroupsPage {
               role: 'admin',
             },
           ],
-          paidMembers: 0,
-          totalPrizePool: 0,
-          adminName: this.currentAdmin.name,
           settings: {
             allowPlayerInvites: true,
             autoApproveJoins: false,
             showLeaderboard: true,
             allowMemberChat: true,
           },
+          type: formValue.type,
+          entryFee: formValue.type === 'prize' ? formValue.entryFee : undefined,
+          paidMembers: 0,
+          totalPrizePool: 0,
+          adminName: this.currentAdmin.name,
+          leaderboard: initialLeaderboard,
         };
 
-        if (groupData.type === 'prize' && groupData.entryFee) {
-          groupData.totalPrizePool = 0;
-        }
+        // Add to groups array
+        this.groups = [...this.groups, newGroup];
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        this.groups.unshift(groupData);
-        this.selectedGroup = groupData;
-        this.groupForm.reset({ type: 'casual' });
-
-        const message =
-          groupData.type === 'prize'
-            ? `Group "${groupData.name}" created successfully! Entry fee: ${groupData.entryFee} GBP. Share code: ${groupData.code}`
-            : `Group "${groupData.name}" created successfully! Share code: ${groupData.code}`;
-
-        await this.toastService.showToast(message, 'success');
+        // Show success message and close modal
+        await this.toastService.showToast(
+          'Group created successfully!',
+          'success'
+        );
+        this.isCreateModalOpen = false;
+        this.groupForm.reset();
       } catch (error) {
-        await this.toastService.showToast('Failed to create group', 'error');
+        console.error('Error creating group:', error);
+        await this.toastService.showToast(
+          'Failed to create group. Please try again.',
+          'danger'
+        );
       } finally {
         this.isLoading = false;
       }
+    } else {
+      await this.toastService.showToast(
+        'Please fill in all required fields.',
+        'warning'
+      );
     }
   }
 
@@ -1482,5 +1571,9 @@ export class GroupsPage {
     this.selectedGroup = group;
     this.selectedTab = 'members';
     this.filteredMembers = [...group.members];
+  }
+
+  viewGroupLeaderboard(group: Group) {
+    this.router.navigate(['/group-admin/groups', group.id, 'leaderboard']);
   }
 }

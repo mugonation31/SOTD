@@ -25,6 +25,7 @@ import {
   addCircleOutline,
   calendarOutline,
   personCircleOutline,
+  trophyOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -60,6 +61,7 @@ export class GroupAdminLayoutPage {
       addCircleOutline,
       calendarOutline,
       personCircleOutline,
+      trophyOutline,
     });
   }
 

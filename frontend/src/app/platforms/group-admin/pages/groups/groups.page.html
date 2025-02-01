@@ -1,0 +1,130 @@
+<!-- Header with Create Group button -->
+<ion-header>
+  <ion-toolbar>
+    <ion-title>My Groups</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="showCreateGroupModal()">
+        <ion-icon name="add-outline" slot="start"></ion-icon>
+        Create Group
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Create Group Modal -->
+  <ion-modal [isOpen]="isCreateModalOpen">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Create New Group</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isCreateModalOpen = false">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <form [formGroup]="groupForm" (ngSubmit)="createGroup()">
+          <ion-item>
+            <ion-label position="stacked">Group Name</ion-label>
+            <ion-input formControlName="name" placeholder="Enter group name"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Group Type</ion-label>
+            <ion-select formControlName="type">
+              <ion-select-option value="casual">Casual</ion-select-option>
+              <ion-select-option value="prize">Prize</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item *ngIf="groupForm.get('type')?.value === 'prize'">
+            <ion-label position="stacked">Entry Fee (£)</ion-label>
+            <ion-select formControlName="entryFee">
+              <ion-select-option *ngFor="let fee of entryFeeOptions" [value]="fee">
+                £{{ fee }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <div formGroupName="settings" class="settings-section">
+            <ion-list-header>
+              <ion-label>Group Settings</ion-label>
+            </ion-list-header>
+
+            <ion-item>
+              <ion-label>Allow Player Invites</ion-label>
+              <ion-toggle formControlName="allowPlayerInvites"></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Auto-approve Joins</ion-label>
+              <ion-toggle formControlName="autoApproveJoins"></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Show Leaderboard</ion-label>
+              <ion-toggle formControlName="showLeaderboard"></ion-toggle>
+            </ion-item>
+
+            <ion-item>
+              <ion-label>Allow Member Chat</ion-label>
+              <ion-toggle formControlName="allowMemberChat"></ion-toggle>
+            </ion-item>
+          </div>
+
+          <div class="ion-padding">
+            <ion-button expand="block" type="submit" [disabled]="!groupForm.valid || isLoading">
+              Create Group
+            </ion-button>
+          </div>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Existing Groups List -->
+  <ion-card *ngFor="let group of groups">
+    <ion-card-header>
+      <ion-card-title>{{ group.name }}</ion-card-title>
+      <ion-card-subtitle>
+        Group Code: {{ group.code }}
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <div class="group-info">
+        <div class="info-item">
+          <ion-icon name="people-outline"></ion-icon>
+          <span class="members" (click)="showMembers(group)">
+            {{ group.memberCount }} Members
+          </span>
+        </div>
+        <div class="info-item">
+          <ion-icon name="trophy-outline"></ion-icon>
+          <span class="leaderboard" (click)="viewGroupLeaderboard(group)">
+            View Leaderboard
+          </span>
+        </div>
+        <div class="info-item" *ngIf="group.type === 'prize'">
+          <ion-icon name="cash-outline"></ion-icon>
+          <span>Entry Fee: £{{ group.entryFee }}</span>
+        </div>
+      </div>
+
+      <div class="group-actions">
+        <ion-button fill="clear" (click)="editGroup(group)">
+          <ion-icon name="create-outline" slot="start"></ion-icon>
+          Edit
+        </ion-button>
+        <ion-button fill="clear" color="danger" (click)="deleteGroup(group)">
+          <ion-icon name="trash-outline" slot="start"></ion-icon>
+          Delete
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

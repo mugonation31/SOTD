@@ -44,8 +44,20 @@ export const routes: Routes = [
       },
       {
         path: 'groups',
-        loadComponent: () =>
-          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./pages/groups/groups.page').then((m) => m.GroupsPage),
+          },
+          {
+            path: ':id/leaderboard',
+            loadComponent: () =>
+              import(
+                './pages/groups/group-leaderboard/group-leaderboard.page'
+              ).then((m) => m.GroupLeaderboardPage),
+          },
+        ],
       },
       {
         path: 'settings',
