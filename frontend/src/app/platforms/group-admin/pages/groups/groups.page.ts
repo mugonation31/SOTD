@@ -57,6 +57,10 @@ import {
   cashOutline,
   createOutline,
   closeOutline,
+  personOutline,
+  personAddOutline,
+  lockClosedOutline,
+  lockOpenOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
@@ -512,6 +516,7 @@ interface CurrentAdmin {
                   <ion-buttons slot="end">
                     <ion-button
                       fill="clear"
+                      color="primary"
                       (click)="manageMemberRole(member)"
                       [title]="
                         member.role === 'admin'
@@ -519,22 +524,21 @@ interface CurrentAdmin {
                           : 'Promote to Admin'
                       "
                       class="role-button"
-                      [class.admin-role]="member.role === 'admin'"
                     >
                       <ion-icon
                         [name]="
                           member.role === 'admin'
-                            ? 'shield-checkmark-outline'
-                            : 'shield-outline'
+                            ? 'person-remove-outline'
+                            : 'person-add-outline'
                         "
                         slot="icon-only"
+                        style="font-size: 22px; color: var(--ion-color-warning)"
                       ></ion-icon>
-                      <ion-ripple-effect></ion-ripple-effect>
                     </ion-button>
                     <ion-button
                       fill="clear"
                       [color]="
-                        member.status === 'active' ? 'warning' : 'success'
+                        member.status === 'active' ? 'success' : 'warning'
                       "
                       (click)="toggleMemberStatus(member)"
                       title="Toggle Status"
@@ -542,10 +546,11 @@ interface CurrentAdmin {
                       <ion-icon
                         [name]="
                           member.status === 'active'
-                            ? 'ban-outline'
-                            : 'checkmark-circle-outline'
+                            ? 'lock-open-outline'
+                            : 'lock-closed-outline'
                         "
                         slot="icon-only"
+                        style="font-size: 22px; color: var(--ion-color-success)"
                       ></ion-icon>
                     </ion-button>
                     <ion-button
@@ -557,6 +562,7 @@ interface CurrentAdmin {
                       <ion-icon
                         name="trash-outline"
                         slot="icon-only"
+                        style="font-size: 22px; color: var(--ion-color-danger)"
                       ></ion-icon>
                     </ion-button>
                   </ion-buttons>
@@ -1024,6 +1030,28 @@ interface CurrentAdmin {
       .leaderboard ion-icon {
         font-size: 1.1rem;
       }
+
+      // Member action buttons styles
+      ion-buttons {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+
+        ion-button {
+          --padding-start: 4px;
+          --padding-end: 4px;
+          height: 35px;
+
+          ion-icon {
+            font-size: 20px;
+            opacity: 1;
+          }
+
+          &:hover ion-icon {
+            opacity: 0.8;
+          }
+        }
+      }
     `,
   ],
   standalone: true,
@@ -1106,6 +1134,11 @@ export class GroupsPage implements OnInit {
       trashOutline,
       addOutline,
       closeOutline,
+      personOutline,
+      personAddOutline,
+      personRemoveOutline,
+      lockClosedOutline,
+      lockOpenOutline,
     });
     this.initForm();
     this.loadMockGroups();
