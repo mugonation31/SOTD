@@ -1397,69 +1397,39 @@ export class GroupsPage implements OnInit {
     const action = isPromotion ? 'promote' : 'demote';
     const newRole = isPromotion ? 'admin' : 'player';
 
-    const alert = document.createElement('ion-alert');
-    alert.header = `${isPromotion ? 'Promote' : 'Demote'} Member`;
-    alert.message = `
-      <p>Are you sure you want to ${action} <strong>${
-      member.name
-    }</strong> to ${newRole}?</p>
-      ${
-        isPromotion
-          ? `
-        <p>As an admin, they will be able to:</p>
-        <ul>
-          <li>Manage group members</li>
-          <li>Change group settings</li>
-          <li>View all predictions</li>
-          <li>Manage deadlines</li>
-        </ul>
-      `
-          : `
-        <p>They will lose all admin privileges and become a regular player.</p>
-      `
+    try {
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Update member's role
+      member.role = newRole;
+
+      // Update the filteredMembers array to reflect the change
+      this.filteredMembers = this.filteredMembers.map((m) =>
+        m.id === member.id ? { ...m, role: newRole } : m
+      );
+
+      // Update the selected group's members array
+      if (this.selectedGroup) {
+        this.selectedGroup.members = this.selectedGroup.members.map((m) =>
+          m.id === member.id ? { ...m, role: newRole } : m
+        );
       }
-    `;
-    alert.buttons = [
-      {
-        text: 'Cancel',
-        role: 'cancel',
-      },
-      {
-        text: 'Confirm',
-        role: 'confirm',
-        handler: async () => {
-          try {
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            // Update role
-            member.role = newRole;
+      await this.toastService.showToast(
+        `Member ${action}d to ${newRole} successfully`,
+        'success'
+      );
+    } catch (error) {
+      console.error(`Error ${action}ing member:`, error);
+      await this.toastService.showToast(
+        `Failed to ${action} member. Please try again.`,
+        'danger'
+      );
 
-            // Add animation class
-            const memberElement = document.querySelector(
-              `[data-member-id="${member.id}"]`
-            );
-            memberElement?.classList.add('role-changed');
-            setTimeout(() => {
-              memberElement?.classList.remove('role-changed');
-            }, 500);
-
-            await this.toastService.showToast(
-              `${member.name} has been ${action}d to ${newRole}`,
-              'success'
-            );
-          } catch (error) {
-            await this.toastService.showToast(
-              `Failed to ${action} member`,
-              'error'
-            );
-          }
-        },
-      },
-    ];
-
-    document.body.appendChild(alert);
-    await alert.present();
+      // Revert the role change in case of error
+      member.role = isPromotion ? 'player' : 'admin';
+    }
   }
 
   async removeMember(member: GroupMember) {
