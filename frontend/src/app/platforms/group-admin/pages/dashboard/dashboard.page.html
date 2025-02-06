@@ -6,4 +6,25 @@
 
 <ion-content class="ion-padding">
   <h1>Welcome to Group Admin Dashboard</h1>
+
+  <!-- Quick Actions -->
+  <h2>Quick Actions</h2>
+  <p>Manage your groups</p>
+
+  <div class="quick-actions">
+    <ion-button color="primary" routerLink="/group-admin/groups">
+      <ion-icon name="people-outline" slot="start"></ion-icon>
+      MANAGE GROUPS
+    </ion-button>
+
+    <ion-button color="success" routerLink="/group-admin/predictions">
+      <ion-icon name="football-outline" slot="start"></ion-icon>
+      MATCH RESULTS
+    </ion-button>
+
+    <ion-button color="warning" routerLink="/group-admin/live">
+      <ion-icon name="eye-outline" slot="start"></ion-icon>
+      LIVE SCORES
+    </ion-button>
+  </div>
 </ion-content>

@@ -31,6 +31,7 @@ import {
   timeOutline,
   peopleCircleOutline,
   footballOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -148,30 +149,20 @@ import {
               </ion-card-header>
               <ion-card-content>
                 <div class="quick-actions">
-                  <ion-button routerLink="/group-admin/groups" color="primary">
+                  <ion-button color="primary" routerLink="/group-admin/groups">
                     <ion-icon name="people-outline" slot="start"></ion-icon>
-                    Manage Groups
+                    MANAGE GROUPS
                   </ion-button>
                   <ion-button
-                    routerLink="/group-admin/predictions"
                     color="success"
+                    routerLink="/group-admin/predictions"
                   >
                     <ion-icon name="football-outline" slot="start"></ion-icon>
-                    Match Results
+                    MATCH RESULTS
                   </ion-button>
-                  <ion-button routerLink="/group-admin/live" color="warning">
-                    <ion-icon name="time-outline" slot="start"></ion-icon>
-                    Live Scores
-                  </ion-button>
-                  <ion-button
-                    routerLink="/group-admin/settings"
-                    color="tertiary"
-                  >
-                    <ion-icon
-                      name="stats-chart-outline"
-                      slot="start"
-                    ></ion-icon>
-                    Settings
+                  <ion-button color="warning" routerLink="/group-admin/live">
+                    <ion-icon name="eye-outline" slot="start"></ion-icon>
+                    LIVE SCORES
                   </ion-button>
                 </div>
               </ion-card-content>
@@ -254,20 +245,20 @@ import {
 
       .quick-actions {
         display: flex;
+        flex-direction: column;
         gap: 1rem;
-        flex-wrap: wrap;
+        margin-top: 1rem;
       }
 
-      ion-badge {
-        font-weight: 500;
-        padding: 4px 8px;
-      }
-
-      ion-item {
+      ion-button {
         --padding-start: 1rem;
         --padding-end: 1rem;
-        --padding-top: 0.5rem;
-        --padding-bottom: 0.5rem;
+        height: 48px;
+        font-weight: 500;
+      }
+
+      ion-icon {
+        font-size: 1.2rem;
       }
 
       @media (max-width: 768px) {
@@ -342,6 +333,7 @@ export class DashboardPage implements OnInit {
       timeOutline,
       peopleCircleOutline,
       footballOutline,
+      eyeOutline,
     });
   }
 

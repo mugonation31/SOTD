@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -13,6 +13,7 @@ import {
   IonItem,
   IonLabel,
   IonIcon,
+  IonButton,
   IonBackButton,
   IonButtons,
 } from '@ionic/angular/standalone';
@@ -25,6 +26,7 @@ import {
   removeOutline,
   footballOutline,
   timeOutline,
+  chevronBackOutline,
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
 
@@ -42,7 +44,10 @@ interface GroupLeaderboardEntry {
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/group-admin/groups"></ion-back-button>
+          <ion-back-button
+            text="Groups"
+            defaultHref="/group-admin/groups"
+          ></ion-back-button>
         </ion-buttons>
         <ion-title>{{ groupName }} Leaderboard</ion-title>
       </ion-toolbar>
@@ -139,6 +144,13 @@ interface GroupLeaderboardEntry {
           font-size: 1.2rem;
         }
       }
+
+      ion-back-button {
+        display: block;
+        --color: var(--ion-color-primary);
+        --icon-font-size: 24px;
+        --padding-start: 0;
+      }
     `,
   ],
   standalone: true,
@@ -155,6 +167,7 @@ interface GroupLeaderboardEntry {
     IonItem,
     IonLabel,
     IonIcon,
+    IonButton,
     IonBackButton,
     IonButtons,
     NgFor,
@@ -170,7 +183,8 @@ export class GroupLeaderboardPage implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    public seasonService: SeasonService
+    public seasonService: SeasonService,
+    private router: Router
   ) {
     addIcons({
       trophyOutline,
@@ -179,6 +193,7 @@ export class GroupLeaderboardPage implements OnInit {
       removeOutline,
       footballOutline,
       timeOutline,
+      chevronBackOutline,
     });
   }
 
@@ -246,5 +261,9 @@ export class GroupLeaderboardPage implements OnInit {
       ...entry,
       position: index + 1,
     }));
+  }
+
+  goBack() {
+    this.router.navigate(['/group-admin/groups']);
   }
 }

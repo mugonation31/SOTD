@@ -112,3 +112,84 @@ ion-item {
     }
   }
 }
+
+:host {
+  .table-header {
+    display: flex;
+    padding: 8px 16px;
+    background: #f4f5f8;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 500;
+    color: #666;
+  }
+
+  .table-body {
+    .table-row {
+      display: flex;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e0e0e0;
+      align-items: center;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+
+  .position-col {
+    width: 80px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .position-change-icon {
+      font-size: 16px;
+    }
+  }
+
+  .name-col {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .gameweek-col {
+    width: 100px;
+    text-align: center;
+  }
+
+  .joker-col {
+    width: 100px;
+    text-align: center;
+  }
+
+  .points-col {
+    width: 80px;
+    text-align: right;
+    color: var(--ion-color-primary);
+    font-weight: 500;
+  }
+
+  ion-segment {
+    margin-bottom: 16px;
+  }
+
+  ion-card {
+    margin: 0;
+    box-shadow: none;
+    border: 1px solid #e0e0e0;
+  }
+
+  ion-card-header {
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  ion-card-title {
+    font-size: 18px;
+    font-weight: 500;
+  }
+
+  ion-card-content {
+    padding: 0;
+  }
+}

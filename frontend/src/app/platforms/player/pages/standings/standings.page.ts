@@ -38,6 +38,7 @@ interface Standing {
   points: number;
   correctScores: number;
   correctResults: number;
+  jokerUsed: number;
 }
 
 @Component({
@@ -69,7 +70,7 @@ interface Standing {
   ],
 })
 export class StandingsPage {
-  selectedSegment = 'overall';
+  selectedSegment = 'group';
   currentUserId = '2'; // Mock current user ID
 
   // Mock data for overall standings
@@ -83,6 +84,7 @@ export class StandingsPage {
       points: 245,
       correctScores: 18,
       correctResults: 35,
+      jokerUsed: 1,
     },
     {
       position: 2,
@@ -93,6 +95,7 @@ export class StandingsPage {
       points: 230,
       correctScores: 16,
       correctResults: 32,
+      jokerUsed: 2,
     },
     {
       position: 3,
@@ -103,6 +106,7 @@ export class StandingsPage {
       points: 225,
       correctScores: 15,
       correctResults: 33,
+      jokerUsed: 1,
     },
     // Add more players...
   ];
@@ -118,6 +122,7 @@ export class StandingsPage {
       points: 230,
       correctScores: 16,
       correctResults: 32,
+      jokerUsed: 2,
     },
     {
       position: 2,
@@ -128,6 +133,7 @@ export class StandingsPage {
       points: 220,
       correctScores: 14,
       correctResults: 30,
+      jokerUsed: 1,
     },
     // Add more group members...
   ];

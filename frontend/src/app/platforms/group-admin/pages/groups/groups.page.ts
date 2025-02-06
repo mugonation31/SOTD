@@ -707,6 +707,66 @@ interface CurrentAdmin {
         padding: 1rem;
         background: var(--ion-color-light);
         border-radius: 8px;
+
+        ion-item {
+          --background: transparent;
+          --padding-start: 0;
+          --inner-padding-end: 0;
+        }
+
+        .fee-selector {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin: 1rem 0;
+        }
+
+        .range-container {
+          flex: 1;
+          padding: 0 0.5rem;
+        }
+
+        .fee-range {
+          --bar-height: 4px;
+          --bar-border-radius: 2px;
+          --knob-size: 20px;
+          --pin-background: var(--ion-color-primary);
+          --pin-color: white;
+          --bar-background: var(--ion-color-medium-tint);
+          --bar-background-active: var(--ion-color-primary);
+        }
+
+        .manual-fee-input {
+          width: 120px;
+          display: flex;
+          align-items: center;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid var(--ion-color-medium-shade);
+          overflow: hidden;
+
+          .currency-symbol {
+            padding: 8px 4px 8px 8px;
+            color: var(--ion-color-medium);
+            font-weight: 500;
+          }
+
+          ion-input {
+            --padding-start: 0;
+            --padding-end: 8px;
+            --padding-top: 8px;
+            --padding-bottom: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+          }
+        }
+
+        ion-note {
+          margin-top: 0.5rem;
+          color: var(--ion-color-medium);
+          font-size: 0.875rem;
+        }
       }
 
       .prize-breakdown {
