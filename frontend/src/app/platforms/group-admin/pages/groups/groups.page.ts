@@ -37,6 +37,7 @@ import {
   IonSelectOption,
   IonNote,
   IonRange,
+  AlertController,
 } from '@ionic/angular/standalone';
 import { NgIf, NgFor, DatePipe, CurrencyPipe } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -1124,7 +1125,8 @@ export class GroupsPage implements OnInit {
   constructor(
     private fb: FormBuilder,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private alertController: AlertController
   ) {
     addIcons({
       peopleOutline,
@@ -1139,6 +1141,7 @@ export class GroupsPage implements OnInit {
       personRemoveOutline,
       lockClosedOutline,
       lockOpenOutline,
+      copyOutline,
     });
     this.initForm();
     this.loadMockGroups();
@@ -1530,43 +1533,48 @@ export class GroupsPage implements OnInit {
   }
 
   async deleteGroup(group: Group) {
-    // Show confirmation dialog
-    const alert = document.createElement('ion-alert');
-    alert.header = 'Confirm Delete';
-    alert.message = `Are you sure you want to delete the group "${group.name}"?`;
-    alert.buttons = [
-      {
-        text: 'Cancel',
-        role: 'cancel',
-      },
-      {
-        text: 'Delete',
-        role: 'destructive',
-        handler: async () => {
-          try {
-            // Remove group from the list
-            this.groups = this.groups.filter((g) => g.id !== group.id);
-
-            // Clear selected group if it was the deleted one
-            if (this.selectedGroup?.id === group.id) {
-              this.selectedGroup = null;
-            }
-
-            await this.toastService.showToast(
-              'Group deleted successfully',
-              'success'
-            );
-          } catch (error) {
-            await this.toastService.showToast(
-              'Failed to delete group',
-              'error'
-            );
-          }
+    const alert = await this.alertController.create({
+      header: 'Delete Group',
+      subHeader: `Are you sure you want to delete "${group.name}"?`,
+      message:
+        'This action cannot be undone. All group data including members and predictions will be permanently deleted.',
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel',
         },
-      },
-    ];
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              // Mock API call to delete group
+              await new Promise((resolve) => setTimeout(resolve, 500));
 
-    document.body.appendChild(alert);
+              // Remove group from the list
+              this.groups = this.groups.filter((g) => g.id !== group.id);
+
+              // Clear selected group if it was the deleted one
+              if (this.selectedGroup?.id === group.id) {
+                this.selectedGroup = null;
+              }
+
+              await this.toastService.showToast(
+                'Group deleted successfully',
+                'success'
+              );
+            } catch (error) {
+              console.error('Error deleting group:', error);
+              await this.toastService.showToast(
+                'Failed to delete group. Please try again.',
+                'danger'
+              );
+            }
+          },
+        },
+      ],
+    });
+
     await alert.present();
   }
 
