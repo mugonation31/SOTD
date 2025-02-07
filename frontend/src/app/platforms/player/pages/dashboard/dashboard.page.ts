@@ -24,6 +24,7 @@ import {
   trophyOutline,
   statsChartOutline,
   timeOutline,
+  starOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -62,7 +63,7 @@ export class DashboardPage {
   playerStats = {
     totalPoints: 245,
     rank: 12,
-    correctScores: 18,
+    jokersUsed: 1,
     correctResults: 35,
   };
 
@@ -78,6 +79,7 @@ export class DashboardPage {
       trophyOutline,
       statsChartOutline,
       timeOutline,
+      starOutline,
     });
   }
 }
