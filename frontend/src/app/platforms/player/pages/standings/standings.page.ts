@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -16,6 +17,8 @@ import {
   IonSegment,
   IonSegmentButton,
   IonAvatar,
+  IonButtons,
+  IonButton,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -25,6 +28,8 @@ import {
   arrowDownOutline,
   removeOutline,
   peopleOutline,
+  footballOutline,
+  personOutline,
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
 
@@ -67,6 +72,8 @@ interface Standing {
     NgFor,
     NgIf,
     FormsModule,
+    IonButtons,
+    IonButton,
   ],
 })
 export class StandingsPage {
@@ -138,13 +145,15 @@ export class StandingsPage {
     // Add more group members...
   ];
 
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       trophyOutline,
       arrowUpOutline,
       arrowDownOutline,
       removeOutline,
       peopleOutline,
+      footballOutline,
+      personOutline,
     });
   }
 
@@ -177,5 +186,9 @@ export class StandingsPage {
 
   isCurrentUser(userId: string): boolean {
     return userId === this.currentUserId;
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

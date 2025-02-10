@@ -1,11 +1,5 @@
 import { Component } from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  FormsModule,
-  ReactiveFormsModule,
-} from '@angular/forms';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -15,93 +9,70 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonList,
   IonItem,
   IonLabel,
   IonInput,
   IonButton,
-  IonSpinner,
-  IonList,
-  IonBadge,
+  IonIcon,
+  IonButtons,
 } from '@ionic/angular/standalone';
-import { NgIf, NgFor } from '@angular/common';
-import { ToastService } from '@core/services/toast.service';
-import { DatePipe } from '@angular/common';
-
-interface PlayerGroup {
-  id: string;
-  name: string;
-  code: string;
-  memberCount: number;
-  joinedAt: Date;
-}
+import { FormsModule } from '@angular/forms';
+import { addIcons } from 'ionicons';
+import {
+  peopleCircleOutline,
+  arrowForwardOutline,
+  footballOutline,
+  personOutline,
+} from 'ionicons/icons';
 
 @Component({
   selector: 'app-join-group',
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Join a Group</ion-title>
+        <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+          <ion-icon name="football-outline" class="football-icon"></ion-icon>
+          <div class="logo-text">
+            <span class="logo-sotd">SOTD</span>
+            <span class="logo-subtitle">Predict 3</span>
+          </div>
+        </div>
+        <ion-buttons slot="end">
+          <ion-button (click)="navigateTo('/player/settings')">
+            <ion-icon name="person-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Enter Group Code</ion-card-title>
+          <ion-card-title>
+            <ion-icon name="people-circle-outline"></ion-icon>
+            Join a Group
+          </ion-card-title>
         </ion-card-header>
         <ion-card-content>
-          <form [formGroup]="joinForm" (ngSubmit)="onSubmit()">
-            <ion-item>
-              <ion-input
-                type="text"
-                formControlName="groupCode"
-                placeholder="Enter your group code"
-                [clearInput]="true"
-              ></ion-input>
-            </ion-item>
-
-            <div class="ion-margin-top">
-              <ion-button
-                expand="block"
-                type="submit"
-                [disabled]="!joinForm.valid || isLoading"
-              >
-                <ion-spinner *ngIf="isLoading"></ion-spinner>
-                <span *ngIf="!isLoading">Join Group</span>
-              </ion-button>
-            </div>
-          </form>
-        </ion-card-content>
-      </ion-card>
-
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>My Groups</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list *ngIf="myGroups.length > 0">
-            <ion-item *ngFor="let group of myGroups">
-              <ion-label>
-                <h2>{{ group.name }}</h2>
-                <p>Joined: {{ group.joinedAt | date }}</p>
-                <p>
-                  Members:
-                  <ion-badge color="primary">{{ group.memberCount }}</ion-badge>
-                </p>
-                <p>
-                  Group Code:
-                  <strong>{{ group.code }}</strong>
-                </p>
-              </ion-label>
-            </ion-item>
-          </ion-list>
-
-          <div
-            *ngIf="myGroups.length === 0"
-            class="ion-text-center ion-padding"
-          >
-            <p>You haven't joined any groups yet.</p>
-            <p>Enter a group code above to join one!</p>
+          <p class="description">
+            Enter a group code to join an existing prediction group
+          </p>
+          <div class="join-form">
+            <ion-input
+              type="text"
+              [(ngModel)]="groupCode"
+              placeholder="Enter group code"
+              class="group-code-input"
+            ></ion-input>
+            <ion-button
+              expand="block"
+              (click)="joinGroup()"
+              [disabled]="!groupCode"
+            >
+              <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+              Join Group
+            </ion-button>
           </div>
         </ion-card-content>
       </ion-card>
@@ -109,12 +80,108 @@ interface PlayerGroup {
   `,
   styles: [
     `
-      ion-item {
-        margin-bottom: 10px;
-        --background: transparent;
+      // Logo Styles
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+
+        .football-icon {
+          font-size: 24px;
+          color: var(--ion-color-primary);
+        }
+
+        .logo-text {
+          display: flex;
+          flex-direction: column;
+          line-height: 1;
+
+          .logo-sotd {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ion-color-dark);
+          }
+
+          .logo-subtitle {
+            font-size: 12px;
+            color: var(--ion-color-medium);
+          }
+        }
       }
-      ion-badge {
-        margin-right: 8px;
+
+      ion-buttons {
+        ion-button {
+          --padding-start: 8px;
+          --padding-end: 8px;
+          height: 36px;
+        }
+
+        ion-icon {
+          font-size: 18px;
+          color: var(--ion-color-medium);
+        }
+      }
+
+      // Existing styles
+      ion-card {
+        margin: 0;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      ion-card-header {
+        padding: 16px;
+
+        ion-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 1.2rem;
+          font-weight: 600;
+
+          ion-icon {
+            font-size: 1.4rem;
+            color: var(--ion-color-primary);
+          }
+        }
+      }
+
+      .description {
+        color: var(--ion-color-medium);
+        margin-bottom: 24px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      .join-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .group-code-input {
+        --background: var(--ion-color-light);
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --padding-top: 12px;
+        --padding-bottom: 12px;
+        border-radius: 8px;
+        font-size: 1rem;
+      }
+
+      ion-button {
+        margin: 0;
+        height: 48px;
+        --border-radius: 8px;
+        font-weight: 500;
+        font-size: 1rem;
+
+        ion-icon {
+          font-size: 1.2rem;
+          margin-left: 8px;
+        }
       }
     `,
   ],
@@ -128,77 +195,34 @@ interface PlayerGroup {
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
+    IonList,
     IonItem,
     IonLabel,
     IonInput,
     IonButton,
-    IonSpinner,
+    IonIcon,
+    IonButtons,
     FormsModule,
-    ReactiveFormsModule,
-    NgIf,
-    IonList,
-    IonBadge,
-    NgFor,
-    DatePipe,
   ],
 })
 export class JoinGroupPage {
-  joinForm: FormGroup;
-  isLoading = false;
-  myGroups: PlayerGroup[] = [];
+  groupCode: string = '';
 
-  constructor(private fb: FormBuilder, private toastService: ToastService) {
-    this.joinForm = this.fb.group({
-      groupCode: ['', [Validators.required, Validators.minLength(5)]],
+  constructor(private router: Router) {
+    addIcons({
+      peopleCircleOutline,
+      arrowForwardOutline,
+      footballOutline,
+      personOutline,
     });
-
-    // Load mock data
-    this.loadMockGroups();
   }
 
-  private loadMockGroups() {
-    this.myGroups = [
-      {
-        id: '1',
-        name: 'Premier League Predictions',
-        code: 'PREM2024',
-        memberCount: 12,
-        joinedAt: new Date('2024-01-15'),
-      },
-    ];
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 
-  async onSubmit() {
-    if (this.joinForm.valid) {
-      this.isLoading = true;
-      try {
-        // Mock API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Mock adding new group
-        const newGroup: PlayerGroup = {
-          id: Date.now().toString(),
-          name: 'New Joined Group',
-          code: this.joinForm.value.groupCode,
-          memberCount: 1,
-          joinedAt: new Date(),
-        };
-
-        this.myGroups.unshift(newGroup);
-        this.joinForm.reset();
-
-        await this.toastService.showToast(
-          'Successfully joined the group!',
-          'success'
-        );
-      } catch (error) {
-        await this.toastService.showToast(
-          'Invalid group code. Please try again.',
-          'error'
-        );
-      } finally {
-        this.isLoading = false;
-      }
-    }
+  joinGroup() {
+    // TODO: Implement group joining logic
+    console.log('Joining group with code:', this.groupCode);
   }
 }

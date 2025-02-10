@@ -17,6 +17,7 @@ import {
   IonSegmentButton,
   IonToast,
   IonButton,
+  IonButtons,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf, NgClass } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -27,8 +28,10 @@ import {
   checkmarkCircleOutline,
   chevronBackOutline,
   chevronForwardOutline,
+  personOutline,
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 interface Prediction {
   id: number;
@@ -80,6 +83,7 @@ interface Prediction {
     IonSegment,
     IonSegmentButton,
     IonButton,
+    IonButtons,
     NgFor,
     NgIf,
     NgClass,
@@ -98,7 +102,7 @@ export class PredictionsPage {
   historicalGameweeks: number[] = []; // To track available historical gameweeks
   liveScoreUpdateInterval: any;
 
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       footballOutline,
       closeCircleOutline,
@@ -106,6 +110,7 @@ export class PredictionsPage {
       checkmarkCircleOutline,
       chevronBackOutline,
       chevronForwardOutline,
+      personOutline,
     });
   }
 
@@ -441,5 +446,9 @@ export class PredictionsPage {
       return 'finished';
     }
     return 'live';
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

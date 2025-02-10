@@ -16,8 +16,9 @@ import {
   IonList,
   IonItem,
   IonLabel,
+  IonButtons,
 } from '@ionic/angular/standalone';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   footballOutline,
@@ -29,6 +30,7 @@ import {
   arrowUpOutline,
   arrowDownOutline,
   removeOutline,
+  personOutline,
 } from 'ionicons/icons';
 
 interface GameweekMatch {
@@ -82,6 +84,7 @@ interface LeaderboardPlayer {
     IonList,
     IonItem,
     IonLabel,
+    IonButtons,
     RouterLink,
     DatePipe,
     NgFor,
@@ -195,7 +198,7 @@ export class DashboardPage {
     },
   ];
 
-  constructor() {
+  constructor(private router: Router) {
     addIcons({
       footballOutline,
       trophyOutline,
@@ -206,6 +209,7 @@ export class DashboardPage {
       arrowUpOutline,
       arrowDownOutline,
       removeOutline,
+      personOutline,
     });
   }
 
@@ -229,5 +233,9 @@ export class DashboardPage {
       default:
         return 'medium';
     }
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

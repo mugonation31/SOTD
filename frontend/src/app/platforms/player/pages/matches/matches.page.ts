@@ -57,18 +57,18 @@ interface GameWeek {
   template: `
     <ion-header>
       <ion-toolbar>
-        <div class="header-content">
-          <div class="logo-container">
-            <ion-icon class="football-icon" name="football-outline"></ion-icon>
-            <div class="logo-text">
-              <span class="logo-sotd">SOTD</span>
-              <span class="logo-subtitle">Predict 3</span>
-            </div>
+        <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+          <ion-icon name="football-outline" class="football-icon"></ion-icon>
+          <div class="logo-text">
+            <span class="logo-sotd">SOTD</span>
+            <span class="logo-subtitle">Predict 3</span>
           </div>
-          <ion-button fill="clear" class="profile-button">
+        </div>
+        <ion-buttons slot="end">
+          <ion-button (click)="navigateTo('/player/settings')">
             <ion-icon name="person-outline"></ion-icon>
           </ion-button>
-        </div>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -514,7 +514,7 @@ interface GameWeek {
       }
 
       ion-buttons ion-icon {
-        font-size: 24px;
+        font-size: 18px;
         color: var(--ion-color-medium);
       }
 
@@ -883,5 +883,9 @@ export class MatchesPage {
   loadGameweekMatches(gameweek: number) {
     // TODO: Implement service call to load matches for the gameweek
     console.log('Loading matches for gameweek:', gameweek);
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

@@ -193,3 +193,47 @@ ion-item {
     padding: 0;
   }
 }
+
+// Logo Styles
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+
+  .football-icon {
+    font-size: 24px;
+    color: var(--ion-color-primary);
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+
+    .logo-sotd {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+
+    .logo-subtitle {
+      font-size: 12px;
+      color: var(--ion-color-medium);
+    }
+  }
+}
+
+ion-buttons {
+  ion-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    height: 36px;
+  }
+
+  ion-icon {
+    font-size: 18px;
+    color: var(--ion-color-medium);
+  }
+}
