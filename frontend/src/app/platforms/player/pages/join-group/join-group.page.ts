@@ -35,6 +35,7 @@ import { GroupService } from '@core/services/group.service';
 interface Group {
   id: string;
   name: string;
+  code: string;
   memberCount: number;
   adminName: string;
   type: 'casual' | 'prize';
@@ -399,10 +400,14 @@ export class JoinGroupPage {
 
       if (group) {
         this.foundGroup = group;
+        // Clear input and reset states after showing dialog
+        this.groupCode = '';
+        this.isValidCode = false;
+        this.isLoading = false;
         this.showGroupDetails = true;
       } else {
         await this.toastService.showToast('Group not found', 'error');
-        // Only clear the input if group is not found
+        // Clear the input if group is not found
         this.groupCode = '';
         this.isValidCode = false;
       }
@@ -456,7 +461,7 @@ export class JoinGroupPage {
       };
 
       const updatedGroup = this.groupService.joinGroup(
-        this.groupCode,
+        this.foundGroup.code,
         newMember
       );
 
@@ -477,9 +482,7 @@ export class JoinGroupPage {
       }
       await this.toastService.showToast(message, 'error');
     } finally {
-      // Clear everything after the join attempt is complete
-      this.groupCode = '';
-      this.isValidCode = false;
+      // Reset all states after join attempt
       this.isLoading = false;
       this.showGroupDetails = false;
       this.foundGroup = null;
