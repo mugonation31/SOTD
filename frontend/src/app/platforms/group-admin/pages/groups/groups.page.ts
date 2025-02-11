@@ -65,6 +65,7 @@ import {
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
+import { GroupService } from '@core/services/group.service';
 
 interface GroupMember {
   id: string;
@@ -1135,7 +1136,8 @@ export class GroupsPage implements OnInit {
     private fb: FormBuilder,
     private toastService: ToastService,
     private router: Router,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private groupService: GroupService
   ) {
     addIcons({
       peopleOutline,
@@ -1153,12 +1155,12 @@ export class GroupsPage implements OnInit {
       copyOutline,
     });
     this.initForm();
-    this.loadMockGroups();
+    this.loadGroups();
   }
 
   ngOnInit() {
     this.initForm();
-    this.loadMockGroups();
+    this.loadGroups();
   }
 
   private initForm() {
@@ -1200,47 +1202,8 @@ export class GroupsPage implements OnInit {
     this.isCreateModalOpen = true;
   }
 
-  private loadMockGroups() {
-    this.groups = [
-      {
-        id: '1',
-        name: 'Premier League Predictions',
-        code: 'PREM2024',
-        memberCount: 12,
-        createdAt: new Date('2024-01-15'),
-        members: [],
-        settings: {
-          allowPlayerInvites: true,
-          autoApproveJoins: false,
-          showLeaderboard: true,
-          allowMemberChat: true,
-        },
-        type: 'casual',
-        paidMembers: 0,
-        totalPrizePool: 0,
-        adminName: 'Current Admin',
-        leaderboard: [],
-      },
-      {
-        id: '2',
-        name: 'Champions League Group',
-        code: 'UCL2024',
-        memberCount: 8,
-        createdAt: new Date('2024-02-01'),
-        members: [],
-        settings: {
-          allowPlayerInvites: true,
-          autoApproveJoins: false,
-          showLeaderboard: true,
-          allowMemberChat: true,
-        },
-        type: 'casual',
-        paidMembers: 0,
-        totalPrizePool: 0,
-        adminName: 'Current Admin',
-        leaderboard: [],
-      },
-    ];
+  private loadGroups() {
+    this.groups = this.groupService.getAllGroups();
   }
 
   onGroupTypeChange() {
@@ -1347,7 +1310,10 @@ export class GroupsPage implements OnInit {
           leaderboard: initialLeaderboard,
         };
 
-        // Replace existing groups array with just the new group
+        // Save group to storage
+        this.groupService.saveGroup(newGroup);
+
+        // Update local groups array
         this.groups = [newGroup];
 
         // Show success message and close modal
@@ -1565,10 +1531,10 @@ export class GroupsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             try {
-              // Mock API call to delete group
-              await new Promise((resolve) => setTimeout(resolve, 500));
+              // Delete group from storage
+              this.groupService.deleteGroup(group.id);
 
-              // Remove group from the list
+              // Update local groups array
               this.groups = this.groups.filter((g) => g.id !== group.id);
 
               // Clear selected group if it was the deleted one
