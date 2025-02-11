@@ -486,6 +486,9 @@ export class JoinGroupPage {
       this.isLoading = false;
       this.showGroupDetails = false;
       this.foundGroup = null;
+      // Re-enable the form for joining another group
+      this.groupCode = '';
+      this.isValidCode = false;
     }
   }
 }
