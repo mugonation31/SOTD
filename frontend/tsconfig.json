@@ -32,10 +32,7 @@
     "strictInputAccessModifiers": true,
     "strictTemplates": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/app/platforms/group-admin/pages/live/live.page.ts"
-  ],
-  "files": ["src/main.ts"],
+  "include": ["src/**/*"],
+  "files": ["src/main.ts", "src/app/platforms/welcome/welcome.page.ts"],
   "exclude": ["node_modules"]
 }
