@@ -23,17 +23,26 @@
 }
 
 .auth-form {
-  background: var(--ion-color-light);
+  background: white;
   border-radius: 8px;
   margin-bottom: 1rem;
   padding: 0.5rem;
 
   ion-item {
+    --background: white;
+    --border-color: transparent;
+    --border-radius: 8px;
+    --highlight-height: 0;
     --padding-start: 8px;
     --padding-end: 8px;
     --inner-padding-end: 8px;
-    margin-bottom: 16px;
-    border-radius: 4px;
+    height: 48px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: 0 4px 16px 4px;
+
+    &.ion-invalid {
+      --background: var(--ion-color-light);
+    }
 
     &:last-child {
       margin-bottom: 0;
@@ -41,6 +50,9 @@
 
     ion-input {
       --padding-start: 8px;
+      --background: transparent;
+      --color: var(--ion-color-dark);
+      --placeholder-color: var(--ion-color-medium);
     }
   }
 

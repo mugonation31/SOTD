@@ -22,13 +22,20 @@ import {
   logoGoogle,
   logoFacebook,
   logoInstagram,
-  logoXbox,
+  logoX,
+  eye,
+  eyeOff,
 } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import {
   validateEmail,
   validatePassword,
 } from '../../../../core/utils/validation.utils';
+
+interface ValidationErrors {
+  email: string;
+  password: string;
+}
 
 @Component({
   selector: 'app-login',
@@ -62,10 +69,12 @@ export class LoginPage {
     securityAnswer: '',
   };
 
-  validationErrors = {
+  validationErrors: ValidationErrors = {
     email: '',
     password: '',
   };
+
+  showPassword = false;
 
   get canSubmit(): boolean {
     return Boolean(
@@ -77,9 +86,11 @@ export class LoginPage {
   }
 
   validateEmail() {
+    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
     if (!this.loginData.email) {
       this.validationErrors.email = 'Email is required';
-    } else if (!validateEmail(this.loginData.email)) {
+    } else if (!emailPattern.test(this.loginData.email)) {
       this.validationErrors.email = 'Please enter a valid email address';
     } else {
       this.validationErrors.email = '';
@@ -96,12 +107,18 @@ export class LoginPage {
     }
   }
 
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
   constructor(private authService: AuthService, private router: Router) {
     addIcons({
       logoGoogle,
       logoFacebook,
       logoInstagram,
-      logoXbox,
+      logoX,
+      eye,
+      eyeOff,
     });
   }
 
@@ -113,8 +130,8 @@ export class LoginPage {
 
     this.authService.login(this.loginData).subscribe({
       next: (response) => {
-        // For now, just navigate to super-admin dashboard
-        this.router.navigate(['/super-admin/dashboard']);
+        localStorage.setItem('token', response.token);
+        this.router.navigate(['/welcome']);
       },
       error: (error) => {
         console.error('Login error:', error);

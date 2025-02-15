@@ -11,9 +11,12 @@ import {
   IonCard,
   IonCardContent,
   IonText,
+  IonNote,
 } from '@ionic/angular/standalone';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { NgIf } from '@angular/common';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -32,14 +35,40 @@ import { FormsModule } from '@angular/forms';
     IonCard,
     IonCardContent,
     IonText,
+    IonNote,
     RouterLink,
     FormsModule,
+    NgIf,
   ],
 })
 export class ForgotPasswordPage {
-  email: string = '';
+  email = '';
+  validationError = '';
+
+  get canSubmit(): boolean {
+    return Boolean(this.email && !this.validationError);
+  }
+
+  constructor(private authService: AuthService, private router: Router) {}
+
+  validateEmail() {
+    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
+    if (!this.email) {
+      this.validationError = 'Email is required';
+    } else if (!emailPattern.test(this.email)) {
+      this.validationError = 'Please enter a valid email address';
+    } else {
+      this.validationError = '';
+    }
+  }
 
   onSubmit() {
-    console.log('Reset password for:', this.email);
+    this.validateEmail();
+
+    if (!this.canSubmit) return;
+
+    // TODO: Implement password reset functionality
+    console.log('Password reset requested for:', this.email);
   }
 }

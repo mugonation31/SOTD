@@ -1,22 +1,22 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>
-      Login
-    </ion-title>
+    <ion-title>Login</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <div class="login-container">
-    <h1 class="title">Welcome Back</h1>
-    <p class="subtitle">Sign in to continue</p>
+<ion-content class="ion-padding">
+  <ion-card class="auth-card">
+    <ion-card-content>
+      <div class="auth-header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to continue</p>
+      </div>
 
-    <ion-card>
-      <ion-card-content>
-        <ion-list>
+      <form (ngSubmit)="onLogin()">
+        <ion-list class="auth-form">
           <ion-item>
-            <ion-input type="email" [(ngModel)]="loginData.email" (ionInput)="validateEmail()"
-              [class.ion-invalid]="validationErrors.email" placeholder="Email">
+            <ion-input placeholder="Email" [(ngModel)]="loginData.email" (ionInput)="validateEmail()"
+              [class.ion-invalid]="validationErrors.email" name="email" required type="email">
             </ion-input>
             <ion-note slot="error" *ngIf="validationErrors.email">
               {{ validationErrors.email }}
@@ -24,9 +24,13 @@
           </ion-item>
 
           <ion-item>
-            <ion-input type="password" [(ngModel)]="loginData.password" (ionInput)="validatePassword()"
-              [class.ion-invalid]="validationErrors.password" placeholder="Password">
+            <ion-input placeholder="Password" [(ngModel)]="loginData.password" (ionInput)="validatePassword()"
+              [class.ion-invalid]="validationErrors.password" [type]="showPassword ? 'text' : 'password'"
+              name="password" required>
             </ion-input>
+            <ion-button fill="clear" slot="end" (click)="togglePasswordVisibility()">
+              <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </ion-button>
             <ion-note slot="error" *ngIf="validationErrors.password">
               {{ validationErrors.password }}
             </ion-note>
@@ -37,12 +41,14 @@
           <a routerLink="/auth/forgot-password">Forgot Password?</a>
         </div>
 
-        <ion-button expand="block" class="login-button" (click)="onLogin()" [disabled]="!canSubmit">
-          Login
-        </ion-button>
+        <div class="auth-actions">
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Login</ion-button>
+        </div>
 
-        <div class="social-signup">
-          <p class="divider">or continue with</p>
+        <div class="auth-footer">
+          <div class="divider">
+            <span>Or login with</span>
+          </div>
 
           <div class="social-buttons">
             <ion-button fill="clear">
@@ -55,16 +61,18 @@
               <ion-icon name="logo-instagram"></ion-icon>
             </ion-button>
             <ion-button fill="clear">
-              <ion-icon name="logo-xbox"></ion-icon>
+              <ion-icon name="logo-x"></ion-icon>
             </ion-button>
           </div>
-        </div>
 
-        <div class="signup-link">
-          Don't have an account?
-          <a routerLink="/auth/signup">Sign Up here</a>
+          <div class="auth-link">
+            <ion-text color="medium">
+              Don't have an account?
+              <a routerLink="/auth/signup">Sign Up</a>
+            </ion-text>
+          </div>
         </div>
-      </ion-card-content>
-    </ion-card>
-  </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
 </ion-content>
