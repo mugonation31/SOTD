@@ -161,12 +161,15 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    // Ensure role is always 'player' for initial signup
+    const signupData = { ...userData, role: 'player' as UserRole };
+
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/signup`, userData)
+      .post<AuthResponse>(`${this.apiUrl}/auth/signup`, signupData)
       .pipe(
         map((response) => {
-          localStorage.setItem('currentUser', JSON.stringify(response));
-          this.currentUserSubject.next(response);
+          // Only store the token, not the full user data
+          localStorage.setItem('token', response.token);
           return response;
         })
       );

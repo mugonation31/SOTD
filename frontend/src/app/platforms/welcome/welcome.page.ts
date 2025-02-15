@@ -30,7 +30,7 @@ import {
           <ion-button
             fill="solid"
             color="primary"
-            (click)="navigateTo('/auth/register')"
+            (click)="navigateTo('/auth/signup')"
           >
             Sign Up
           </ion-button>
@@ -50,7 +50,7 @@ import {
           <ion-button
             size="large"
             color="primary"
-            (click)="navigateTo('/auth/register')"
+            (click)="navigateTo('/auth/signup')"
           >
             Create a Group
             <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
@@ -58,7 +58,7 @@ import {
           <ion-button
             size="large"
             fill="outline"
-            (click)="navigateTo('/auth/register')"
+            (click)="navigateTo('/auth/signup')"
           >
             Join a Group
             <ion-icon name="people-circle-outline" slot="end"></ion-icon>

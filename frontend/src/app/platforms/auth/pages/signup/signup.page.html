@@ -41,31 +41,57 @@
           </ion-item>
 
           <ion-item>
-            <ion-input placeholder="Email" [(ngModel)]="signupData.email" name="email" required type="email">
+            <ion-input placeholder="Email" [(ngModel)]="signupData.email" (ionInput)="validateEmail()"
+              [class.ion-invalid]="validationErrors.email" name="email" required type="email">
             </ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-select placeholder="Select Role" [(ngModel)]="signupData.role" name="role" required>
-              <ion-select-option value="player">Player</ion-select-option>
-              <ion-select-option value="group-admin">Group Admin</ion-select-option>
-              <ion-select-option value="super-admin">Super Admin</ion-select-option>
-            </ion-select>
+            <ion-note slot="error" *ngIf="validationErrors.email">
+              {{ validationErrors.email }}
+            </ion-note>
           </ion-item>
 
           <ion-item>
             <ion-input placeholder="Password" [(ngModel)]="signupData.password" (ionInput)="validatePassword()"
-              [class.ion-invalid]="validationErrors.password" name="password" required type="password">
+              [class.ion-invalid]="validationErrors.password" [type]="showPassword ? 'text' : 'password'"
+              name="password" required>
             </ion-input>
+            <ion-button fill="clear" slot="end" (click)="togglePasswordVisibility()">
+              <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </ion-button>
             <ion-note slot="error" *ngIf="validationErrors.password">
               {{ validationErrors.password }}
             </ion-note>
           </ion-item>
 
+          <div class="password-requirements" *ngIf="signupData.password.length > 0">
+            <div [class.valid]="passwordCriteria.length">
+              <ion-icon [name]="passwordCriteria.length ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+              Minimum 8 characters
+            </div>
+            <div [class.valid]="passwordCriteria.uppercase">
+              <ion-icon [name]="passwordCriteria.uppercase ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+              At least one uppercase letter
+            </div>
+            <div [class.valid]="passwordCriteria.number">
+              <ion-icon [name]="passwordCriteria.number ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+              At least one number
+            </div>
+            <div [class.valid]="passwordCriteria.special">
+              <ion-icon [name]="passwordCriteria.special ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+              At least one special character
+            </div>
+          </div>
+
           <ion-item>
-            <ion-input placeholder="Confirm Password" [(ngModel)]="signupData.confirmPassword" name="confirmPassword"
-              required type="password">
+            <ion-input placeholder="Confirm Password" [(ngModel)]="signupData.confirmPassword"
+              [type]="showConfirmPassword ? 'text' : 'password'" [class.ion-invalid]="validationErrors.confirmPassword"
+              (ionInput)="validateConfirmPassword()" name="confirmPassword" required>
             </ion-input>
+            <ion-button fill="clear" slot="end" (click)="toggleConfirmPasswordVisibility()">
+              <ion-icon [name]="showConfirmPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </ion-button>
+            <ion-note slot="error" *ngIf="validationErrors.confirmPassword">
+              {{ validationErrors.confirmPassword }}
+            </ion-note>
           </ion-item>
         </ion-list>
 

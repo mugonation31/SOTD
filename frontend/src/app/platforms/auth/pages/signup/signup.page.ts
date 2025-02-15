@@ -25,6 +25,10 @@ import {
   logoFacebook,
   logoInstagram,
   logoXbox,
+  eye,
+  eyeOff,
+  checkmarkCircle,
+  ellipseOutline,
 } from 'ionicons/icons';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
 import {
@@ -40,6 +44,13 @@ interface ValidationErrors {
   email: string;
   password: string;
   confirmPassword: string;
+}
+
+interface PasswordCriteria {
+  length: boolean;
+  uppercase: boolean;
+  number: boolean;
+  special: boolean;
 }
 
 @Component({
@@ -88,6 +99,16 @@ export class SignupPage {
     confirmPassword: '',
   };
 
+  showPassword = false;
+  showConfirmPassword = false;
+
+  passwordCriteria: PasswordCriteria = {
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false,
+  };
+
   get canSubmit(): boolean {
     return Boolean(
       this.signupData.firstName &&
@@ -95,13 +116,26 @@ export class SignupPage {
         this.signupData.email &&
         this.signupData.password &&
         this.signupData.confirmPassword &&
-        this.signupData.role &&
         !this.validationErrors.firstName &&
         !this.validationErrors.lastName &&
         !this.validationErrors.email &&
         !this.validationErrors.password &&
-        !this.validationErrors.confirmPassword
+        !this.validationErrors.confirmPassword &&
+        this.isPasswordValid()
     );
+  }
+
+  constructor(private authService: AuthService, private router: Router) {
+    addIcons({
+      logoGoogle,
+      logoFacebook,
+      logoInstagram,
+      logoXbox,
+      eye,
+      eyeOff,
+      checkmarkCircle,
+      ellipseOutline,
+    });
   }
 
   validateRequired(field: keyof ValidationErrors, value: string) {
@@ -115,9 +149,11 @@ export class SignupPage {
   }
 
   validateEmail() {
+    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
     if (!this.signupData.email) {
       this.validationErrors.email = 'Email is required';
-    } else if (!validateEmail(this.signupData.email)) {
+    } else if (!emailPattern.test(this.signupData.email)) {
       this.validationErrors.email = 'Please enter a valid email address';
     } else {
       this.validationErrors.email = '';
@@ -125,13 +161,30 @@ export class SignupPage {
   }
 
   validatePassword() {
-    if (!this.signupData.password) {
+    const password = this.signupData.password;
+
+    // Update criteria checks
+    this.passwordCriteria = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    if (!password) {
       this.validationErrors.password = 'Password is required';
+    } else if (!this.isPasswordValid()) {
+      this.validationErrors.password =
+        'Password does not meet all requirements';
     } else {
-      const errors = getPasswordErrors(this.signupData.password);
-      this.validationErrors.password = errors.length ? errors.join(', ') : '';
+      this.validationErrors.password = '';
     }
+
     this.validateConfirmPassword();
+  }
+
+  isPasswordValid(): boolean {
+    return Object.values(this.passwordCriteria).every((criterion) => criterion);
   }
 
   validateConfirmPassword() {
@@ -144,13 +197,12 @@ export class SignupPage {
     }
   }
 
-  constructor(private authService: AuthService, private router: Router) {
-    addIcons({
-      logoGoogle,
-      logoFacebook,
-      logoInstagram,
-      logoXbox,
-    });
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility() {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   onSignup() {
@@ -165,23 +217,8 @@ export class SignupPage {
     const { confirmPassword, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
       next: (response) => {
-        localStorage.setItem('userRole', response.user.role);
         localStorage.setItem('token', response.token);
-
-        switch (response.user.role) {
-          case 'super-admin':
-            this.router.navigate(['/super-admin/dashboard']);
-            break;
-          case 'group-admin':
-            this.router.navigate(['/group-admin/dashboard']);
-            break;
-          case 'player':
-            this.router.navigate(['/player/dashboard']);
-            break;
-          default:
-            console.error('Invalid role');
-            break;
-        }
+        this.router.navigate(['/welcome']);
       },
       error: (error) => {
         console.error('Signup error:', error);
