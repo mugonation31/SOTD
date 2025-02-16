@@ -1,13 +1,8 @@
 import { Injectable } from '@angular/core';
-
-interface GroupMember {
-  id: string;
-  name: string;
-  email: string;
-  joinedAt: Date;
-  status: 'active' | 'inactive';
-  role: 'admin' | 'player';
-}
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { Group, GroupMember, CreateGroupData } from '../types/group.types';
 
 interface GroupSettings {
   allowPlayerInvites: boolean;
@@ -16,20 +11,12 @@ interface GroupSettings {
   allowMemberChat: boolean;
 }
 
-interface Group {
-  id: string;
-  name: string;
-  code: string;
-  memberCount: number;
-  createdAt: Date;
-  members: GroupMember[];
-  settings: GroupSettings;
-  type: 'casual' | 'prize';
-  entryFee?: number;
-  paidMembers: number;
-  totalPrizePool?: number;
-  adminName: string;
-  leaderboard: any[];
+interface GroupLeaderboardEntry {
+  memberId: string;
+  memberName: string;
+  points: number;
+  rank: number;
+  trend: 'up' | 'down' | 'same';
 }
 
 @Injectable({
@@ -37,8 +24,9 @@ interface Group {
 })
 export class GroupService {
   private readonly STORAGE_KEY = 'sotd_groups';
+  private apiUrl = environment.apiUrl;
 
-  constructor() {
+  constructor(private http: HttpClient) {
     // Initialize storage if empty
     if (!localStorage.getItem(this.STORAGE_KEY)) {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
@@ -51,6 +39,7 @@ export class GroupService {
     return groups.map((group: any) => ({
       ...group,
       createdAt: new Date(group.createdAt),
+      updatedAt: new Date(group.updatedAt),
       members: group.members.map((member: any) => ({
         ...member,
         joinedAt: new Date(member.joinedAt),
@@ -104,5 +93,57 @@ export class GroupService {
   deleteGroup(groupId: string): void {
     const groups = this.getAllGroups().filter((g) => g.id !== groupId);
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+  }
+
+  createGroup(groupData: CreateGroupData): Observable<Group> {
+    // Mock response for frontend development
+    const mockResponse: Group = {
+      id: 'mock-group-id',
+      name: groupData.name,
+      code: `G${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      description: groupData.description,
+      entryFee: groupData.entryFee,
+      isPrivate: groupData.isPrivate,
+      rules: groupData.rules,
+      adminId: 'mock-admin-id',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      memberCount: 1, // Start with admin as member
+      members: [
+        {
+          id: 'mock-admin-id',
+          name: 'Admin User',
+          email: 'admin@example.com',
+          joinedAt: new Date(),
+          status: 'active',
+          role: 'admin',
+        },
+      ],
+      settings: {
+        allowPlayerInvites: false,
+        autoApproveJoins: false,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+      type: 'casual',
+      paidMembers: 0,
+      totalPrizePool: 0,
+      adminName: 'Admin User',
+      leaderboard: [],
+    };
+
+    // Save the group to local storage
+    this.saveGroup(mockResponse);
+
+    // Return mock response
+    return new Observable((subscriber) => {
+      setTimeout(() => {
+        subscriber.next(mockResponse);
+        subscriber.complete();
+      }, 1000); // Simulate network delay
+    });
+
+    // TODO: Uncomment this when backend is ready
+    // return this.http.post<Group>(`${this.apiUrl}/groups`, groupData);
   }
 }

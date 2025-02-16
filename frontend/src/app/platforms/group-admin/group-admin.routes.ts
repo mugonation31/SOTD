@@ -19,6 +19,13 @@ export const routes: Routes = [
     component: GroupAdminLayoutPage,
     children: [
       {
+        path: 'create',
+        loadComponent: () =>
+          import('./pages/create-group/create-group.page').then(
+            (m) => m.CreateGroupPage
+          ),
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/dashboard/dashboard.page').then(

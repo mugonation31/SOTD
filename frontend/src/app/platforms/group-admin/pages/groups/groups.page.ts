@@ -66,53 +66,12 @@ import {
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
-
-interface GroupMember {
-  id: string;
-  name: string;
-  email: string;
-  joinedAt: Date;
-  status: 'active' | 'inactive';
-  role: 'admin' | 'player';
-}
-
-interface GroupSettings {
-  allowPlayerInvites: boolean;
-  autoApproveJoins: boolean;
-  showLeaderboard: boolean;
-  allowMemberChat: boolean;
-}
-
-interface GroupLeaderboardEntry {
-  position: number;
-  name: string;
-  played: number;
-  jokerUsed: number;
-  totalPoints: number;
-}
-
-interface Group {
-  id: string;
-  name: string;
-  code: string;
-  memberCount: number;
-  createdAt: Date;
-  members: GroupMember[];
-  settings: GroupSettings;
-  type: 'casual' | 'prize';
-  entryFee?: number;
-  paidMembers: number;
-  totalPrizePool?: number;
-  adminName: string;
-  leaderboard: GroupLeaderboardEntry[];
-}
-
-interface CurrentAdmin {
-  id: string;
-  name: string;
-  email: string;
-  members: GroupMember[];
-}
+import {
+  Group,
+  GroupSettings,
+  GroupMember,
+  GroupLeaderboardEntry,
+} from '../../../../core/types/group.types';
 
 @Component({
   selector: 'app-groups',
@@ -360,7 +319,7 @@ interface CurrentAdmin {
                 <ion-button
                   fill="clear"
                   size="small"
-                  (click)="copyGroupCode(group.code)"
+                  (click)="copyCode($event, group.code)"
                 >
                   <ion-icon name="copy-outline"></ion-icon>
                 </ion-button>
@@ -1112,20 +1071,13 @@ export class GroupsPage implements OnInit {
   filteredMembers: GroupMember[] = [];
   entryFeeOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   currentMemberCount = 0;
-  currentAdmin: CurrentAdmin = {
-    id: '1',
-    name: 'John Smith',
-    email: 'john@example.com',
-    members: [
-      {
-        id: '1',
-        name: 'John Smith',
-        email: 'john@example.com',
-        joinedAt: new Date(),
-        status: 'active',
-        role: 'admin',
-      },
-    ],
+  currentAdmin: GroupMember = {
+    id: 'mock-admin-id',
+    name: 'Admin User',
+    email: 'admin@example.com',
+    joinedAt: new Date(),
+    status: 'active',
+    role: 'admin',
   };
 
   get hasExistingGroup(): boolean {
@@ -1286,6 +1238,7 @@ export class GroupsPage implements OnInit {
           code: this.generateGroupCode(),
           memberCount: 1,
           createdAt: new Date(),
+          updatedAt: new Date(),
           members: [
             {
               id: this.currentAdmin.id,
@@ -1307,6 +1260,9 @@ export class GroupsPage implements OnInit {
           paidMembers: 0,
           totalPrizePool: 0,
           adminName: this.currentAdmin.name,
+          adminId: this.currentAdmin.id,
+          description: `${formValue.name} - A prediction group managed by ${this.currentAdmin.name}`,
+          isPrivate: false,
           leaderboard: initialLeaderboard,
         };
 
@@ -1495,18 +1451,6 @@ export class GroupsPage implements OnInit {
     const input = event.target;
     input.classList.add('has-value');
     this.groupForm.patchValue({ entryFee: value }, { emitEvent: false });
-  }
-
-  async copyGroupCode(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      await this.toastService.showToast(
-        'Group code copied to clipboard',
-        'success'
-      );
-    } catch (error) {
-      await this.toastService.showToast('Failed to copy code', 'error');
-    }
   }
 
   viewGroupDetails(group: Group) {
