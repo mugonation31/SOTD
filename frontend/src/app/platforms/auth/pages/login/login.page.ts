@@ -129,9 +129,8 @@ export class LoginPage {
     if (!this.canSubmit) return;
 
     this.authService.login(this.loginData).subscribe({
-      next: (response) => {
-        localStorage.setItem('token', response.token);
-        this.router.navigate(['/welcome']);
+      next: () => {
+        this.router.navigate(['/welcome'], { replaceUrl: true });
       },
       error: (error) => {
         console.error('Login error:', error);

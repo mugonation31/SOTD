@@ -216,11 +216,11 @@ export class SignupPage {
 
     const { confirmPassword, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
-      next: (response) => {
-        localStorage.setItem('token', response.token);
-        this.router.navigate(['/welcome']);
+      next: () => {
+        this.router.navigate(['/welcome'], { replaceUrl: true });
       },
       error: (error) => {
+        // TODO: Add proper error handling with Toast service
         console.error('Signup error:', error);
       },
     });

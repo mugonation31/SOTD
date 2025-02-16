@@ -124,6 +124,31 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
+    // Mock response for frontend development
+    const mockResponse: AuthResponse = {
+      token: 'mock-jwt-token',
+      user: {
+        id: 'mock-user-id',
+        email: loginData.email,
+        firstName: 'John', // Mock name
+        lastName: 'Doe', // Mock name
+        role: 'player',
+      },
+    };
+
+    // Return mock response
+    return new Observable((subscriber) => {
+      setTimeout(() => {
+        localStorage.setItem('currentUser', JSON.stringify(mockResponse));
+        localStorage.setItem('lastActivity', Date.now().toString());
+        this.currentUserSubject.next(mockResponse);
+        subscriber.next(mockResponse);
+        subscriber.complete();
+      }, 500); // Simulate network delay
+    });
+
+    // TODO: Uncomment this when backend is ready
+    /*
     try {
       this.checkLoginAttempts(loginData.email);
     } catch (error) {
@@ -140,7 +165,7 @@ export class AuthService {
       .post<AuthResponse>(`${this.apiUrl}/auth/login`, secureData)
       .pipe(
         tap(() => {
-          this.loginAttempts.delete(loginData.email); // Reset on successful login
+          this.loginAttempts.delete(loginData.email);
           this.updateLastActivity();
         }),
         map((response) => {
@@ -158,21 +183,48 @@ export class AuthService {
           return throwError(() => error);
         })
       );
+    */
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
-    // Ensure role is always 'player' for initial signup
-    const signupData = { ...userData, role: 'player' as UserRole };
+    // Mock response for frontend development
+    const mockResponse: AuthResponse = {
+      token: 'mock-jwt-token',
+      user: {
+        id: 'mock-user-id',
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: 'player',
+      },
+    };
 
+    // Return mock response
+    return new Observable((subscriber) => {
+      setTimeout(() => {
+        // Store both token and user data
+        localStorage.setItem('currentUser', JSON.stringify(mockResponse));
+        localStorage.setItem('lastActivity', Date.now().toString());
+        this.currentUserSubject.next(mockResponse);
+        subscriber.next(mockResponse);
+        subscriber.complete();
+      }, 500); // Simulate network delay
+    });
+
+    // TODO: Uncomment this when backend is ready
+    /*
+    const signupData = { ...userData, role: 'player' as UserRole };
     return this.http
       .post<AuthResponse>(`${this.apiUrl}/auth/signup`, signupData)
       .pipe(
         map((response) => {
-          // Only store the token, not the full user data
-          localStorage.setItem('token', response.token);
+          localStorage.setItem('currentUser', JSON.stringify(response));
+          localStorage.setItem('lastActivity', Date.now().toString());
+          this.currentUserSubject.next(response);
           return response;
         })
       );
+    */
   }
 
   logout() {

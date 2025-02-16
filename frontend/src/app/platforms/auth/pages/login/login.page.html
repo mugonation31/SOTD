@@ -1,6 +1,9 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Login</ion-title>
+    <ion-title class="logo-title">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      SOTD Predict 3
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -37,8 +40,14 @@
           </ion-item>
         </ion-list>
 
-        <div class="forgot-password">
-          <a routerLink="/auth/forgot-password">Forgot Password?</a>
+        <div class="auth-links">
+          <div class="forgot-password">
+            <a routerLink="/auth/forgot-password">Forgot Password?</a>
+          </div>
+          <div class="signup-link">
+            <span>New to SOTD? </span>
+            <a routerLink="/auth/signup">Create an account</a>
+          </div>
         </div>
 
         <div class="auth-actions">
@@ -63,13 +72,6 @@
             <ion-button fill="clear">
               <ion-icon name="logo-x"></ion-icon>
             </ion-button>
-          </div>
-
-          <div class="auth-link">
-            <ion-text color="medium">
-              Don't have an account?
-              <a routerLink="/auth/signup">Sign Up</a>
-            </ion-text>
           </div>
         </div>
       </form>

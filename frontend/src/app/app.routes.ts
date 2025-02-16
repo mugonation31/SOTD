@@ -2,16 +2,21 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
-    path: 'welcome',
-    loadChildren: () =>
-      import('./platforms/welcome/welcome.module').then(
-        (m) => m.WelcomePageModule
-      ),
-  },
-  {
     path: 'auth',
     loadChildren: () =>
       import('./platforms/auth/auth.routes').then((m) => m.routes),
+  },
+  {
+    path: 'welcome',
+    loadComponent: () =>
+      import('./platforms/welcome/welcome.page').then((m) => m.WelcomePage),
+  },
+  {
+    path: 'join-group',
+    loadComponent: () =>
+      import('./platforms/join-group/join-group.page').then(
+        (m) => m.JoinGroupPage
+      ),
   },
   {
     path: 'player',

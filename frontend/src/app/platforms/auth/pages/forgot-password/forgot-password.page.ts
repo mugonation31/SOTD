@@ -12,11 +12,14 @@ import {
   IonCardContent,
   IonText,
   IonNote,
+  IonIcon,
 } from '@ionic/angular/standalone';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { AuthService } from '../../../../core/services/auth.service';
+import { addIcons } from 'ionicons';
+import { footballOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-forgot-password',
@@ -36,6 +39,7 @@ import { AuthService } from '../../../../core/services/auth.service';
     IonCardContent,
     IonText,
     IonNote,
+    IonIcon,
     RouterLink,
     FormsModule,
     NgIf,
@@ -49,7 +53,9 @@ export class ForgotPasswordPage {
     return Boolean(this.email && !this.validationError);
   }
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router) {
+    addIcons({ footballOutline });
+  }
 
   validateEmail() {
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;

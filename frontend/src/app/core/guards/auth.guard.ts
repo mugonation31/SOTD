@@ -1,24 +1,32 @@
-import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = (route) => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
+@Injectable({ providedIn: 'root' })
+export class AuthGuard {
+  constructor(private authService: AuthService, private router: Router) {}
 
-  const userRole = localStorage.getItem('userRole');
-  const requiredRole = route.data['role'];
+  canActivate(): boolean | Promise<boolean> | Observable<boolean> {
+    if (this.authService.isAuthenticated()) {
+      return true;
+    }
 
-  if (!userRole) {
-    router.navigate(['/auth/login']);
+    this.router.navigate(['/auth/login']);
     return false;
   }
+}
 
-  if (requiredRole && userRole !== requiredRole) {
-    // Redirect to appropriate dashboard based on role
-    router.navigate([`/${userRole}/dashboard`]);
+@Injectable({ providedIn: 'root' })
+export class NoAuthGuard {
+  constructor(private authService: AuthService, private router: Router) {}
+
+  canActivate(): boolean | Promise<boolean> | Observable<boolean> {
+    if (!this.authService.isAuthenticated()) {
+      return true;
+    }
+
+    this.router.navigate(['/welcome']);
     return false;
   }
-
-  return true;
-};
+}
