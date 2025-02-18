@@ -22,6 +22,7 @@ import {
   statsChartOutline,
   peopleOutline,
   personAddOutline,
+  speedometerOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -54,6 +55,7 @@ export class SuperAdminLayoutPage {
       statsChartOutline,
       peopleOutline,
       personAddOutline,
+      speedometerOutline,
     });
   }
 

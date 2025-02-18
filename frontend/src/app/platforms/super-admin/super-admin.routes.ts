@@ -31,6 +31,11 @@ export const routes: Routes = [
         data: { preload: true },
       },
       {
+        path: 'metrics',
+        loadComponent: () =>
+          import('./pages/metrics/metrics.page').then((m) => m.MetricsPage),
+      },
+      {
         path: 'groups',
         loadComponent: () =>
           import('./pages/groups/groups.page').then((m) => m.GroupsPage),
@@ -51,6 +56,11 @@ export const routes: Routes = [
             (m) => m.GroupAdminInvitesPage
           ),
         data: { preload: true },
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./pages/users/users.page').then((m) => m.UsersPage),
       },
       {
         path: 'settings',
