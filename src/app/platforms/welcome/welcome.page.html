@@ -1,0 +1,76 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Welcome</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="welcome-container">
+    <h1>Welcome to SOTD</h1>
+    <p>Choose how you'd like to get started:</p>
+
+    <div class="options-container">
+      <ion-card (click)="createGroup()">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="people-outline"></ion-icon>
+            Create a Group
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          Create your own prediction group and invite others to join.
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card (click)="joinGroup()">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="person-add-outline"></ion-icon>
+            Join a Group
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          Join an existing prediction group using an invite code.
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <section class="how-it-works">
+      <h2>How It Works</h2>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="12" size-md="4" *ngFor="let step of howItWorks">
+            <ion-card>
+              <ion-card-content>
+                <div class="step-icon">
+                  <ion-icon [name]="step.icon"></ion-icon>
+                </div>
+                <h3>{{ step.title }}</h3>
+                <p>{{ step.description }}</p>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </section>
+
+    <section class="features">
+      <h2>Features</h2>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="12" size-md="6" *ngFor="let feature of features">
+            <ion-card>
+              <ion-card-content>
+                <div class="feature-icon">
+                  <ion-icon [name]="feature.icon"></ion-icon>
+                </div>
+                <h3>{{ feature.title }}</h3>
+                <p>{{ feature.description }}</p>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </section>
+  </div>
+</ion-content>

@@ -1,0 +1,102 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/player/settings')">
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Segment Control -->
+  <ion-segment [(ngModel)]="selectedSegment" class="standings-segment">
+    <ion-segment-button value="group">
+      <ion-icon name="people-outline"></ion-icon>
+      My Group
+    </ion-segment-button>
+    <ion-segment-button value="overall">
+      <ion-icon name="trophy-outline"></ion-icon>
+      Overall League
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Overall Standings -->
+  <div *ngIf="selectedSegment === 'overall'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Overall League Standings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <!-- Table Header -->
+        <div class="table-header">
+          <div class="position-col">Position</div>
+          <div class="name-col">Name</div>
+          <div class="gameweek-col">Game Week</div>
+          <div class="joker-col">Played Joker</div>
+          <div class="points-col">Points</div>
+        </div>
+
+        <!-- Table Body -->
+        <div class="table-body">
+          <div class="table-row" *ngFor="let player of overallStandings">
+            <div class="position-col">
+              {{ player.position }}
+              <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
+                [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))"
+                class="position-change-icon">
+              </ion-icon>
+            </div>
+            <div class="name-col">{{ player.name }}</div>
+            <div class="gameweek-col">{{ player.played }}</div>
+            <div class="joker-col">{{ player.jokerUsed || '0' }}/2</div>
+            <div class="points-col">{{ player.points }}</div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Group Standings -->
+  <div *ngIf="selectedSegment === 'group'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Current Standings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <!-- Table Header -->
+        <div class="table-header">
+          <div class="position-col">Position</div>
+          <div class="name-col">Name</div>
+          <div class="gameweek-col">Game Week</div>
+          <div class="joker-col">Played Joker</div>
+          <div class="points-col">Points</div>
+        </div>
+
+        <!-- Table Body -->
+        <div class="table-body">
+          <div class="table-row" *ngFor="let player of groupStandings">
+            <div class="position-col">
+              {{ player.position }}
+              <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
+                [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))"
+                class="position-change-icon">
+              </ion-icon>
+            </div>
+            <div class="name-col">{{ player.name }}</div>
+            <div class="gameweek-col">{{ player.played }}</div>
+            <div class="joker-col">{{ player.jokerUsed || '0' }}/2</div>
+            <div class="points-col">{{ player.points }}</div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

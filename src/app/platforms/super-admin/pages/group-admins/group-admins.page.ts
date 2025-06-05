@@ -1,0 +1,253 @@
+import { Component } from '@angular/core';
+import {
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonButton,
+  IonIcon,
+  IonBadge,
+  IonToggle,
+  IonSegment,
+  IonSegmentButton,
+  IonRouterOutlet,
+} from '@ionic/angular/standalone';
+import { NgFor, NgIf, DatePipe } from '@angular/common';
+import { addIcons } from 'ionicons';
+import {
+  peopleCircleOutline,
+  trashOutline,
+  banOutline,
+  checkmarkCircleOutline,
+} from 'ionicons/icons';
+import { ToastService } from '@core/services/toast.service';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { GroupAdminInvitesPage } from '../group-admin-invites/group-admin-invites.page';
+
+interface GroupAdmin {
+  id: string;
+  email: string;
+  name: string;
+  status: 'active' | 'inactive';
+  lastLogin?: Date;
+  groupsManaged: string[];
+  joinedDate: Date;
+}
+
+@Component({
+  selector: 'app-group-admins',
+  template: `
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Admin Management</ion-title>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-segment [(ngModel)]="activeTab">
+          <ion-segment-button value="list">
+            <ion-label>Admins</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="invites">
+            <ion-label>Invites</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <div class="ion-padding">
+        <!-- Admins List Tab -->
+        <div *ngIf="activeTab === 'list'">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>Active Group Admins</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-list>
+                <ion-item *ngFor="let admin of filteredAdmins">
+                  <ion-label>
+                    <h2>{{ admin.name }}</h2>
+                    <p>{{ admin.email }}</p>
+                    <p>Joined: {{ admin.joinedDate | date : 'mediumDate' }}</p>
+                    <p>
+                      Groups Managed:
+                      <ion-badge
+                        color="primary"
+                        *ngFor="let group of admin.groupsManaged"
+                      >
+                        {{ group }}
+                      </ion-badge>
+                    </p>
+                  </ion-label>
+                  <ion-toggle
+                    [checked]="admin.status === 'active'"
+                    (ionChange)="toggleAdminStatus(admin)"
+                  ></ion-toggle>
+                  <ion-button
+                    fill="clear"
+                    color="danger"
+                    (click)="confirmRevokeAccess(admin)"
+                  >
+                    <ion-icon name="trash-outline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </ion-list>
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Invites Tab -->
+        <div *ngIf="activeTab === 'invites'" class="full-height">
+          <app-group-admin-invites></app-group-admin-invites>
+        </div>
+      </div>
+    </ion-content>
+  `,
+  styles: [
+    `
+      .full-height {
+        height: 100%;
+
+        ::ng-deep ion-header {
+          display: none;
+        }
+
+        ::ng-deep ion-content {
+          --padding-top: 0;
+          --padding-bottom: 0;
+        }
+      }
+    `,
+  ],
+  standalone: true,
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonButton,
+    IonIcon,
+    IonBadge,
+    IonToggle,
+    NgFor,
+    NgIf,
+    DatePipe,
+    IonSegment,
+    IonSegmentButton,
+    RouterModule,
+    FormsModule,
+    IonRouterOutlet,
+    GroupAdminInvitesPage,
+  ],
+})
+export class GroupAdminsPage {
+  groupAdmins: GroupAdmin[] = [];
+  filteredAdmins: GroupAdmin[] = [];
+  activeTab = 'list';
+  searchTerm = '';
+  statusFilter = 'all';
+
+  constructor(private toastService: ToastService) {
+    addIcons({
+      peopleCircleOutline,
+      trashOutline,
+      banOutline,
+      checkmarkCircleOutline,
+    });
+    // Load mock data immediately
+    this.loadMockAdmins();
+    // Initialize filteredAdmins
+    this.filteredAdmins = this.groupAdmins;
+  }
+
+  private loadMockAdmins() {
+    this.groupAdmins = [
+      {
+        id: '1',
+        email: 'admin1@example.com',
+        name: 'John Admin',
+        status: 'active',
+        lastLogin: new Date('2024-03-15'),
+        groupsManaged: ['Premier League A', 'Champions League'],
+        joinedDate: new Date('2024-01-01'),
+      },
+      {
+        id: '2',
+        email: 'admin2@example.com',
+        name: 'Sarah Manager',
+        status: 'active',
+        lastLogin: new Date('2024-03-14'),
+        groupsManaged: ['Premier League B'],
+        joinedDate: new Date('2024-01-15'),
+      },
+    ];
+    this.filterAdmins();
+  }
+
+  filterAdmins() {
+    let filtered = [...this.groupAdmins];
+
+    // Apply status filter
+    if (this.statusFilter !== 'all') {
+      filtered = filtered.filter((admin) => admin.status === this.statusFilter);
+    }
+
+    // Apply search filter
+    if (this.searchTerm) {
+      const term = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (admin) =>
+          admin.name.toLowerCase().includes(term) ||
+          admin.email.toLowerCase().includes(term)
+      );
+    }
+
+    this.filteredAdmins = filtered;
+  }
+
+  async toggleAdminStatus(admin: GroupAdmin) {
+    try {
+      admin.status = admin.status === 'active' ? 'inactive' : 'active';
+      await this.toastService.showToast(
+        `Admin status ${
+          admin.status === 'active' ? 'activated' : 'deactivated'
+        }`,
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast('Error updating admin status', 'error');
+    }
+  }
+
+  async confirmRevokeAccess(admin: GroupAdmin) {
+    if (confirm(`Are you sure you want to revoke access for ${admin.name}?`)) {
+      try {
+        this.groupAdmins = this.groupAdmins.filter((a) => a.id !== admin.id);
+        this.filterAdmins();
+        await this.toastService.showToast(
+          'Admin access revoked successfully',
+          'success'
+        );
+      } catch (error) {
+        await this.toastService.showToast(
+          'Error revoking admin access',
+          'error'
+        );
+      }
+    }
+  }
+}

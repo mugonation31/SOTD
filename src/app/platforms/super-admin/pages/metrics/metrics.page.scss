@@ -1,0 +1,162 @@
+:host {
+  ion-content {
+    --background: var(--ion-color-light);
+  }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  ion-card-header {
+    padding: 1rem;
+
+    ion-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      ion-icon {
+        font-size: 1.25rem;
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  ion-card-content {
+    padding: 1rem;
+  }
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .label {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+
+  .value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--ion-color-dark);
+
+    &.success {
+      color: var(--ion-color-success);
+    }
+
+    &.warning {
+      color: var(--ion-color-warning);
+    }
+
+    &.error {
+      color: var(--ion-color-danger);
+    }
+  }
+}
+
+.storage-usage {
+  margin-bottom: 1rem;
+
+  .usage-bar {
+    margin-bottom: 0.5rem;
+
+    ion-progress-bar {
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+  }
+
+  .usage-text {
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+    text-align: right;
+  }
+}
+
+.backup-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .label {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+
+  .value {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+
+    ion-badge {
+      text-transform: capitalize;
+      font-weight: 500;
+    }
+  }
+}
+
+.metrics-history {
+  margin-bottom: 2rem;
+
+  ion-segment {
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .chart-card {
+    margin: 0;
+    border-radius: 12px;
+
+    .chart-placeholder {
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ion-color-medium);
+      font-style: italic;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    ion-card-header {
+      ion-card-title {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .metric-item {
+    .value {
+      font-size: 1rem;
+    }
+  }
+}

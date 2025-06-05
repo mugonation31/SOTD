@@ -1,0 +1,86 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/player/settings')">
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Deadline Info -->
+  <ion-card class="deadline-card">
+    <ion-card-content>
+      <div class="deadline-info">
+        <ion-icon name="time-outline" color="warning"></ion-icon>
+        <span>Submission Deadline: {{ currentGameweek.deadline | date:'medium' }}</span>
+      </div>
+      <div class="selection-info">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        Enter scores for any 3 matches to submit your predictions
+      </div>
+      <div class="points-info">
+        <p>Points System:</p>
+        <ul>
+          <li>Home Win: 3 points</li>
+          <li>Away Win: 4 points</li>
+          <li>Draw: 6 points</li>
+          <li>Correct Score: Additional 3 points</li>
+          <li>3 Perfect Scores: Bonus 10 points</li>
+        </ul>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Available Matches -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        Available Matches
+        <ion-badge color="primary">Predict 3</ion-badge>
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <ion-item *ngFor="let match of matches">
+          <div class="match-row">
+            <div class="match-container">
+              <div class="team home-team">{{ match.homeTeam }}</div>
+              <div class="score-inputs">
+                <ion-input type="tel" maxlength="2" [(ngModel)]="match.prediction.homeScore"
+                  (ionChange)="validateScore(match, true, $event)" placeholder="-">
+                </ion-input>
+                <span class="score-separator">-</span>
+                <ion-input type="tel" maxlength="2" [(ngModel)]="match.prediction.awayScore"
+                  (ionChange)="validateScore(match, false, $event)" placeholder="-">
+                </ion-input>
+              </div>
+              <div class="team away-team">{{ match.awayTeam }}</div>
+            </div>
+            <div class="kickoff-time">
+              <ion-icon name="time-outline"></ion-icon>
+              {{ match.kickoff | date:'EEEE, MMM d' }} at {{ match.kickoff | date:'h:mm a' }}
+            </div>
+          </div>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" class="submit-button" [disabled]="!canSubmit()" (click)="onSubmit()">
+        <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+        Submit Predictions
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
+
+<ion-alert [isOpen]="showAlert" header="Alert" [message]="alertMessage" [buttons]="['OK']"
+  (didDismiss)="showAlert = false">
+</ion-alert>

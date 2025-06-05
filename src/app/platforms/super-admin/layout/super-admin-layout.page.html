@@ -1,0 +1,47 @@
+<div class="page-wrapper">
+  <ion-header>
+    <ion-toolbar>
+      <div class="logo-container" (click)="navigateTo('/super-admin/dashboard')">
+        <ion-icon name="football-outline" class="football-icon"></ion-icon>
+        <div class="logo-text">
+          <span class="logo-sotd">SOTD</span>
+          <span class="logo-subtitle">Scores On The Doors</span>
+        </div>
+      </div>
+      <ion-buttons slot="end">
+        <ion-button (click)="navigateTo('/super-admin/settings')">
+          <ion-icon name="person-outline" class="profile-icon"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-tabs>
+    <ion-tab-bar slot="bottom">
+      <ion-tab-button tab="dashboard" href="/super-admin/dashboard">
+        <ion-icon name="grid-outline"></ion-icon>
+        <ion-label>Dashboard</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="metrics" href="/super-admin/metrics">
+        <ion-icon name="speedometer-outline"></ion-icon>
+        <ion-label>Metrics</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="groups" href="/super-admin/groups">
+        <ion-icon name="layers-outline"></ion-icon>
+        <ion-label>Groups & Users</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="predictions" href="/super-admin/predictions">
+        <ion-icon name="stats-chart-outline"></ion-icon>
+        <ion-label>Predictions</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="group-admins" href="/super-admin/group-admins">
+        <ion-icon name="people-outline"></ion-icon>
+        <ion-label>Admins</ion-label>
+      </ion-tab-button>
+    </ion-tab-bar>
+  </ion-tabs>
+</div>

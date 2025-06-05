@@ -1,0 +1,199 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Group Admin Dashboard</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Group Performance Overview -->
+  <ion-card class="performance-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="trophy-outline"></ion-icon>
+        Group Performance
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="top-performers">
+        <h4>Top Performers This Week</h4>
+        <div class="performers-list">
+          <div *ngFor="let player of topPerformers" class="performer-item">
+            <div class="performer-info">
+              <span class="name">{{ player.name }}</span>
+              <span class="points">+{{ player.weekPoints }} pts</span>
+            </div>
+            <div class="performance-details">
+              <span class="detail">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                {{ player.correctPredictions }} correct
+              </span>
+              <span class="detail" *ngIf="player.usedJoker">
+                <ion-icon name="star"></ion-icon>
+                Joker used
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="points-distribution">
+        <h4>Points Distribution</h4>
+        <div class="distribution-stats">
+          <div class="stat-item">
+            <span class="value">{{ groupStats.averagePoints }}</span>
+            <span class="label">Avg Points</span>
+          </div>
+          <div class="stat-item">
+            <span class="value">{{ groupStats.perfectScores }}</span>
+            <span class="label">Perfect Scores</span>
+          </div>
+          <div class="stat-item">
+            <span class="value">{{ groupStats.jokersUsed }}</span>
+            <span class="label">Jokers Used</span>
+          </div>
+        </div>
+      </div>
+
+      <ion-button expand="block" fill="clear" routerLink="/group-admin/groups/leaderboard">
+        View Full Leaderboard
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Current Gameweek Status -->
+  <ion-card class="gameweek-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="football-outline"></ion-icon>
+        Gameweek {{ currentGameweek.number }} Status
+      </ion-card-title>
+      <ion-card-subtitle class="deadline-info">
+        <ion-icon name="time-outline"></ion-icon>
+        Deadline: {{ currentGameweek.deadline | date:'medium' }}
+      </ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="submission-progress">
+        <div class="progress-header">
+          <h4>Prediction Submissions</h4>
+          <span class="progress-text">{{ currentGameweek.submittedCount }}/{{ currentGameweek.totalMembers }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"
+            [style.width.%]="(currentGameweek.submittedCount / currentGameweek.totalMembers) * 100"></div>
+        </div>
+      </div>
+
+      <div class="pending-submissions" *ngIf="currentGameweek.pendingMembers.length > 0">
+        <h4>Yet to Submit</h4>
+        <div class="pending-list">
+          <div *ngFor="let member of currentGameweek.pendingMembers" class="pending-member">
+            <span class="name">{{ member.name }}</span>
+            <ion-button fill="clear" size="small" (click)="sendReminder(member)">
+              <ion-icon name="mail-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <ion-button expand="block" routerLink="/group-admin/predictions"
+        [color]="currentGameweek.allSubmitted ? 'success' : 'primary'">
+        <ion-icon [name]="currentGameweek.allSubmitted ? 'eye-outline' : 'football-outline'" slot="start"></ion-icon>
+        {{ currentGameweek.allSubmitted ? 'View All Predictions' : 'Manage Predictions' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Quick Stats Overview -->
+  <ion-grid class="stats-grid">
+    <ion-row>
+      <ion-col size="12" size-md="6" size-lg="3">
+        <ion-card class="stat-card">
+          <ion-card-content>
+            <div class="stat-icon">
+              <ion-icon name="people-outline" color="primary"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <h3>Active Members</h3>
+              <p class="stat-value">{{ groupStats.activeMembers }}</p>
+              <p class="stat-label">{{ groupStats.totalMembers }} Total Members</p>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6" size-lg="3">
+        <ion-card class="stat-card">
+          <ion-card-content>
+            <div class="stat-icon">
+              <ion-icon name="cash-outline" color="success"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <h3>Prize Pool</h3>
+              <p class="stat-value">{{ groupStats.prizePool | currency:'GBP' }}</p>
+              <p class="stat-label">{{ groupStats.paidMembers }}/{{ groupStats.totalMembers }} Paid</p>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6" size-lg="3">
+        <ion-card class="stat-card">
+          <ion-card-content>
+            <div class="stat-icon">
+              <ion-icon name="star-outline" color="warning"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <h3>Joker Status</h3>
+              <p class="stat-value">{{ groupStats.jokersAvailable }}</p>
+              <p class="stat-label">Available Jokers</p>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6" size-lg="3">
+        <ion-card class="stat-card">
+          <ion-card-content>
+            <div class="stat-icon">
+              <ion-icon name="stats-chart-outline" color="tertiary"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <h3>Engagement</h3>
+              <p class="stat-value">{{ groupStats.engagementRate }}%</p>
+              <p class="stat-label">Weekly Participation</p>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Quick Actions -->
+  <ion-card class="actions-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="flash-outline"></ion-icon>
+        Quick Actions
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="quick-actions">
+        <ion-button color="primary" routerLink="/group-admin/predictions">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          MANAGE PREDICTIONS
+        </ion-button>
+
+        <ion-button color="success" routerLink="/group-admin/live">
+          <ion-icon name="eye-outline" slot="start"></ion-icon>
+          LIVE SCORES
+        </ion-button>
+
+        <ion-button color="warning" routerLink="/group-admin/groups">
+          <ion-icon name="people-outline" slot="start"></ion-icon>
+          MANAGE GROUP
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
