@@ -13,6 +13,8 @@ import {
   IonRow,
   IonCol,
   IonIcon,
+  IonButton,
+  IonButtons,
 } from '@ionic/angular/standalone';
 import { NgFor } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -23,6 +25,8 @@ import {
   trophyOutline,
   starOutline,
   cashOutline,
+  logInOutline,
+  personCircleOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -43,6 +47,8 @@ import {
     IonRow,
     IonCol,
     IonIcon,
+    IonButton,
+    IonButtons,
     NgFor,
   ],
 })
@@ -86,6 +92,8 @@ export class WelcomePage {
       trophyOutline,
       starOutline,
       cashOutline,
+      logInOutline,
+      personCircleOutline,
     });
   }
 
@@ -95,5 +103,13 @@ export class WelcomePage {
 
   joinGroup() {
     this.router.navigate(['/join-group']);
+  }
+
+  login() {
+    this.router.navigate(['/auth/login']);
+  }
+
+  signup() {
+    this.router.navigate(['/auth/signup']);
   }
 } 
