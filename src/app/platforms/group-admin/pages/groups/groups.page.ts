@@ -119,321 +119,184 @@ interface CurrentAdmin {
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>My Group</ion-title>
+        <ion-title>My Groups</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
-      <!-- Create New Group Card - Only show if no existing group -->
-      <ion-card class="create-group-card" *ngIf="!hasExistingGroup">
+      <!-- Create Group Button -->
+      <ion-button expand="block" (click)="showCreateForm()" class="create-group-btn">
+        <ion-icon slot="start" name="add-outline"></ion-icon>
+        Create New Group
+      </ion-button>
+
+      <!-- Create Group Form -->
+      <ion-card *ngIf="isCreateModalOpen">
         <ion-card-header>
-          <ion-card-title>Create Your Group</ion-card-title>
-          <ion-card-subtitle>Set up your prediction group</ion-card-subtitle>
+          <ion-card-title>Create New Group</ion-card-title>
+          <ion-button fill="clear" (click)="isCreateModalOpen = false" slot="end">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
         </ion-card-header>
 
         <ion-card-content>
           <form [formGroup]="groupForm" (ngSubmit)="createGroup()">
-            <!-- Group Type Selection -->
-            <div class="group-type-selection">
-              <ion-segment
-                formControlName="type"
-                (ionChange)="onGroupTypeChange()"
-              >
-                <ion-segment-button value="casual">
-                  <ion-label>
-                    <div class="segment-content">
-                      <ion-icon name="trophy-outline"></ion-icon>
-                      <div class="segment-text">
-                        <h3>Casual Group</h3>
-                        <p>Play for bragging rights</p>
-                      </div>
-                    </div>
-                  </ion-label>
-                </ion-segment-button>
-
-                <ion-segment-button value="prize">
-                  <ion-label>
-                    <div class="segment-content">
-                      <ion-icon name="cash-outline"></ion-icon>
-                      <div class="segment-text">
-                        <h3>Prize Group</h3>
-                        <p>Play for cash prizes</p>
-                      </div>
-                    </div>
-                  </ion-label>
-                </ion-segment-button>
-              </ion-segment>
-            </div>
-
-            <!-- Entry Fee Selection -->
-            <div
-              class="entry-fee-section"
-              *ngIf="groupForm.get('type')?.value === 'prize'"
-            >
-              <ion-item lines="none">
-                <ion-label position="stacked">Entry Fee</ion-label>
-
-                <div class="fee-selector">
-                  <!-- Range Slider -->
-                  <div class="range-container">
-                    <ion-range
-                      class="fee-range"
-                      [min]="1"
-                      [max]="100"
-                      [step]="1"
-                      [pin]="true"
-                      [ticks]="true"
-                      [snaps]="true"
-                      formControlName="entryFee"
-                      (ionChange)="onEntryFeeChange($event)"
-                    >
-                      <div slot="start" class="range-label">£1</div>
-                      <div slot="end" class="range-label">£100</div>
-                    </ion-range>
-                  </div>
-
-                  <!-- Manual Input -->
-                  <div class="manual-fee-input">
-                    <div class="currency-symbol">£</div>
-                    <ion-input
-                      type="number"
-                      [min]="1"
-                      [max]="100"
-                      formControlName="entryFee"
-                      (ionInput)="onManualFeeInput($event)"
-                      class="fee-input"
-                      clearInput="true"
-                      placeholder="0"
-                    >
-                    </ion-input>
-                  </div>
-                </div>
-
-                <ion-note>Set entry fee between £1 and £100</ion-note>
-              </ion-item>
-
-              <div
-                class="prize-breakdown"
-                *ngIf="groupForm.get('type')?.value === 'prize'"
-              >
-                <h4>Prize Breakdown</h4>
-
-                <!-- Show this when entry fee is set -->
-                <div
-                  class="prize-distribution"
-                  *ngIf="groupForm.get('entryFee')?.value"
-                >
-                  <div class="current-pool">
-                    <p>
-                      Entry Fee:
-                      {{ groupForm.get('entryFee')?.value | currency : 'GBP' }}
-                    </p>
-                    <p>Current Members: {{ currentMemberCount }}</p>
-                    <p class="pool-total">
-                      Potential Prize Pool:
-                      {{ calculateTotalPool() | currency : 'GBP' }}
-                    </p>
-                  </div>
-
-                  <div class="prize-items">
-                    <div class="prize-item">
-                      <ion-badge color="gold">1st</ion-badge>
-                      <span>{{ calculatePrize(1) | currency : 'GBP' }}</span>
-                    </div>
-                    <div class="prize-item">
-                      <ion-badge color="silver">2nd</ion-badge>
-                      <span>{{ calculatePrize(2) | currency : 'GBP' }}</span>
-                    </div>
-                    <div class="prize-item">
-                      <ion-badge color="bronze">3rd</ion-badge>
-                      <span>{{ calculatePrize(3) | currency : 'GBP' }}</span>
-                    </div>
-                  </div>
-
-                  <div class="prize-note">
-                    <ion-note>
-                      * Prize amounts will be finalized once all members have
-                      joined and paid
-                    </ion-note>
-                  </div>
-                </div>
-
-                <!-- Show this when no entry fee is set -->
-                <div
-                  class="prize-info"
-                  *ngIf="!groupForm.get('entryFee')?.value"
-                >
-                  <p>
-                    Set an entry fee (£1 - £100) to see potential prize
-                    distribution
-                  </p>
-                  <p class="prize-note">
-                    Prize breakdown adjusts based on number of members:
-                    <br />• 3-5 members: Winner takes all <br />• 6-10 members:
-                    1st (70%), 2nd (30%) <br />• 11-20 members: 1st (50%), 2nd
-                    (30%), 3rd (20%) <br />• 21+ members: 1st (45%), 2nd (35%),
-                    3rd (20%)
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <!-- Group Name -->
-            <ion-item class="group-name-input">
+            <ion-item>
               <ion-label position="stacked">Group Name</ion-label>
-              <ion-input
-                formControlName="name"
+              <ion-input 
+                formControlName="name" 
                 placeholder="Enter a memorable name for your group"
                 [clearInput]="true"
               ></ion-input>
             </ion-item>
 
-            <div class="form-actions">
-              <ion-button
-                expand="block"
+            <!-- Group Type Selection -->
+            <ion-list-header>
+              <ion-label>Group Type</ion-label>
+            </ion-list-header>
+            
+            <ion-segment formControlName="type" (ionChange)="onGroupTypeChange()">
+              <ion-segment-button value="casual">
+                <ion-icon name="trophy-outline"></ion-icon>
+                <ion-label>Casual</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="prize">
+                <ion-icon name="cash-outline"></ion-icon>
+                <ion-label>Prize</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+
+            <!-- Entry Fee (only for prize groups) -->
+            <div *ngIf="groupForm.get('type')?.value === 'prize'" class="ion-margin-top">
+              <ion-item>
+                <ion-label position="stacked">Entry Fee (£)</ion-label>
+                <ion-input
+                  type="number"
+                  formControlName="entryFee"
+                  [min]="1"
+                  [max]="100"
+                  placeholder="Enter amount between £1-£100"
+                ></ion-input>
+              </ion-item>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="ion-margin-top">
+              <ion-button 
+                expand="block" 
                 type="submit"
                 [disabled]="!groupForm.valid || isLoading"
-                class="create-button"
               >
                 <ion-spinner *ngIf="isLoading"></ion-spinner>
-                <span *ngIf="!isLoading">
-                  <ion-icon name="add-circle-outline"></ion-icon>
-                  Create Group
-                </span>
+                <span *ngIf="!isLoading">Create Group</span>
               </ion-button>
             </div>
           </form>
         </ion-card-content>
       </ion-card>
 
-      <!-- No Group Message -->
-      <ion-card *ngIf="!hasExistingGroup && !isCreateModalOpen">
+      <!-- Welcome Message - Only show if no groups -->
+      <ion-card *ngIf="groups.length === 0">
         <ion-card-header>
           <ion-card-title>Welcome to Group Admin</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <p>
-            You haven't created a group yet. Use the form above to create your
-            first group!
+            You haven't created any groups yet. Click the "Create Group" button above to get started!
           </p>
         </ion-card-content>
       </ion-card>
 
-      <!-- Existing Group Card -->
-      <ion-card *ngIf="hasExistingGroup">
+      <!-- Existing Groups List -->
+      <ion-card *ngIf="groups.length > 0">
         <ion-card-header>
-          <ion-card-title>My Group</ion-card-title>
+          <ion-card-title>My Groups</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <div class="group-list-item" *ngFor="let group of groups">
-            <div class="group-main-info">
+            <div class="group-info">
               <h2>{{ group.name }}</h2>
               <div class="group-meta">
-                <span class="group-type">
-                  <ion-badge
-                    [color]="group.type === 'prize' ? 'primary' : 'medium'"
-                  >
-                    {{
-                      group.type === 'prize' ? 'Prize Group' : 'Casual Group'
-                    }}
-                  </ion-badge>
-                </span>
-                <span class="group-admin">
+                <ion-badge [color]="group.type === 'prize' ? 'primary' : 'medium'">
+                  {{ group.type === 'prize' ? 'Prize Group' : 'Casual Group' }}
+                </ion-badge>
+                <span>
                   <ion-icon name="person-outline"></ion-icon>
                   Admin: {{ group.adminName }}
                 </span>
-                <span class="group-date">
+                <span>
                   <ion-icon name="calendar-outline"></ion-icon>
-                  Created: {{ group.createdAt | date : 'medium' }}
+                  Created: {{ group.createdAt | date:'medium' }}
                 </span>
-                <span *ngIf="group.type === 'prize'" class="group-fee">
+                <span *ngIf="group.type === 'prize'">
                   <ion-icon name="cash-outline"></ion-icon>
-                  Entry Fee: {{ group.entryFee | currency : 'GBP' }}
+                  Entry Fee: {{ group.entryFee | currency:'GBP' }}
                 </span>
-              </div>
-            </div>
-
-            <div class="group-details">
-              <div class="group-code-section">
-                <span class="label">Group Code:</span>
-                <span class="code">{{ group.code }}</span>
-                <ion-button
-                  fill="clear"
-                  size="small"
-                  (click)="copyGroupCode(group.code)"
-                >
-                  <ion-icon name="copy-outline"></ion-icon>
-                </ion-button>
               </div>
 
               <div class="group-stats">
-                <span class="members" (click)="viewGroupMembers(group)">
-                  <ion-icon name="people-outline"></ion-icon>
-                  {{ group.memberCount }} Members
-                </span>
-
-                <span class="leaderboard" (click)="viewGroupLeaderboard(group)">
-                  <ion-icon name="trophy-outline"></ion-icon>
-                  View Leaderboard
-                </span>
-
-                <span *ngIf="group.type === 'prize'" class="entry-fee">
-                  <ion-icon name="cash-outline"></ion-icon>
-                  Entry Fee: {{ group.entryFee | currency : 'GBP' }}
-                </span>
-
-                <span *ngIf="group.type === 'prize'" class="paid-members">
-                  <ion-icon name="checkmark-circle-outline"></ion-icon>
-                  {{ group.paidMembers }}/{{ group.memberCount }} Paid
-                </span>
+                <div class="group-code">
+                  <span>Group Code: {{ group.code }}</span>
+                  <ion-button fill="clear" (click)="copyGroupCode(group.code)">
+                    <ion-icon name="copy-outline"></ion-icon>
+                  </ion-button>
+                </div>
+                
+                <div class="member-stats">
+                  <span>
+                    <ion-icon name="people-outline"></ion-icon>
+                    {{ group.memberCount }} Members
+                  </span>
+                  <span *ngIf="group.type === 'prize'">
+                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                    {{ group.paidMembers }}/{{ group.memberCount }} Paid
+                  </span>
+                </div>
               </div>
             </div>
 
             <div class="group-actions">
-              <ion-button
-                fill="clear"
-                color="primary"
-                (click)="viewGroupDetails(group)"
-              >
-                <ion-icon name="eye-outline"></ion-icon>
-                View
+              <ion-button fill="clear" (click)="showGroupDetails(group)">
+                <ion-icon slot="start" name="eye-outline"></ion-icon>
+                VIEW
               </ion-button>
-              <ion-button
-                fill="clear"
-                color="danger"
-                (click)="deleteGroup(group)"
-              >
-                <ion-icon name="trash-outline"></ion-icon>
-                Delete
+              <ion-button fill="clear" color="danger" (click)="deleteGroup(group)">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                DELETE
               </ion-button>
             </div>
           </div>
         </ion-card-content>
       </ion-card>
 
-      <!-- Enhanced Group Details Modal -->
+      <!-- Group Details Modal -->
       <ion-modal [isOpen]="!!selectedGroup" (didDismiss)="selectedGroup = null">
         <ng-template>
           <ion-header>
             <ion-toolbar>
               <ion-title>{{ selectedGroup?.name }}</ion-title>
               <ion-buttons slot="end">
-                <ion-button (click)="selectedGroup = null">Close</ion-button>
+                <ion-button (click)="selectedGroup = null">
+                  <ion-icon name="close-outline"></ion-icon>
+                </ion-button>
               </ion-buttons>
             </ion-toolbar>
             <ion-toolbar>
               <ion-segment [(ngModel)]="selectedTab">
                 <ion-segment-button value="members">
+                  <ion-icon name="people-outline"></ion-icon>
                   <ion-label>Members</ion-label>
                 </ion-segment-button>
                 <ion-segment-button value="settings">
+                  <ion-icon name="settings-outline"></ion-icon>
                   <ion-label>Settings</ion-label>
                 </ion-segment-button>
               </ion-segment>
             </ion-toolbar>
           </ion-header>
 
-          <ion-content class="ion-padding" *ngIf="selectedGroup">
+          <ion-content class="ion-padding">
             <!-- Members Tab -->
             <div *ngIf="selectedTab === 'members'">
               <ion-searchbar
@@ -443,74 +306,27 @@ interface CurrentAdmin {
               ></ion-searchbar>
 
               <ion-list>
-                <ion-list-header>
-                  <ion-label>Members ({{ filteredMembers.length }})</ion-label>
-                </ion-list-header>
-
                 <ion-item *ngFor="let member of filteredMembers">
                   <ion-label>
                     <h2>{{ member.name }}</h2>
                     <p>{{ member.email }}</p>
                     <p>Joined: {{ member.joinedAt | date }}</p>
-                    <p>Status: {{ member.status }}</p>
                   </ion-label>
-                  <ion-badge
-                    slot="end"
-                    [color]="member.role === 'admin' ? 'warning' : 'primary'"
-                  >
+                  <ion-badge slot="end" [color]="member.role === 'admin' ? 'warning' : 'primary'">
                     {{ member.role }}
                   </ion-badge>
+                  <ion-badge slot="end" [color]="member.status === 'active' ? 'success' : 'medium'">
+                    {{ member.status }}
+                  </ion-badge>
                   <ion-buttons slot="end">
-                    <ion-button
-                      fill="clear"
-                      color="primary"
-                      (click)="manageMemberRole(member)"
-                      [title]="
-                        member.role === 'admin'
-                          ? 'Demote to Player'
-                          : 'Promote to Admin'
-                      "
-                      class="role-button"
-                    >
-                      <ion-icon
-                        [name]="
-                          member.role === 'admin'
-                            ? 'person-remove-outline'
-                            : 'person-add-outline'
-                        "
-                        slot="icon-only"
-                        style="font-size: 22px; color: var(--ion-color-warning)"
-                      ></ion-icon>
+                    <ion-button (click)="manageMemberRole(member)">
+                      <ion-icon [name]="member.role === 'admin' ? 'arrow-down-outline' : 'arrow-up-outline'"></ion-icon>
                     </ion-button>
-                    <ion-button
-                      fill="clear"
-                      [color]="
-                        member.status === 'active' ? 'success' : 'warning'
-                      "
-                      (click)="toggleMemberStatus(member)"
-                      title="Toggle Status"
-                    >
-                      <ion-icon
-                        [name]="
-                          member.status === 'active'
-                            ? 'lock-open-outline'
-                            : 'lock-closed-outline'
-                        "
-                        slot="icon-only"
-                        style="font-size: 22px; color: var(--ion-color-success)"
-                      ></ion-icon>
+                    <ion-button (click)="toggleMemberStatus(member)">
+                      <ion-icon [name]="member.status === 'active' ? 'lock-open-outline' : 'lock-closed-outline'"></ion-icon>
                     </ion-button>
-                    <ion-button
-                      fill="clear"
-                      color="danger"
-                      (click)="removeMember(member)"
-                      title="Remove Member"
-                    >
-                      <ion-icon
-                        name="trash-outline"
-                        slot="icon-only"
-                        style="font-size: 22px; color: var(--ion-color-danger)"
-                      ></ion-icon>
+                    <ion-button color="danger" (click)="removeMember(member)">
+                      <ion-icon name="trash-outline"></ion-icon>
                     </ion-button>
                   </ion-buttons>
                 </ion-item>
@@ -518,36 +334,33 @@ interface CurrentAdmin {
             </div>
 
             <!-- Settings Tab -->
-            <div *ngIf="selectedTab === 'settings'" class="ion-padding">
+            <div *ngIf="selectedTab === 'settings'">
               <ion-list>
                 <ion-item>
                   <ion-label>Allow Player Invites</ion-label>
                   <ion-toggle
-                    [(ngModel)]="selectedGroup.settings.allowPlayerInvites"
+                    [(ngModel)]="selectedGroup!.settings.allowPlayerInvites"
                     (ionChange)="saveSettings()"
                   ></ion-toggle>
                 </ion-item>
-
                 <ion-item>
                   <ion-label>Auto-approve Joins</ion-label>
                   <ion-toggle
-                    [(ngModel)]="selectedGroup.settings.autoApproveJoins"
+                    [(ngModel)]="selectedGroup!.settings.autoApproveJoins"
                     (ionChange)="saveSettings()"
                   ></ion-toggle>
                 </ion-item>
-
                 <ion-item>
                   <ion-label>Show Leaderboard</ion-label>
                   <ion-toggle
-                    [(ngModel)]="selectedGroup.settings.showLeaderboard"
+                    [(ngModel)]="selectedGroup!.settings.showLeaderboard"
                     (ionChange)="saveSettings()"
                   ></ion-toggle>
                 </ion-item>
-
                 <ion-item>
                   <ion-label>Allow Member Chat</ion-label>
                   <ion-toggle
-                    [(ngModel)]="selectedGroup.settings.allowMemberChat"
+                    [(ngModel)]="selectedGroup!.settings.allowMemberChat"
                     (ionChange)="saveSettings()"
                   ></ion-toggle>
                 </ion-item>
@@ -612,12 +425,12 @@ export class GroupsPage implements OnInit {
   currentMemberCount = 0;
   currentAdmin: CurrentAdmin = {
     id: '1',
-    name: 'John Smith',
+    name: 'John Doe',
     email: 'john@example.com',
     members: [
       {
         id: '1',
-        name: 'John Smith',
+        name: 'John Doe',
         email: 'john@example.com',
         joinedAt: new Date(),
         status: 'active',
@@ -625,10 +438,6 @@ export class GroupsPage implements OnInit {
       },
     ],
   };
-
-  get hasExistingGroup(): boolean {
-    return this.groups.length > 0;
-  }
 
   constructor(
     private fb: FormBuilder,
@@ -683,21 +492,6 @@ export class GroupsPage implements OnInit {
         entryFeeControl?.disable();
       }
     });
-  }
-
-  showCreateGroupModal() {
-    this.groupForm.reset({
-      name: '',
-      type: 'casual',
-      entryFee: 10,
-      settings: {
-        allowPlayerInvites: true,
-        autoApproveJoins: false,
-        showLeaderboard: true,
-        allowMemberChat: true,
-      },
-    });
-    this.isCreateModalOpen = true;
   }
 
   private loadGroups() {
@@ -762,14 +556,6 @@ export class GroupsPage implements OnInit {
   }
 
   async createGroup() {
-    if (this.hasExistingGroup) {
-      await this.toastService.showToast(
-        'You can only manage one group at a time.',
-        'warning'
-      );
-      return;
-    }
-
     if (this.groupForm.valid) {
       try {
         this.isLoading = true;
@@ -811,16 +597,28 @@ export class GroupsPage implements OnInit {
         // Save group to storage
         this.groupService.saveGroup(newGroup);
 
-        // Update local groups array
-        this.groups = [newGroup];
+        // Update local groups array by appending the new group
+        this.groups = [...this.groups, newGroup];
 
         // Show success message and close modal
         await this.toastService.showToast(
           'Group created successfully!',
           'success'
         );
+
+        // Reset form and close create form
+        this.groupForm.reset({
+          name: '',
+          type: 'casual',
+          entryFee: 10,
+          settings: {
+            allowPlayerInvites: true,
+            autoApproveJoins: false,
+            showLeaderboard: true,
+            allowMemberChat: true,
+          },
+        });
         this.isCreateModalOpen = false;
-        this.groupForm.reset();
       } catch (error) {
         console.error('Error creating group:', error);
         await this.toastService.showToast(
@@ -1067,5 +865,22 @@ export class GroupsPage implements OnInit {
 
   viewGroupLeaderboard(group: Group) {
     this.router.navigate(['/group-admin/groups', group.id, 'leaderboard']);
+  }
+
+  // Add method to handle create button click
+  showCreateForm() {
+    // Reset form before showing
+    this.groupForm.reset({
+      name: '',
+      type: 'casual',
+      entryFee: 10,
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: false,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+    });
+    this.isCreateModalOpen = true;
   }
 }
