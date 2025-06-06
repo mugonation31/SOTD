@@ -28,6 +28,7 @@ import {
   logInOutline,
   personCircleOutline,
 } from 'ionicons/icons';
+import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-welcome',
@@ -84,7 +85,10 @@ export class WelcomePage {
     },
   ];
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {
     addIcons({
       peopleOutline,
       personAddOutline,
@@ -98,11 +102,23 @@ export class WelcomePage {
   }
 
   createGroup() {
-    this.router.navigate(['/group-admin/groups']);
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/group-admin/groups']);
+    } else {
+      this.router.navigate(['/auth/signup'], {
+        queryParams: { returnUrl: '/group-admin/groups' }
+      });
+    }
   }
 
   joinGroup() {
-    this.router.navigate(['/join-group']);
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/join-group']);
+    } else {
+      this.router.navigate(['/auth/signup'], {
+        queryParams: { returnUrl: '/join-group' }
+      });
+    }
   }
 
   login() {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -14,7 +14,7 @@ import {
   IonText,
   IonNote,
 } from '@ionic/angular/standalone';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -61,7 +61,7 @@ interface ValidationErrors {
     NgIf,
   ],
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   loginData = {
     email: '',
     password: '',
@@ -75,6 +75,7 @@ export class LoginPage {
   };
 
   showPassword = false;
+  private returnUrl: string = '/welcome';
 
   get canSubmit(): boolean {
     return Boolean(
@@ -83,6 +84,28 @@ export class LoginPage {
         !this.validationErrors.email &&
         !this.validationErrors.password
     );
+  }
+
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    addIcons({
+      logoGoogle,
+      logoFacebook,
+      logoInstagram,
+      logoX,
+      eye,
+      eyeOff,
+    });
+  }
+
+  ngOnInit() {
+    // Get return URL from route parameters or default to '/welcome'
+    this.route.queryParams.subscribe(params => {
+      this.returnUrl = params['returnUrl'] || '/welcome';
+    });
   }
 
   validateEmail() {
@@ -111,26 +134,19 @@ export class LoginPage {
     this.showPassword = !this.showPassword;
   }
 
-  constructor(private authService: AuthService, private router: Router) {
-    addIcons({
-      logoGoogle,
-      logoFacebook,
-      logoInstagram,
-      logoX,
-      eye,
-      eyeOff,
-    });
-  }
-
   onLogin() {
     this.validateEmail();
     this.validatePassword();
 
     if (!this.canSubmit) return;
 
+    // Set default security question and answer for development
+    this.loginData.securityQuestion = 'What is your favorite color?';
+    this.loginData.securityAnswer = 'blue';
+
     this.authService.login(this.loginData).subscribe({
       next: () => {
-        this.router.navigate(['/player/dashboard'], { replaceUrl: true });
+        this.router.navigate([this.returnUrl], { replaceUrl: true });
       },
       error: (error) => {
         console.error('Login error:', error);

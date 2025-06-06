@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -16,7 +16,7 @@ import {
   IonSelectOption,
   IonNote,
 } from '@ionic/angular/standalone';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -79,7 +79,7 @@ interface PasswordCriteria {
     NgIf,
   ],
 })
-export class SignupPage {
+export class SignupPage implements OnInit {
   signupData = {
     username: '',
     firstName: '',
@@ -101,6 +101,7 @@ export class SignupPage {
 
   showPassword = false;
   showConfirmPassword = false;
+  private returnUrl: string = '/welcome';
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -125,7 +126,11 @@ export class SignupPage {
     );
   }
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
     addIcons({
       logoGoogle,
       logoFacebook,
@@ -135,6 +140,13 @@ export class SignupPage {
       eyeOff,
       checkmarkCircle,
       ellipseOutline,
+    });
+  }
+
+  ngOnInit() {
+    // Get return URL from route parameters or default to '/welcome'
+    this.route.queryParams.subscribe(params => {
+      this.returnUrl = params['returnUrl'] || '/welcome';
     });
   }
 
@@ -217,7 +229,10 @@ export class SignupPage {
     const { confirmPassword, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
       next: () => {
-        this.router.navigate(['/welcome'], { replaceUrl: true });
+        // After successful signup, redirect to login with returnUrl
+        this.router.navigate(['/auth/login'], {
+          queryParams: { returnUrl: this.returnUrl }
+        });
       },
       error: (error) => {
         // TODO: Add proper error handling with Toast service
