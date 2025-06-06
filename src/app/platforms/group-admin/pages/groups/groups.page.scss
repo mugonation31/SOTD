@@ -742,3 +742,25 @@ ion-header {
 .create-group-btn {
   margin-bottom: 1rem;
 }
+
+:host {
+  ion-content {
+    --background: var(--ion-color-light);
+  }
+
+  .create-group-btn {
+    margin: 1rem 0;
+    --background: var(--ion-color-primary);
+    --color: var(--ion-color-primary-contrast);
+    font-weight: 500;
+    text-transform: none;
+    font-size: 1rem;
+    
+    ion-icon {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+  }
+
+  // ... rest of existing styles ...
+}
