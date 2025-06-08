@@ -217,6 +217,10 @@ export class SignupPage implements OnInit {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
+  }
+
   onSignup() {
     this.validateRequired('firstName', this.signupData.firstName);
     this.validateRequired('lastName', this.signupData.lastName);
