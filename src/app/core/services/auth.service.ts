@@ -70,7 +70,8 @@ export class AuthService {
     const lastActivity = localStorage.getItem('lastActivity');
 
     if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
-      this.logout();
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('lastActivity');
       return null;
     }
 
