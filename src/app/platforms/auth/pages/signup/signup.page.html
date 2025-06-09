@@ -56,6 +56,13 @@
           </ion-item>
 
           <ion-item>
+            <ion-select [(ngModel)]="signupData.role" name="role" placeholder="Select Role">
+              <ion-select-option value="player">Player</ion-select-option>
+              <ion-select-option value="group-admin">Group Admin</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
             <ion-input placeholder="Password" [(ngModel)]="signupData.password" (ionInput)="validatePassword()"
               [class.ion-invalid]="validationErrors.password" [type]="showPassword ? 'text' : 'password'"
               name="password" required>

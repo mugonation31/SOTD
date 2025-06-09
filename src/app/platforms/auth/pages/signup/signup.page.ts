@@ -222,24 +222,22 @@ export class SignupPage implements OnInit {
   }
 
   onSignup() {
-    this.validateRequired('firstName', this.signupData.firstName);
-    this.validateRequired('lastName', this.signupData.lastName);
     this.validateEmail();
     this.validatePassword();
     this.validateConfirmPassword();
 
     if (!this.canSubmit) return;
 
-    const { confirmPassword, ...signupPayload } = this.signupData;
-    this.authService.signup(signupPayload).subscribe({
+    this.authService.signup(this.signupData).subscribe({
       next: () => {
-        // After successful signup, redirect to login with returnUrl
-        this.router.navigate(['/auth/login'], {
-          queryParams: { returnUrl: this.route.snapshot.queryParams['loginReturnUrl'] || this.returnUrl }
-        });
+        // Redirect based on role
+        const redirectPath = this.signupData.role === 'group-admin' 
+          ? '/group-admin/dashboard'
+          : '/player/dashboard';
+          
+        this.router.navigate([redirectPath], { replaceUrl: true });
       },
       error: (error) => {
-        // TODO: Add proper error handling with Toast service
         console.error('Signup error:', error);
       },
     });
