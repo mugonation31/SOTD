@@ -153,4 +153,8 @@ export class LoginPage implements OnInit {
       },
     });
   }
+
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
+  }
 }
