@@ -235,7 +235,7 @@ export class SignupPage implements OnInit {
       next: () => {
         // After successful signup, redirect to login with returnUrl
         this.router.navigate(['/auth/login'], {
-          queryParams: { returnUrl: this.returnUrl }
+          queryParams: { returnUrl: this.route.snapshot.queryParams['loginReturnUrl'] || this.returnUrl }
         });
       },
       error: (error) => {

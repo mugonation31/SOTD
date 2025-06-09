@@ -113,10 +113,10 @@ export class WelcomePage {
 
   joinGroup() {
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/join-group']);
+      this.router.navigate(['/player/join-group']);
     } else {
       this.router.navigate(['/auth/signup'], {
-        queryParams: { returnUrl: '/join-group' }
+        queryParams: { returnUrl: '/auth/login', loginReturnUrl: '/player/join-group' }
       });
     }
   }

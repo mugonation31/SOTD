@@ -27,6 +27,7 @@ export interface AuthResponse {
     role: UserRole;
     firstName: string;
     lastName: string;
+    username?: string;
   };
 }
 
@@ -125,15 +126,31 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
+    // Get stored user data to check for username
+    const storedUser = localStorage.getItem('currentUser');
+    let username: string | undefined;
+    
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.user.email === loginData.email) {
+          username = parsedUser.user.username;
+        }
+      } catch (e) {
+        console.error('Error parsing stored user data:', e);
+      }
+    }
+
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
       user: {
         id: 'mock-user-id',
         email: loginData.email,
-        firstName: 'John', // Mock name
-        lastName: 'Doe', // Mock name
+        firstName: 'John',
+        lastName: 'Doe',
         role: 'player',
+        ...(username ? { username } : {}),
       },
     };
 
@@ -197,6 +214,7 @@ export class AuthService {
         firstName: userData.firstName,
         lastName: userData.lastName,
         role: 'player',
+        ...(userData.username ? { username: userData.username } : {}),
       },
     };
 
@@ -247,5 +265,11 @@ export class AuthService {
 
   getToken(): string | null {
     return this.currentUserValue?.token || null;
+  }
+
+  getDisplayName(): string {
+    const user = this.currentUserValue?.user;
+    if (!user) return '';
+    return user.username || user.firstName;
   }
 }
