@@ -7,71 +7,135 @@
 
 <ion-content class="ion-padding">
   <!-- Create Group Button -->
-  <ion-button expand="block" (click)="showCreateForm()" class="create-group-btn">
+  <ion-button expand="block" (click)="toggleCreateForm()" class="create-group-btn">
     <ion-icon slot="start" name="add-outline"></ion-icon>
-    Create New Group
+    {{ showCreateForm ? 'Cancel' : 'Create New Group' }}
   </ion-button>
 
   <!-- Create Group Form -->
-  <ion-card *ngIf="isCreateModalOpen">
+  <ion-card class="create-group-card" *ngIf="showCreateForm">
     <ion-card-header>
-      <ion-card-title>Create New Group</ion-card-title>
-      <ion-button fill="clear" (click)="isCreateModalOpen = false" slot="end">
-        <ion-icon name="close-outline"></ion-icon>
-      </ion-button>
+      <ion-card-title>Create Your Group</ion-card-title>
+      <ion-card-subtitle>Set up your prediction group</ion-card-subtitle>
     </ion-card-header>
 
     <ion-card-content>
-      <form [formGroup]="groupForm" (ngSubmit)="createGroup()">
-        <!-- Group Name -->
-        <ion-item>
-          <ion-label position="stacked">Group Name</ion-label>
-          <ion-input 
-            formControlName="name" 
-            placeholder="Enter a memorable name for your group"
-            [clearInput]="true"
-          ></ion-input>
-        </ion-item>
-
+      <form [formGroup]="groupForm" (ngSubmit)="onCreateGroup()">
         <!-- Group Type Selection -->
-        <ion-list-header>
-          <ion-label>Group Type</ion-label>
-        </ion-list-header>
-        
-        <ion-segment formControlName="type" (ionChange)="onGroupTypeChange()">
-          <ion-segment-button value="casual">
-            <ion-icon name="trophy-outline"></ion-icon>
-            <ion-label>Casual</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="prize">
-            <ion-icon name="cash-outline"></ion-icon>
-            <ion-label>Prize</ion-label>
-          </ion-segment-button>
-        </ion-segment>
+        <div class="group-type-selection">
+          <ion-segment formControlName="type" (ionChange)="onGroupTypeChange()">
+            <ion-segment-button value="casual">
+              <ion-label>
+                <div class="segment-content">
+                  <ion-icon name="trophy-outline"></ion-icon>
+                  <div class="segment-text">
+                    <h3>Casual Group</h3>
+                    <p>Play for bragging rights</p>
+                  </div>
+                </div>
+              </ion-label>
+            </ion-segment-button>
 
-        <!-- Entry Fee (only for prize groups) -->
-        <div *ngIf="groupForm.get('type')?.value === 'prize'" class="ion-margin-top">
-          <ion-item>
-            <ion-label position="stacked">Entry Fee (£)</ion-label>
-            <ion-input
-              type="number"
-              formControlName="entryFee"
-              [min]="1"
-              [max]="100"
-              placeholder="Enter amount between £1-£100"
-            ></ion-input>
-          </ion-item>
+            <ion-segment-button value="prize">
+              <ion-label>
+                <div class="segment-content">
+                  <ion-icon name="cash-outline"></ion-icon>
+                  <div class="segment-text">
+                    <h3>Prize Group</h3>
+                    <p>Play for cash prizes</p>
+                  </div>
+                </div>
+              </ion-label>
+            </ion-segment-button>
+          </ion-segment>
         </div>
 
-        <!-- Submit Button -->
-        <div class="ion-margin-top">
-          <ion-button 
-            expand="block" 
-            type="submit"
-            [disabled]="!groupForm.valid || isLoading"
-          >
+        <!-- Entry Fee Selection -->
+        <div class="entry-fee-section" *ngIf="groupForm.get('type')?.value === 'prize'">
+          <ion-item lines="none">
+            <ion-label position="stacked">Entry Fee</ion-label>
+
+            <div class="fee-selector">
+              <!-- Range Slider -->
+              <div class="range-container">
+                <ion-range class="fee-range" [min]="1" [max]="100" [step]="1" [pin]="true" [ticks]="true" [snaps]="true"
+                  formControlName="entryFee" (ionChange)="onEntryFeeChange($event)">
+                  <div slot="start" class="range-label">£1</div>
+                  <div slot="end" class="range-label">£100</div>
+                </ion-range>
+              </div>
+
+              <!-- Manual Input -->
+              <div class="manual-fee-input">
+                <div class="currency-symbol">£</div>
+                <ion-input type="number" [min]="1" [max]="100" formControlName="entryFee"
+                  (ionInput)="onManualFeeInput($event)" class="fee-input" clearInput="true" placeholder="0">
+                </ion-input>
+              </div>
+            </div>
+
+            <ion-note>Set entry fee between £1 and £100</ion-note>
+          </ion-item>
+
+          <div class="prize-breakdown" *ngIf="groupForm.get('type')?.value === 'prize'">
+            <h4>Prize Breakdown</h4>
+
+            <!-- Show this when entry fee is set -->
+            <div class="prize-distribution" *ngIf="groupForm.get('entryFee')?.value">
+              <div class="current-pool">
+                <p>Entry Fee: {{ groupForm.get('entryFee')?.value | currency:'GBP' }}</p>
+                <p>Current Members: {{ currentMemberCount }}</p>
+                <p class="pool-total">Potential Prize Pool: {{ calculateTotalPool() | currency:'GBP' }}</p>
+              </div>
+
+              <div class="prize-items">
+                <div class="prize-item">
+                  <ion-badge color="gold">1st</ion-badge>
+                  <span>{{ calculatePrize(1) | currency:'GBP' }}</span>
+                </div>
+                <div class="prize-item">
+                  <ion-badge color="silver">2nd</ion-badge>
+                  <span>{{ calculatePrize(2) | currency:'GBP' }}</span>
+                </div>
+                <div class="prize-item">
+                  <ion-badge color="bronze">3rd</ion-badge>
+                  <span>{{ calculatePrize(3) | currency:'GBP' }}</span>
+                </div>
+              </div>
+
+              <div class="prize-note">
+                <ion-note>* Prize amounts will be finalized once all members have joined and paid</ion-note>
+              </div>
+            </div>
+
+            <!-- Show this when no entry fee is set -->
+            <div class="prize-info" *ngIf="!groupForm.get('entryFee')?.value">
+              <p>Set an entry fee (£1 - £100) to see potential prize distribution</p>
+              <p>Prize breakdown adjusts based on number of members:</p>
+              <ul class="breakdown-list">
+                <li>3-5 members: Winner takes all</li>
+                <li>6-10 members: 1st (70%), 2nd (30%)</li>
+                <li>11-20 members: 1st (50%), 2nd (30%), 3rd (20%)</li>
+                <li>21+ members: 1st (45%), 2nd (35%), 3rd (20%)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group Name -->
+        <ion-item class="group-name-input">
+          <ion-label position="stacked">Group Name</ion-label>
+          <ion-input formControlName="name" placeholder="Enter a memorable name for your group"
+            [clearInput]="true"></ion-input>
+        </ion-item>
+
+        <div class="form-actions">
+          <ion-button expand="block" type="submit" [disabled]="!groupForm.valid || isLoading" class="create-button">
             <ion-spinner *ngIf="isLoading"></ion-spinner>
-            <span *ngIf="!isLoading">Create Group</span>
+            <span *ngIf="!isLoading">
+              <ion-icon name="add-circle-outline"></ion-icon>
+              Create Group
+            </span>
           </ion-button>
         </div>
       </form>
@@ -198,23 +262,6 @@
                 <p>{{ member.email }}</p>
                 <p>Joined: {{ member.joinedAt | date }}</p>
               </ion-label>
-              <ion-badge slot="end" [color]="member.role === 'admin' ? 'warning' : 'primary'">
-                {{ member.role }}
-              </ion-badge>
-              <ion-badge slot="end" [color]="member.status === 'active' ? 'success' : 'medium'">
-                {{ member.status }}
-              </ion-badge>
-              <ion-buttons slot="end">
-                <ion-button (click)="manageMemberRole(member)">
-                  <ion-icon [name]="member.role === 'admin' ? 'arrow-down-outline' : 'arrow-up-outline'"></ion-icon>
-                </ion-button>
-                <ion-button (click)="toggleMemberStatus(member)">
-                  <ion-icon [name]="member.status === 'active' ? 'lock-open-outline' : 'lock-closed-outline'"></ion-icon>
-                </ion-button>
-                <ion-button color="danger" (click)="removeMember(member)">
-                  <ion-icon name="trash-outline"></ion-icon>
-                </ion-button>
-              </ion-buttons>
             </ion-item>
           </ion-list>
         </div>
@@ -224,31 +271,19 @@
           <ion-list>
             <ion-item>
               <ion-label>Allow Player Invites</ion-label>
-              <ion-toggle
-                [(ngModel)]="selectedGroup!.settings.allowPlayerInvites"
-                (ionChange)="saveSettings()"
-              ></ion-toggle>
+              <ion-toggle [(ngModel)]="selectedGroup!.settings.allowPlayerInvites"></ion-toggle>
             </ion-item>
             <ion-item>
               <ion-label>Auto-approve Joins</ion-label>
-              <ion-toggle
-                [(ngModel)]="selectedGroup!.settings.autoApproveJoins"
-                (ionChange)="saveSettings()"
-              ></ion-toggle>
+              <ion-toggle [(ngModel)]="selectedGroup!.settings.autoApproveJoins"></ion-toggle>
             </ion-item>
             <ion-item>
               <ion-label>Show Leaderboard</ion-label>
-              <ion-toggle
-                [(ngModel)]="selectedGroup!.settings.showLeaderboard"
-                (ionChange)="saveSettings()"
-              ></ion-toggle>
+              <ion-toggle [(ngModel)]="selectedGroup!.settings.showLeaderboard"></ion-toggle>
             </ion-item>
             <ion-item>
               <ion-label>Allow Member Chat</ion-label>
-              <ion-toggle
-                [(ngModel)]="selectedGroup!.settings.allowMemberChat"
-                (ionChange)="saveSettings()"
-              ></ion-toggle>
+              <ion-toggle [(ngModel)]="selectedGroup!.settings.allowMemberChat"></ion-toggle>
             </ion-item>
           </ion-list>
         </div>
