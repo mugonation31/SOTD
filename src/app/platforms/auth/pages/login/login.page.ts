@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -15,7 +15,7 @@ import {
   IonNote,
 } from '@ionic/angular/standalone';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
@@ -62,6 +62,8 @@ interface ValidationErrors {
   ],
 })
 export class LoginPage implements OnInit {
+  @ViewChild('loginForm') loginForm!: NgForm;
+
   loginData = {
     email: '',
     password: '',
@@ -76,6 +78,7 @@ export class LoginPage implements OnInit {
 
   showPassword = false;
   private returnUrl: string = '/welcome';
+  private loginReturnUrl: string | null = null;
 
   get canSubmit(): boolean {
     return Boolean(
@@ -102,9 +105,12 @@ export class LoginPage implements OnInit {
   }
 
   ngOnInit() {
-    // Get return URL from route parameters or default to '/welcome'
+    console.log('Login page initialized');
     this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/welcome';
+      this.loginReturnUrl = params['loginReturnUrl'] || null;
+      this.returnUrl = this.loginReturnUrl || '/welcome';
+      console.log('Query params:', params);
+      console.log('Login return URL:', this.loginReturnUrl);
     });
   }
 
@@ -135,18 +141,41 @@ export class LoginPage implements OnInit {
   }
 
   onLogin() {
+    console.log('Login button clicked');
     this.validateEmail();
     this.validatePassword();
 
-    if (!this.canSubmit) return;
+    if (!this.canSubmit) {
+      console.log('Form validation failed:', this.validationErrors);
+      return;
+    }
+
+    console.log('Attempting login with:', this.loginData);
 
     // Set default security question and answer for development
     this.loginData.securityQuestion = 'What is your favorite color?';
     this.loginData.securityAnswer = 'blue';
 
     this.authService.login(this.loginData).subscribe({
-      next: () => {
-        this.router.navigate([this.returnUrl], { replaceUrl: true });
+      next: (response) => {
+        console.log('Login response:', response);
+        const role = response.user?.role;
+        console.log('User role:', role);
+        
+        // Always use loginReturnUrl if available
+        if (this.loginReturnUrl) {
+          console.log('Redirecting to loginReturnUrl:', this.loginReturnUrl);
+          this.router.navigate([this.loginReturnUrl], { replaceUrl: true });
+          return;
+        }
+        
+        // If no loginReturnUrl, redirect based on role
+        const redirectUrl = role === 'group-admin' 
+          ? '/group-admin/groups'
+          : '/player/join-group';
+          
+        console.log('No loginReturnUrl, redirecting based on role:', redirectUrl);
+        this.router.navigate([redirectUrl], { replaceUrl: true });
       },
       error: (error) => {
         console.error('Login error:', error);

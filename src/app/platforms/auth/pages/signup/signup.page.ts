@@ -101,7 +101,8 @@ export class SignupPage implements OnInit {
 
   showPassword = false;
   showConfirmPassword = false;
-  private returnUrl: string = '/welcome';
+  private returnUrl: string = '/';
+  private loginReturnUrl: string = '/';
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -144,9 +145,10 @@ export class SignupPage implements OnInit {
   }
 
   ngOnInit() {
-    // Get return URL from route parameters or default to '/welcome'
     this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/welcome';
+      this.returnUrl = params['returnUrl'] || '/';
+      this.loginReturnUrl = params['loginReturnUrl'];
+      this.signupData.role = params['role'] || 'player';
     });
   }
 
@@ -230,12 +232,7 @@ export class SignupPage implements OnInit {
 
     this.authService.signup(this.signupData).subscribe({
       next: () => {
-        // Redirect based on role
-        const redirectPath = this.signupData.role === 'group-admin' 
-          ? '/group-admin/dashboard'
-          : '/player/dashboard';
-          
-        this.router.navigate([redirectPath], { replaceUrl: true });
+        this.router.navigate([this.returnUrl], { replaceUrl: true });
       },
       error: (error) => {
         console.error('Signup error:', error);

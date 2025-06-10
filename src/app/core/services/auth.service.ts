@@ -126,15 +126,27 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
-    // Get stored user data to check for username
+    console.log('Login called with:', loginData);
+    
+    // Get stored user data to check for username and role
     const storedUser = localStorage.getItem('currentUser');
+    console.log('Stored user data:', storedUser);
+    
     let username: string | undefined;
+    let role: UserRole = 'player';
+    let firstName = 'John';
+    let lastName = 'Doe';
     
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        console.log('Parsed stored user:', parsedUser);
         if (parsedUser.user.email === loginData.email) {
           username = parsedUser.user.username;
+          role = parsedUser.user.role;
+          firstName = parsedUser.user.firstName;
+          lastName = parsedUser.user.lastName;
+          console.log('Found matching user with role:', role);
         }
       } catch (e) {
         console.error('Error parsing stored user data:', e);
@@ -147,12 +159,14 @@ export class AuthService {
       user: {
         id: 'mock-user-id',
         email: loginData.email,
-        firstName: 'John',
-        lastName: 'Doe',
-        role: 'player',
+        firstName,
+        lastName,
+        role,
         ...(username ? { username } : {}),
       },
     };
+
+    console.log('Created mock response:', mockResponse);
 
     // Return mock response
     return new Observable((subscriber) => {
@@ -160,6 +174,7 @@ export class AuthService {
         localStorage.setItem('currentUser', JSON.stringify(mockResponse));
         localStorage.setItem('lastActivity', Date.now().toString());
         this.currentUserSubject.next(mockResponse);
+        console.log('Emitting mock response');
         subscriber.next(mockResponse);
         subscriber.complete();
       }, 500); // Simulate network delay
@@ -205,6 +220,8 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    console.log('Signup called with:', userData);
+    
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -213,37 +230,24 @@ export class AuthService {
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: 'player',
+        role: userData.role,
         ...(userData.username ? { username: userData.username } : {}),
       },
     };
 
+    console.log('Created signup response:', mockResponse);
+
     // Return mock response
     return new Observable((subscriber) => {
       setTimeout(() => {
-        // Store both token and user data
         localStorage.setItem('currentUser', JSON.stringify(mockResponse));
         localStorage.setItem('lastActivity', Date.now().toString());
         this.currentUserSubject.next(mockResponse);
+        console.log('Emitting signup response');
         subscriber.next(mockResponse);
         subscriber.complete();
       }, 500); // Simulate network delay
     });
-
-    // TODO: Uncomment this when backend is ready
-    /*
-    const signupData = { ...userData, role: 'player' as UserRole };
-    return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/signup`, signupData)
-      .pipe(
-        map((response) => {
-          localStorage.setItem('currentUser', JSON.stringify(response));
-          localStorage.setItem('lastActivity', Date.now().toString());
-          this.currentUserSubject.next(response);
-          return response;
-        })
-      );
-    */
   }
 
   logout() {
@@ -256,7 +260,20 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.currentUserValue?.token;
+    const currentUser = this.currentUserValue;
+    const lastActivity = localStorage.getItem('lastActivity');
+    
+    if (!currentUser || !lastActivity) {
+      return false;
+    }
+
+    // Check if session has expired
+    if (Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
+      this.logout();
+      return false;
+    }
+
+    return true;
   }
 
   isSuperAdmin(): boolean {

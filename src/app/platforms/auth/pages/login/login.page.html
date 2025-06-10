@@ -18,7 +18,7 @@
         <p>Sign in to continue</p>
       </div>
 
-      <form (ngSubmit)="onLogin()">
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm">
         <ion-list class="auth-form">
           <ion-item>
             <ion-input placeholder="Email" [(ngModel)]="loginData.email" (ionInput)="validateEmail()"
@@ -54,7 +54,7 @@
         </div>
 
         <div class="auth-actions">
-          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Login</ion-button>
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit" (click)="onLogin()">Login</ion-button>
         </div>
 
         <div class="auth-footer">

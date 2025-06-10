@@ -102,23 +102,23 @@ export class WelcomePage {
   }
 
   createGroup() {
-    if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/group-admin/groups']);
-    } else {
-      this.router.navigate(['/auth/signup'], {
-        queryParams: { returnUrl: '/group-admin/groups' }
-      });
-    }
+    this.router.navigate(['/auth/signup'], {
+      queryParams: { 
+        returnUrl: '/auth/login',
+        loginReturnUrl: '/group-admin/groups',
+        role: 'group-admin'
+      }
+    });
   }
 
   joinGroup() {
-    if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/player/join-group']);
-    } else {
-      this.router.navigate(['/auth/signup'], {
-        queryParams: { returnUrl: '/auth/login', loginReturnUrl: '/player/join-group' }
-      });
-    }
+    this.router.navigate(['/auth/signup'], {
+      queryParams: { 
+        returnUrl: '/auth/login',
+        loginReturnUrl: '/player/join-group',
+        role: 'player'
+      }
+    });
   }
 
   login() {
@@ -128,4 +128,6 @@ export class WelcomePage {
   signup() {
     this.router.navigate(['/auth/signup']);
   }
+
+  // We removed the automatic redirection to allow users to visit the welcome page
 } 
