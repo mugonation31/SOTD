@@ -36,9 +36,11 @@ import {
   peopleOutline,
   footballOutline,
   cameraOutline,
+  personOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
+import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -568,7 +570,11 @@ export class SettingsPage {
     },
   };
 
-  constructor(private router: Router, private toastService: ToastService) {
+  constructor(
+    private router: Router, 
+    private toastService: ToastService,
+    private authService: AuthService
+  ) {
     addIcons({
       personCircleOutline,
       keyOutline,
@@ -581,23 +587,24 @@ export class SettingsPage {
       peopleOutline,
       footballOutline,
       cameraOutline,
+      personOutline,
     });
   }
 
-  async onFileSelected(event: Event) {
+  onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      await this.toastService.showToast('Please select an image file', 'error');
+      this.toastService.showToast('Please select an image file', 'error');
       return;
     }
 
     // Check file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes
     if (file.size > maxSize) {
-      await this.toastService.showToast('Image must be less than 5MB', 'error');
+      this.toastService.showToast('Image must be less than 5MB', 'error');
       return;
     }
 
@@ -611,13 +618,13 @@ export class SettingsPage {
 
       // TODO: Upload the file to your server
       // This is where you would typically make an API call to upload the image
-      await this.simulateUpload();
-      await this.toastService.showToast(
+      this.simulateUpload();
+      this.toastService.showToast(
         'Profile picture updated successfully',
         'success'
       );
     } catch (error) {
-      await this.toastService.showToast(
+      this.toastService.showToast(
         'Error uploading profile picture',
         'error'
       );
@@ -626,46 +633,49 @@ export class SettingsPage {
     }
   }
 
-  private async simulateUpload(): Promise<void> {
+  private simulateUpload() {
     // Simulate an API call with a delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setTimeout(() => {}, 1000);
   }
 
   async updateProfile() {
     try {
-      // TODO: Implement actual profile update
-      await this.toastService.showToast(
-        'Profile updated successfully',
-        'success'
-      );
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await this.toastService.showToast('Profile updated successfully', 'success');
     } catch (error) {
-      await this.toastService.showToast('Error updating profile', 'error');
+      await this.toastService.showToast(
+        'Failed to update profile. Please try again.',
+        'danger'
+      );
     }
   }
 
   async changePassword() {
-    if (!this.passwordForm.current) {
-      await this.toastService.showToast(
-        'Current password is required',
-        'error'
-      );
+    if (!this.passwordForm.current || !this.passwordForm.new || !this.passwordForm.confirm) {
+      await this.toastService.showToast('Please fill in all password fields', 'warning');
       return;
     }
 
     if (this.passwordForm.new !== this.passwordForm.confirm) {
-      await this.toastService.showToast('New passwords do not match', 'error');
+      await this.toastService.showToast('New passwords do not match', 'danger');
       return;
     }
 
     try {
-      // TODO: Implement actual password change
-      await this.toastService.showToast(
-        'Password changed successfully',
-        'success'
-      );
-      this.passwordForm = { current: '', new: '', confirm: '' };
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      this.passwordForm = {
+        current: '',
+        new: '',
+        confirm: '',
+      };
+      await this.toastService.showToast('Password changed successfully', 'success');
     } catch (error) {
-      await this.toastService.showToast('Error changing password', 'error');
+      await this.toastService.showToast(
+        'Failed to change password. Please try again.',
+        'danger'
+      );
     }
   }
 
@@ -679,17 +689,17 @@ export class SettingsPage {
     }
   }
 
+  validatePointsTotal() {
+    const total = this.calculatePointsTotal();
+    if (total !== 100) {
+      // Handle invalid total (optional)
+    }
+  }
+
   calculatePointsTotal(): number {
     const { correctScore, correctResult, participation } =
       this.groupSettings.customPoints;
     return correctScore + correctResult + participation;
-  }
-
-  validatePointsTotal() {
-    const total = this.calculatePointsTotal();
-    if (total !== 100) {
-      this.toastService.showToast('Points total must equal 100%', 'warning');
-    }
   }
 
   async saveSettings() {
@@ -698,30 +708,32 @@ export class SettingsPage {
       this.calculatePointsTotal() !== 100
     ) {
       await this.toastService.showToast(
-        'Points total must equal 100% before saving',
-        'error'
+        'Custom points must total 100%',
+        'warning'
       );
       return;
     }
 
     try {
-      // TODO: Implement settings save
-      await this.toastService.showToast(
-        'Settings saved successfully',
-        'success'
-      );
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await this.toastService.showToast('Settings saved successfully', 'success');
     } catch (error) {
-      await this.toastService.showToast('Error saving settings', 'error');
+      await this.toastService.showToast(
+        'Failed to save settings. Please try again.',
+        'danger'
+      );
     }
   }
 
   async logout() {
     try {
-      // TODO: Implement proper logout
-      await this.toastService.showToast('Logging out...', 'warning');
-      this.router.navigate(['/group-admin/login']);
+      await this.authService.logout();
+      this.router.navigate(['/auth/login'], { replaceUrl: true });
+      await this.toastService.showToast('Logged out successfully', 'success');
     } catch (error) {
-      await this.toastService.showToast('Error during logout', 'error');
+      console.error('Logout error:', error);
+      await this.toastService.showToast('Failed to logout. Please try again.', 'danger');
     }
   }
 }
