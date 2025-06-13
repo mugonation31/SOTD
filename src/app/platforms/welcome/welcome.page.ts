@@ -100,6 +100,10 @@ export class WelcomePage {
   }
 
   createGroup() {
+    // Store role and firstLogin flag in localStorage (overwrite any existing values)
+    localStorage.setItem('selectedRole', 'group-admin');
+    localStorage.setItem('firstLogin', 'true');
+
     this.router.navigate(['/auth/signup'], {
       queryParams: { 
         returnUrl: '/auth/login',
@@ -110,6 +114,10 @@ export class WelcomePage {
   }
 
   joinGroup() {
+    // Store role and firstLogin flag in localStorage (overwrite any existing values)
+    localStorage.setItem('selectedRole', 'player');
+    localStorage.setItem('firstLogin', 'true');
+    
     this.router.navigate(['/auth/signup'], {
       queryParams: { 
         returnUrl: '/auth/login',
