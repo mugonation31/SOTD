@@ -147,9 +147,11 @@ export class SignupPage implements OnInit {
   ngOnInit() {
     const role = localStorage.getItem('selectedRole');
     if (!role) { 
+      // if no role is set, redirect to welcome page
       this.router.navigate(['/welcome']);
     };
 
+    // get return url from query params
     this.route.queryParams.subscribe(params => {
       this.returnUrl = params['returnUrl'] || '/';
       this.loginReturnUrl = params['loginReturnUrl'];
