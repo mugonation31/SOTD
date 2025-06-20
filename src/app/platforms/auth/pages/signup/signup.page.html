@@ -21,9 +21,13 @@
       <form (ngSubmit)="onSignup()">
         <ion-list class="auth-form">
           <ion-item>
-            <ion-input placeholder="Username (Optional)" [(ngModel)]="signupData.username" name="username" type="text">
+            <ion-input placeholder="Username" [(ngModel)]="signupData.username"
+              (ionInput)="validateRequired('username', signupData.username)"
+              [class.ion-invalid]="validationErrors.username" name="username" required type="text">
             </ion-input>
-            <ion-note slot="helper">Leave blank to use surname as display name</ion-note>
+            <ion-note slot="error" *ngIf="validationErrors.username">
+              {{ validationErrors.username }}
+            </ion-note>
           </ion-item>
 
           <ion-item>

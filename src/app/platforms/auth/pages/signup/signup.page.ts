@@ -28,8 +28,7 @@ import {
   eye,
   eyeOff,
   checkmarkCircle,
-  ellipseOutline,
-} from 'ionicons/icons';
+  ellipseOutline, footballOutline } from 'ionicons/icons';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
 import {
   validateEmail,
@@ -112,11 +111,13 @@ export class SignupPage implements OnInit {
 
   get canSubmit(): boolean {
     return Boolean(
-      this.signupData.firstName &&
+      this.signupData.username &&
+        this.signupData.firstName &&
         this.signupData.lastName &&
         this.signupData.email &&
         this.signupData.password &&
         this.signupData.confirmPassword &&
+        !this.validationErrors.username &&
         !this.validationErrors.firstName &&
         !this.validationErrors.lastName &&
         !this.validationErrors.email &&
@@ -131,16 +132,7 @@ export class SignupPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    addIcons({
-      logoGoogle,
-      logoFacebook,
-      logoInstagram,
-      logoX,
-      eye,
-      eyeOff,
-      checkmarkCircle,
-      ellipseOutline,
-    });
+    addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,checkmarkCircle,ellipseOutline,});
   }
 
   ngOnInit() {
@@ -218,6 +210,7 @@ export class SignupPage implements OnInit {
   }
 
   onSignup() {
+    this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
     this.validateRequired('lastName', this.signupData.lastName);
     this.validateEmail();
