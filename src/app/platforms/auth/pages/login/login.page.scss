@@ -1,43 +1,5 @@
 @import "../../styles/auth.shared.scss";
 
-// Logo styles
-ion-toolbar {
-  --padding-start: 0;
-  --padding-end: 0;
-}
-
-.logo-container {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-
-  &:hover {
-    opacity: 0.8;
-  }
-
-  .football-icon {
-    font-size: 24px;
-    margin-right: 8px;
-  }
-
-  .logo-text {
-    display: flex;
-    flex-direction: column;
-
-    .logo-sotd {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .logo-subtitle {
-      font-size: 12px;
-      opacity: 0.8;
-    }
-  }
-}
-
 .auth-card {
   max-width: 400px;
   margin: 0 auto;

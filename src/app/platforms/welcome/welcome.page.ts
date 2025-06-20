@@ -26,6 +26,7 @@ import {
   starOutline,
   cashOutline,
   logInOutline,
+  personCircleOutline,
 } from 'ionicons/icons';
 import { AuthService } from '@core/services/auth.service';
 
@@ -96,38 +97,35 @@ export class WelcomePage {
       starOutline,
       cashOutline,
       logInOutline,
+      personCircleOutline,
     });
   }
 
   createGroup() {
-    // Store role and firstLogin flag in localStorage (overwrite any existing values)
-    localStorage.setItem('selectedRole', 'group-admin');
-    localStorage.setItem('firstLogin', 'true');
-
-    this.router.navigate(['/auth/signup'], {
-      queryParams: { 
-        returnUrl: '/auth/login',
-        loginReturnUrl: '/group-admin/groups',
-        role: 'group-admin'
-      }
-    });
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/group-admin/groups']);
+    } else {
+      this.router.navigate(['/auth/signup'], {
+        queryParams: { returnUrl: '/group-admin/groups' }
+      });
+    }
   }
 
   joinGroup() {
-    // Store role and firstLogin flag in localStorage (overwrite any existing values)
-    localStorage.setItem('selectedRole', 'player');
-    localStorage.setItem('firstLogin', 'true');
-    
-    this.router.navigate(['/auth/signup'], {
-      queryParams: { 
-        returnUrl: '/auth/login',
-        loginReturnUrl: '/player/join-group',
-        role: 'player'
-      }
-    });
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/join-group']);
+    } else {
+      this.router.navigate(['/auth/signup'], {
+        queryParams: { returnUrl: '/join-group' }
+      });
+    }
   }
 
   login() {
     this.router.navigate(['/auth/login']);
+  }
+
+  signup() {
+    this.router.navigate(['/auth/signup']);
   }
 } 

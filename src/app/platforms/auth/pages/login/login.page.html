@@ -1,12 +1,9 @@
 <ion-header>
   <ion-toolbar>
-    <div class="logo-container" (click)="navigateToWelcome()">
+    <ion-title class="logo-title">
       <ion-icon name="football-outline" class="football-icon"></ion-icon>
-      <div class="logo-text">
-        <span class="logo-sotd">SOTD</span>
-        <span class="logo-subtitle">Predict 3</span>
-      </div>
-    </div>
+      SOTD Predict 3
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -18,7 +15,7 @@
         <p>Sign in to continue</p>
       </div>
 
-      <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+      <form (ngSubmit)="onLogin()">
         <ion-list class="auth-form">
           <ion-item>
             <ion-input placeholder="Email" [(ngModel)]="loginData.email" (ionInput)="validateEmail()"
@@ -54,7 +51,7 @@
         </div>
 
         <div class="auth-actions">
-          <ion-button expand="block" type="submit" [disabled]="!canSubmit" (click)="onLogin()">Login</ion-button>
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Login</ion-button>
         </div>
 
         <div class="auth-footer">

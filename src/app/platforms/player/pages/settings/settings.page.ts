@@ -40,7 +40,6 @@ import {
   cameraOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
-import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-player-settings',
@@ -496,11 +495,7 @@ export class SettingsPage {
     language: 'en',
   };
 
-  constructor(
-    private router: Router, 
-    private toastService: ToastService,
-    private authService: AuthService
-  ) {
+  constructor(private router: Router, private toastService: ToastService) {
     addIcons({
       personOutline,
       mailOutline,
@@ -612,12 +607,11 @@ export class SettingsPage {
 
   async logout() {
     try {
-      await this.authService.logout();
-      this.router.navigate(['/auth/login'], { replaceUrl: true });
-      await this.toastService.showToast('Logged out successfully', 'success');
+      // TODO: Implement proper logout
+      await this.toastService.showToast('Logging out...', 'warning');
+      this.router.navigate(['/auth/login']);
     } catch (error) {
-      console.error('Logout error:', error);
-      await this.toastService.showToast('Failed to logout. Please try again.', 'danger');
+      await this.toastService.showToast('Error during logout', 'error');
     }
   }
 

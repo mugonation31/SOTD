@@ -170,33 +170,30 @@ ion-toolbar {
 .logo-container {
   display: flex;
   align-items: center;
-  padding: 10px;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
+  gap: 8px;
+  padding: 8px 16px;
+}
 
-  &:hover {
-    opacity: 0.8;
-  }
+.football-icon {
+  font-size: 24px;
+  color: var(--ion-color-primary);
+}
 
-  .football-icon {
-    font-size: 24px;
-    margin-right: 8px;
-  }
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
 
-  .logo-text {
-    display: flex;
-    flex-direction: column;
+.logo-sotd {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
 
-    .logo-sotd {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .logo-subtitle {
-      font-size: 12px;
-      opacity: 0.8;
-    }
-  }
+.logo-subtitle {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  line-height: 1;
 }
 
 // Responsive adjustments

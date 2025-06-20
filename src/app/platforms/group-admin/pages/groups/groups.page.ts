@@ -1,5 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import {
   IonHeader,
   IonToolbar,
@@ -25,10 +31,13 @@ import {
   IonSearchbar,
   IonToggle,
   IonAlert,
-  AlertController,
-  IonRange,
-  IonNote,
+  IonRippleEffect,
   IonCardSubtitle,
+  IonSelect,
+  IonSelectOption,
+  IonNote,
+  IonRange,
+  AlertController,
 } from '@ionic/angular/standalone';
 import { NgIf, NgFor, DatePipe, CurrencyPipe } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -53,8 +62,6 @@ import {
   personAddOutline,
   lockClosedOutline,
   lockOpenOutline,
-  eyeOutline,
-  addCircleOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
@@ -113,8 +120,6 @@ interface CurrentAdmin {
   styleUrls: ['./groups.page.scss'],
   standalone: true,
   imports: [
-    FormsModule,
-    ReactiveFormsModule,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -131,6 +136,8 @@ interface CurrentAdmin {
     IonBadge,
     IonIcon,
     IonList,
+    FormsModule,
+    ReactiveFormsModule,
     NgIf,
     NgFor,
     DatePipe,
@@ -142,29 +149,48 @@ interface CurrentAdmin {
     IonSearchbar,
     IonToggle,
     IonAlert,
-    CurrencyPipe,
-    IonRange,
-    IonNote,
+    IonRippleEffect,
     IonCardSubtitle,
+    IonSelect,
+    IonSelectOption,
+    IonNote,
+    IonRange,
+    CurrencyPipe,
   ],
 })
 export class GroupsPage implements OnInit {
+  groupForm!: FormGroup;
   isLoading = false;
+  isCreateModalOpen = false;
   groups: Group[] = [];
   selectedGroup: Group | null = null;
   selectedTab = 'members';
   searchTerm = '';
   filteredMembers: GroupMember[] = [];
-  showCreateForm = false;
-  groupForm!: FormGroup;
+  entryFeeOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   currentMemberCount = 0;
+  currentAdmin: CurrentAdmin = {
+    id: '1',
+    name: 'John Doe',
+    email: 'john@example.com',
+    members: [
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        joinedAt: new Date(),
+        status: 'active',
+        role: 'admin',
+      },
+    ],
+  };
 
   constructor(
+    private fb: FormBuilder,
+    private toastService: ToastService,
     private router: Router,
     private alertController: AlertController,
-    private groupService: GroupService,
-    private toastService: ToastService,
-    private fb: FormBuilder
+    private groupService: GroupService
   ) {
     addIcons({
       peopleOutline,
@@ -172,36 +198,29 @@ export class GroupsPage implements OnInit {
       cashOutline,
       createOutline,
       trashOutline,
-      settingsOutline,
-      searchOutline,
-      banOutline,
-      checkmarkCircleOutline,
-      personRemoveOutline,
-      shieldOutline,
-      shieldCheckmarkOutline,
-      copyOutline,
       addOutline,
-      starOutline,
       closeOutline,
       personOutline,
       personAddOutline,
+      personRemoveOutline,
       lockClosedOutline,
       lockOpenOutline,
-      eyeOutline,
-      addCircleOutline,
+      copyOutline,
     });
+    this.initForm();
+    this.loadGroups();
   }
 
   ngOnInit() {
-    this.loadGroups();
     this.initForm();
+    this.loadGroups();
   }
 
   private initForm() {
     this.groupForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       type: ['casual', Validators.required],
-      entryFee: [null],
+      entryFee: [{ value: 10, disabled: true }],
       settings: this.fb.group({
         allowPlayerInvites: [true],
         autoApproveJoins: [false],
@@ -210,19 +229,19 @@ export class GroupsPage implements OnInit {
       }),
     });
 
-    // Reset entry fee when type changes
+    // Listen to type changes to enable/disable entry fee
     this.groupForm.get('type')?.valueChanges.subscribe((type) => {
-      if (type === 'casual') {
-        this.groupForm.patchValue({ entryFee: null });
+      const entryFeeControl = this.groupForm.get('entryFee');
+      if (type === 'prize') {
+        entryFeeControl?.enable();
+      } else {
+        entryFeeControl?.disable();
       }
     });
   }
 
-  toggleCreateForm() {
-    this.showCreateForm = !this.showCreateForm;
-    if (this.showCreateForm) {
-      this.initForm();
-    }
+  private loadGroups() {
+    this.groups = this.groupService.getAllGroups();
   }
 
   onGroupTypeChange() {
@@ -248,83 +267,112 @@ export class GroupsPage implements OnInit {
   }
 
   getPrizeDistribution(memberCount: number): { [key: number]: number } {
+    // For very small groups (3-5 members)
     if (memberCount <= 5) {
-      return { 1: 1.0, 2: 0, 3: 0 };
-    } else if (memberCount <= 10) {
-      return { 1: 0.7, 2: 0.3, 3: 0 };
-    } else if (memberCount <= 20) {
-      return { 1: 0.5, 2: 0.3, 3: 0.2 };
-    } else {
-      return { 1: 0.45, 2: 0.35, 3: 0.2 };
+      return {
+        1: 1.0, // 100% for first place when very few members
+        2: 0, // No second place prize
+        3: 0, // No third place prize
+      };
+    }
+    // For small groups (6-10 members)
+    else if (memberCount <= 10) {
+      return {
+        1: 0.7, // 70% for first place
+        2: 0.3, // 30% for second place
+        3: 0, // No third place prize
+      };
+    }
+    // For medium groups (11-20 members)
+    else if (memberCount <= 20) {
+      return {
+        1: 0.5, // 50% for first place
+        2: 0.3, // 30% for second place
+        3: 0.2, // 20% for third place
+      };
+    }
+    // For large groups (21+ members)
+    else {
+      return {
+        1: 0.45, // 45% for first place
+        2: 0.35, // 35% for second place
+        3: 0.2, // 20% for third place
+      };
     }
   }
 
-  onEntryFeeChange(event: any) {
-    const value = event.detail.value;
-    const roundedValue = Math.round(value / 5) * 5;
-    this.groupForm.patchValue({ entryFee: roundedValue }, { emitEvent: false });
-  }
-
-  onManualFeeInput(event: any) {
-    let value = event.detail.value;
-
-    if (value === '' || value === null) {
-      this.groupForm.patchValue({ entryFee: null }, { emitEvent: false });
-      const input = event.target;
-      input.classList.remove('has-value');
-      return;
-    }
-
-    value = Number(value);
-    if (value < 1) value = 1;
-    if (value > 100) value = 100;
-
-    const input = event.target;
-    input.classList.add('has-value');
-    this.groupForm.patchValue({ entryFee: value }, { emitEvent: false });
-  }
-
-  async onCreateGroup() {
+  async createGroup() {
     if (this.groupForm.valid) {
       try {
         this.isLoading = true;
         const formValue = this.groupForm.value;
 
-        this.groupService
-          .createGroup({
-            name: formValue.name,
-            description: `${formValue.name} - A prediction group`,
-            entryFee: formValue.type === 'prize' ? formValue.entryFee : 0,
-            isPrivate: false,
-          })
-          .subscribe({
-            next: () => {
-              this.isLoading = false;
-              this.toastService.showToast(
-                'Group created successfully!',
-                'success'
-              );
-              this.loadGroups(); // Refresh the groups list
-              this.showCreateForm = false; // Close the modal
-              this.groupForm.reset(); // Reset the form
-              this.initForm(); // Reinitialize the form with default values
+        // Create initial leaderboard with members in alphabetical order
+        const initialLeaderboard: GroupLeaderboardEntry[] = [];
+
+        const newGroup: Group = {
+          id: crypto.randomUUID(),
+          name: formValue.name,
+          code: this.generateGroupCode(),
+          memberCount: 1,
+          createdAt: new Date(),
+          members: [
+            {
+              id: this.currentAdmin.id,
+              name: this.currentAdmin.name,
+              email: this.currentAdmin.email,
+              joinedAt: new Date(),
+              status: 'active',
+              role: 'admin',
             },
-            error: (error) => {
-              console.error('Error creating group:', error);
-              this.isLoading = false;
-              this.toastService.showToast(
-                'Failed to create group. Please try again.',
-                'danger'
-              );
-            },
-          });
+          ],
+          settings: {
+            allowPlayerInvites: true,
+            autoApproveJoins: false,
+            showLeaderboard: true,
+            allowMemberChat: true,
+          },
+          type: formValue.type,
+          entryFee: formValue.type === 'prize' ? formValue.entryFee : undefined,
+          paidMembers: 0,
+          totalPrizePool: 0,
+          adminName: this.currentAdmin.name,
+          leaderboard: initialLeaderboard,
+        };
+
+        // Save group to storage
+        this.groupService.saveGroup(newGroup);
+
+        // Update local groups array by appending the new group
+        this.groups = [...this.groups, newGroup];
+
+        // Show success message and close modal
+        await this.toastService.showToast(
+          'Group created successfully!',
+          'success'
+        );
+
+        // Reset form and close create form
+        this.groupForm.reset({
+          name: '',
+          type: 'casual',
+          entryFee: 10,
+          settings: {
+            allowPlayerInvites: true,
+            autoApproveJoins: false,
+            showLeaderboard: true,
+            allowMemberChat: true,
+          },
+        });
+        this.isCreateModalOpen = false;
       } catch (error) {
         console.error('Error creating group:', error);
-        this.isLoading = false;
         await this.toastService.showToast(
           'Failed to create group. Please try again.',
           'danger'
         );
+      } finally {
+        this.isLoading = false;
       }
     } else {
       await this.toastService.showToast(
@@ -334,8 +382,26 @@ export class GroupsPage implements OnInit {
     }
   }
 
-  private loadGroups() {
-    this.groups = this.groupService.getAllGroups();
+  private generateGroupCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  async copyCode(event: Event, code: string) {
+    event.stopPropagation(); // Prevent group details from opening
+    try {
+      await navigator.clipboard.writeText(code);
+      await this.toastService.showToast(
+        'Group code copied to clipboard',
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast('Error copying code', 'error');
+    }
   }
 
   async showGroupDetails(group: Group) {
@@ -445,6 +511,46 @@ export class GroupsPage implements OnInit {
     }
   }
 
+  onEntryFeeChange(event: any) {
+    const value = event.detail.value;
+    // Ensure the value is a multiple of 5
+    const roundedValue = Math.round(value / 5) * 5;
+    this.groupForm.patchValue({ entryFee: roundedValue }, { emitEvent: false });
+  }
+
+  onManualFeeInput(event: any) {
+    let value = event.detail.value;
+
+    // Allow empty value
+    if (value === '' || value === null) {
+      this.groupForm.patchValue({ entryFee: null }, { emitEvent: false });
+      const input = event.target;
+      input.classList.remove('has-value');
+      return;
+    }
+
+    // Convert to number and validate
+    value = Number(value);
+    if (value < 1) value = 1;
+    if (value > 100) value = 100;
+
+    const input = event.target;
+    input.classList.add('has-value');
+    this.groupForm.patchValue({ entryFee: value }, { emitEvent: false });
+  }
+
+  async copyGroupCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      await this.toastService.showToast(
+        'Group code copied to clipboard',
+        'success'
+      );
+    } catch (error) {
+      await this.toastService.showToast('Failed to copy code', 'error');
+    }
+  }
+
   viewGroupDetails(group: Group) {
     this.selectedGroup = group;
     // You could also navigate to a details view or show a modal
@@ -507,16 +613,20 @@ export class GroupsPage implements OnInit {
     this.router.navigate(['/group-admin/groups', group.id, 'leaderboard']);
   }
 
-  navigateToCreateGroup() {
-    this.router.navigate(['/group-admin/create-group']);
-  }
-
-  async copyGroupCode(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      await this.toastService.showToast('Group code copied to clipboard', 'success');
-    } catch (error) {
-      await this.toastService.showToast('Failed to copy code', 'error');
-    }
+  // Add method to handle create button click
+  showCreateForm() {
+    // Reset form before showing
+    this.groupForm.reset({
+      name: '',
+      type: 'casual',
+      entryFee: 10,
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: false,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+    });
+    this.isCreateModalOpen = true;
   }
 }
