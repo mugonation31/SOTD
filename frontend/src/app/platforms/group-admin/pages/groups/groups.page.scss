@@ -186,6 +186,80 @@ ion-toggle {
   animation: roleChange 0.5s ease;
 }
 
+// Create Group Button Container
+.create-group-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+  padding: 0 8px;
+}
+
+.create-group-btn {
+  --border-radius: 12px;
+  --padding-start: 20px;
+  --padding-end: 20px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --border-width: 0 !important;
+  --border-style: none !important;
+  --border-color: transparent !important;
+  --background: var(--ion-color-primary);
+  --color: var(--ion-color-primary-contrast);
+  --box-shadow: none;
+  --ripple-color: transparent;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.3);
+  transition: all 0.3s ease;
+  border: none !important;
+  outline: none !important;
+  overflow: hidden;
+  border-radius: 12px;
+
+  &::part(native) {
+    border: none !important;
+    outline: none !important;
+    background: var(--ion-color-primary) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  &::before,
+  &::after {
+    display: none !important;
+  }
+
+  .button-native {
+    border: none !important;
+    outline: none !important;
+    background: var(--ion-color-primary) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  &:hover {
+    --background: var(--ion-color-primary-shade) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(var(--ion-color-primary-rgb), 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+    --background: var(--ion-color-primary-shade) !important;
+  }
+
+  &:focus {
+    --background: var(--ion-color-primary) !important;
+  }
+
+  ion-icon {
+    margin-right: 8px;
+    font-size: 18px;
+  }
+}
+
 .create-group-card {
   margin-bottom: 2rem;
   border-radius: 16px;
