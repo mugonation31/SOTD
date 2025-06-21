@@ -31,6 +31,7 @@ log.txt
 
 # Node
 /node_modules
+/frontend/node_modules
 npm-debug.log
 yarn-error.log
 
@@ -56,6 +57,9 @@ yarn-error.log
 # Miscellaneous
 /.angular
 /.angular/cache
+# Angular cache in frontend directory
+/frontend/.angular
+/frontend/.angular/cache
 .sass-cache/
 /.nx
 /.nx/cache

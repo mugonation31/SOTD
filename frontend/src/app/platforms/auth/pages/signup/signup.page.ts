@@ -100,8 +100,7 @@ export class SignupPage implements OnInit {
 
   showPassword = false;
   showConfirmPassword = false;
-  private returnUrl: string = '/';
-  private loginReturnUrl: string = '/';
+  private returnUrl: string = '/welcome';
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -136,23 +135,10 @@ export class SignupPage implements OnInit {
     addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,checkmarkCircle,ellipseOutline,});
   }
 
-  
   ngOnInit() {
-    // get return url from query params
+    // Get return URL from route parameters or default to '/welcome'
     this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/';
-      this.loginReturnUrl = params['loginReturnUrl'];
-
-      const paramsRole = params['role'];
-      const storedRole = localStorage.getItem('selectedRole');
-
-      this.signupData.role = paramsRole || storedRole || 'player';
-      console.log('Signup resolved role:', this.signupData.role);
-
-      if (!this.signupData.role) {
-        // if no role is set, redirect to welcome page
-        this.router.navigate(['/welcome']);
-      }
+      this.returnUrl = params['returnUrl'] || '/welcome';
     });
   }
 
@@ -223,10 +209,6 @@ export class SignupPage implements OnInit {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  navigateToWelcome() {
-    this.router.navigate(['/welcome']);
-  }
-
   onSignup() {
     this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
@@ -237,11 +219,16 @@ export class SignupPage implements OnInit {
 
     if (!this.canSubmit) return;
 
-    this.authService.signup(this.signupData).subscribe({
+    const { confirmPassword, ...signupPayload } = this.signupData;
+    this.authService.signup(signupPayload).subscribe({
       next: () => {
-        this.router.navigate([this.returnUrl], { replaceUrl: true });
+        // After successful signup, redirect to login with returnUrl
+        this.router.navigate(['/auth/login'], {
+          queryParams: { returnUrl: this.returnUrl }
+        });
       },
       error: (error) => {
+        // TODO: Add proper error handling with Toast service
         console.error('Signup error:', error);
       },
     });
