@@ -15,67 +15,139 @@
   </div>
 
   <!-- Create Group Form -->
-  <ion-card *ngIf="isCreateModalOpen">
-    <ion-card-header>
-      <ion-card-title>Create New Group</ion-card-title>
-    </ion-card-header>
+  <div *ngIf="isCreateModalOpen" class="create-group-form">
+    <ion-card class="form-card">
+      <ion-card-header class="form-header">
+        <ion-card-title class="form-title">Create Your Group</ion-card-title>
+        <p class="form-subtitle">Set up your prediction group</p>
+      </ion-card-header>
 
-    <ion-card-content>
-      <form [formGroup]="groupForm" (ngSubmit)="createGroup()">
-        <!-- Group Name -->
-        <ion-item>
-          <ion-label position="stacked">Group Name</ion-label>
-          <ion-input 
-            formControlName="name" 
-            placeholder="Enter a memorable name for your group"
-            [clearInput]="true"
-          ></ion-input>
-        </ion-item>
+      <ion-card-content class="form-content">
+        <form [formGroup]="groupForm" (ngSubmit)="createGroup()">
+          <!-- Group Name -->
+          <div class="form-field">
+            <ion-item lines="none" class="name-input">
+              <ion-label position="stacked">Group Name</ion-label>
+              <ion-input 
+                formControlName="name" 
+                placeholder="Enter a memorable name for your group"
+                [clearInput]="true"
+              ></ion-input>
+            </ion-item>
+          </div>
 
-        <!-- Group Type Selection -->
-        <ion-list-header>
-          <ion-label>Group Type</ion-label>
-        </ion-list-header>
-        
-        <ion-segment formControlName="type" (ionChange)="onGroupTypeChange()">
-          <ion-segment-button value="casual">
-            <ion-icon name="trophy-outline"></ion-icon>
-            <ion-label>Casual</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="prize">
-            <ion-icon name="cash-outline"></ion-icon>
-            <ion-label>Prize</ion-label>
-          </ion-segment-button>
-        </ion-segment>
+          <!-- Group Type Selection -->
+          <div class="form-field">
+            <div class="group-type-selection">
+              <div class="type-option" 
+                   [class.selected]="groupForm.get('type')?.value === 'casual'" 
+                   (click)="selectGroupType('casual')">
+                <div class="type-content">
+                  <h3>CASUAL GROUP</h3>
+                  <p>PLAY FOR BRAGGING RIGHTS</p>
+                </div>
+              </div>
+              <div class="type-option prize-option" 
+                   [class.selected]="groupForm.get('type')?.value === 'prize'" 
+                   (click)="selectGroupType('prize')">
+                <div class="type-content">
+                  <ion-icon name="cash-outline" class="prize-icon"></ion-icon>
+                  <h3>PRIZE GROUP</h3>
+                  <p>PLAY FOR CASH PRIZES</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Entry Fee (only for prize groups) -->
-        <div *ngIf="groupForm.get('type')?.value === 'prize'" class="ion-margin-top">
-          <ion-item>
-            <ion-label position="stacked">Entry Fee (£)</ion-label>
-            <ion-input
-              type="number"
-              formControlName="entryFee"
-              [min]="1"
-              [max]="100"
-              placeholder="Enter amount between £1-£100"
-            ></ion-input>
-          </ion-item>
-        </div>
+          <!-- Entry Fee (only for prize groups) -->
+          <div *ngIf="groupForm.get('type')?.value === 'prize'" class="form-field entry-fee-section">
+            <div class="entry-fee-header">
+              <h4>Entry Fee</h4>
+            </div>
+            
+            <div class="fee-controls">
+              <div class="fee-range">
+                <span class="fee-label">£1</span>
+                <ion-range 
+                  formControlName="entryFee"
+                  [min]="1" 
+                  [max]="100" 
+                  [step]="1"
+                  [snaps]="true"
+                  class="fee-slider"
+                  (ionChange)="onEntryFeeChange($event)">
+                </ion-range>
+                <span class="fee-label">£100</span>
+              </div>
+              
+              <div class="fee-input-container">
+                <span class="currency-symbol">£</span>
+                <ion-input
+                  type="number"
+                  formControlName="entryFee"
+                  [min]="1"
+                  [max]="100"
+                  class="fee-input"
+                  (ionInput)="onManualFeeInput($event)"
+                ></ion-input>
+              </div>
+            </div>
+            
+            <p class="fee-description">Set entry fee between £1 and £100</p>
 
-        <!-- Submit Button -->
-        <div class="ion-margin-top">
-          <ion-button 
-            expand="block" 
-            type="submit"
-            [disabled]="!groupForm.valid || isLoading"
-          >
-            <ion-spinner *ngIf="isLoading"></ion-spinner>
-            <span *ngIf="!isLoading">Create Group</span>
-          </ion-button>
-        </div>
-      </form>
-    </ion-card-content>
-  </ion-card>
+            <!-- Prize Breakdown -->
+            <div class="prize-breakdown">
+              <h4>Prize Breakdown</h4>
+              <div class="prize-info">
+                <div class="prize-detail">
+                  <span class="label">Entry Fee:</span>
+                  <span class="value">£{{ groupForm.get('entryFee')?.value || 0 }}.00</span>
+                </div>
+                <div class="prize-detail">
+                  <span class="label">Current Members:</span>
+                  <span class="value">{{ currentMemberCount || 1 }}</span>
+                </div>
+                <div class="prize-detail total">
+                  <span class="label">Potential Prize Pool:</span>
+                  <span class="value">£{{ calculateTotalPool() || 0 }}.00</span>
+                </div>
+              </div>
+
+              <div class="prize-positions">
+                <div class="position-card first">
+                  <div class="position-label">1st</div>
+                  <div class="prize-amount">£{{ calculatePrize(1) || 0 }}.00</div>
+                </div>
+                <div class="position-card second">
+                  <div class="position-label">2nd</div>
+                  <div class="prize-amount">£{{ calculatePrize(2) || 0 }}.00</div>
+                </div>
+                <div class="position-card third">
+                  <div class="position-label">3rd</div>
+                  <div class="prize-amount">£{{ calculatePrize(3) || 0 }}.00</div>
+                </div>
+              </div>
+
+              <p class="prize-note">* Prize amounts will be finalized once all members have joined and paid</p>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <ion-button 
+              expand="block" 
+              type="submit"
+              class="create-button"
+              [disabled]="!groupForm.valid || isLoading"
+            >
+              <ion-spinner *ngIf="isLoading"></ion-spinner>
+              <span *ngIf="!isLoading">Create Group</span>
+            </ion-button>
+          </div>
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
 
   <!-- Welcome Message - Only show if no groups -->
   <ion-card *ngIf="groups.length === 0">

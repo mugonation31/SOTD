@@ -838,3 +838,359 @@ ion-header {
 
   // ... rest of existing styles ...
 }
+
+// New Create Group Form Styling
+.create-group-form {
+  margin-top: 24px;
+  margin-bottom: 32px;
+  
+  .form-card {
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border: none;
+    background: white;
+  }
+
+  .form-header {
+    background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+    color: white;
+    text-align: center;
+    padding: 32px 24px;
+    
+    .form-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      color: white;
+    }
+    
+    .form-subtitle {
+      font-size: 16px;
+      margin: 8px 0 0 0;
+      opacity: 0.9;
+      color: white;
+      font-weight: 400;
+    }
+  }
+
+  .form-content {
+    padding: 32px 24px;
+    background: white;
+  }
+
+  .form-field {
+    margin-bottom: 32px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .name-input {
+    --background: #f8f9fa;
+    --border-radius: 12px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --inner-padding-end: 0;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    
+    &.ion-focused {
+      --background: white;
+      border-color: var(--ion-color-primary);
+      box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+    }
+    
+    ion-label {
+      color: var(--ion-color-dark);
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    
+    ion-input {
+      --color: var(--ion-color-dark);
+      --placeholder-color: var(--ion-color-medium);
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+
+  .group-type-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    
+    .type-option {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      padding: 24px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      position: relative;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      }
+      
+      &.selected {
+        border-color: var(--ion-color-primary);
+        background: rgba(var(--ion-color-primary-rgb), 0.05);
+        box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+      }
+      
+      &.prize-option.selected {
+        border-color: var(--ion-color-primary);
+        background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.1), rgba(var(--ion-color-primary-rgb), 0.05));
+      }
+      
+      .type-content {
+        h3 {
+          font-size: 14px;
+          font-weight: 700;
+          margin: 0 0 4px 0;
+          color: var(--ion-color-dark);
+          letter-spacing: 0.5px;
+        }
+        
+        p {
+          font-size: 12px;
+          margin: 0;
+          color: var(--ion-color-medium);
+          font-weight: 500;
+          letter-spacing: 0.3px;
+        }
+        
+        .prize-icon {
+          font-size: 24px;
+          color: var(--ion-color-primary);
+          margin-bottom: 8px;
+        }
+      }
+    }
+  }
+
+  .entry-fee-section {
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 24px;
+    
+    .entry-fee-header {
+      margin-bottom: 24px;
+      
+      h4 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+        color: var(--ion-color-dark);
+      }
+    }
+    
+    .fee-controls {
+      margin-bottom: 24px;
+      
+      .fee-range {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+        
+        .fee-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--ion-color-medium);
+          min-width: 32px;
+        }
+        
+        .fee-slider {
+          flex: 1;
+          --bar-height: 6px;
+          --bar-background: #e9ecef;
+          --bar-background-active: var(--ion-color-primary);
+          --knob-background: var(--ion-color-primary);
+          --knob-size: 24px;
+          --knob-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+      }
+      
+      .fee-input-container {
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0;
+        width: fit-content;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+        
+        &:focus-within {
+          border-color: var(--ion-color-primary);
+          box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+        }
+        
+        .currency-symbol {
+          padding: 12px 8px 12px 16px;
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--ion-color-dark);
+        }
+        
+        .fee-input {
+          --background: transparent;
+          --padding-start: 0;
+          --padding-end: 16px;
+          --padding-top: 12px;
+          --padding-bottom: 12px;
+          width: 80px;
+          font-size: 16px;
+          font-weight: 600;
+          text-align: center;
+        }
+      }
+    }
+    
+    .fee-description {
+      text-align: center;
+      color: var(--ion-color-medium);
+      font-size: 14px;
+      margin: 0 0 24px 0;
+      font-style: italic;
+    }
+    
+    .prize-breakdown {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #e9ecef;
+      
+      h4 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+        color: var(--ion-color-dark);
+        text-align: center;
+      }
+      
+      .prize-info {
+        margin-bottom: 24px;
+        
+        .prize-detail {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 0;
+          
+          &.total {
+            border-top: 2px solid #e9ecef;
+            margin-top: 12px;
+            padding-top: 16px;
+            font-weight: 700;
+            font-size: 16px;
+          }
+          
+          .label {
+            color: var(--ion-color-medium);
+            font-size: 14px;
+          }
+          
+          .value {
+            color: var(--ion-color-dark);
+            font-weight: 600;
+            font-size: 14px;
+          }
+        }
+      }
+      
+      .prize-positions {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+        
+        .position-card {
+          flex: 1;
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 16px 12px;
+          text-align: center;
+          
+          &.first {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #8b5a00;
+          }
+          
+          &.second {
+            background: linear-gradient(135deg, #c0c0c0, #d4d4d4);
+            color: #4a4a4a;
+          }
+          
+          &.third {
+            background: linear-gradient(135deg, #cd7f32, #e69c5a);
+            color: #5d3a1a;
+          }
+          
+          .position-label {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .prize-amount {
+            font-size: 16px;
+            font-weight: 700;
+          }
+        }
+      }
+      
+      .prize-note {
+        font-size: 12px;
+        color: var(--ion-color-medium);
+        text-align: center;
+        margin: 0;
+        font-style: italic;
+        line-height: 1.4;
+      }
+    }
+  }
+
+  .form-actions {
+    margin-top: 32px;
+    
+    .create-button {
+      --background: var(--ion-color-primary);
+      --color: white;
+      --border-radius: 12px;
+      --padding-top: 16px;
+      --padding-bottom: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: none;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);
+      transition: all 0.3s ease;
+      
+      &:hover {
+        --background: var(--ion-color-primary-shade);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.4);
+      }
+      
+      &:active {
+        transform: translateY(0);
+      }
+      
+      &[disabled] {
+        opacity: 0.6;
+        transform: none;
+        box-shadow: none;
+      }
+    }
+  }
+}

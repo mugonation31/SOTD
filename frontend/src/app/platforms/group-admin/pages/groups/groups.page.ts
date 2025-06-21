@@ -194,7 +194,7 @@ export class GroupsPage implements OnInit {
     private alertController: AlertController,
     private groupService: GroupService
   ) {
-    addIcons({closeOutline,trophyOutline,cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,settingsOutline,addOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,});
+    addIcons({cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,closeOutline,settingsOutline,trophyOutline,addOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,});
     this.initForm();
     this.loadGroups();
   }
@@ -241,6 +241,11 @@ export class GroupsPage implements OnInit {
       this.groupForm.get('entryFee')?.setValidators(Validators.required);
     }
     this.groupForm.get('entryFee')?.updateValueAndValidity();
+  }
+
+  selectGroupType(type: 'casual' | 'prize') {
+    this.groupForm.patchValue({ type });
+    this.onGroupTypeChange();
   }
 
   calculatePrize(position: number): number {
