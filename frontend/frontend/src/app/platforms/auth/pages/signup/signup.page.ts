@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -16,7 +16,7 @@ import {
   IonSelectOption,
   IonNote,
 } from '@ionic/angular/standalone';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -78,7 +78,7 @@ interface PasswordCriteria {
     NgIf,
   ],
 })
-export class SignupPage implements OnInit {
+export class SignupPage {
   signupData = {
     username: '',
     firstName: '',
@@ -100,8 +100,6 @@ export class SignupPage implements OnInit {
 
   showPassword = false;
   showConfirmPassword = false;
-  private returnUrl: string = '/';
-  private loginReturnUrl: string = '/';
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -128,32 +126,8 @@ export class SignupPage implements OnInit {
     );
   }
 
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) {
+  constructor(private authService: AuthService, private router: Router) {
     addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,checkmarkCircle,ellipseOutline,});
-  }
-
-  
-  ngOnInit() {
-    // get return url from query params
-    this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/';
-      this.loginReturnUrl = params['loginReturnUrl'];
-
-      const paramsRole = params['role'];
-      const storedRole = localStorage.getItem('selectedRole');
-
-      this.signupData.role = paramsRole || storedRole || 'player';
-      console.log('Signup resolved role:', this.signupData.role);
-
-      if (!this.signupData.role) {
-        // if no role is set, redirect to welcome page
-        this.router.navigate(['/welcome']);
-      }
-    });
   }
 
   validateRequired(field: keyof ValidationErrors, value: string) {
@@ -223,10 +197,6 @@ export class SignupPage implements OnInit {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  navigateToWelcome() {
-    this.router.navigate(['/welcome']);
-  }
-
   onSignup() {
     this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
@@ -237,11 +207,13 @@ export class SignupPage implements OnInit {
 
     if (!this.canSubmit) return;
 
-    this.authService.signup(this.signupData).subscribe({
+    const { confirmPassword, ...signupPayload } = this.signupData;
+    this.authService.signup(signupPayload).subscribe({
       next: () => {
-        this.router.navigate([this.returnUrl], { replaceUrl: true });
+        this.router.navigate(['/welcome'], { replaceUrl: true });
       },
       error: (error) => {
+        // TODO: Add proper error handling with Toast service
         console.error('Signup error:', error);
       },
     });
