@@ -61,7 +61,10 @@ import {
   personOutline,
   personAddOutline,
   lockClosedOutline,
-  lockOpenOutline, calendarOutline, eyeOutline } from 'ionicons/icons';
+  lockOpenOutline, 
+  calendarOutline, 
+  eyeOutline,
+  removeOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
@@ -191,7 +194,7 @@ export class GroupsPage implements OnInit {
     private alertController: AlertController,
     private groupService: GroupService
   ) {
-    addIcons({addOutline,closeOutline,trophyOutline,cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,settingsOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,});
+    addIcons({closeOutline,trophyOutline,cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,settingsOutline,addOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,});
     this.initForm();
     this.loadGroups();
   }
@@ -599,19 +602,24 @@ export class GroupsPage implements OnInit {
   }
 
   // Add method to handle create button click
-  showCreateForm() {
-    // Reset form before showing
-    this.groupForm.reset({
-      name: '',
-      type: 'casual',
-      entryFee: 10,
-      settings: {
-        allowPlayerInvites: true,
-        autoApproveJoins: false,
-        showLeaderboard: true,
-        allowMemberChat: true,
-      },
-    });
-    this.isCreateModalOpen = true;
+  toggleCreateForm() {
+    if (this.isCreateModalOpen) {
+      // Close the form
+      this.isCreateModalOpen = false;
+    } else {
+      // Reset form before showing
+      this.groupForm.reset({
+        name: '',
+        type: 'casual',
+        entryFee: 10,
+        settings: {
+          allowPlayerInvites: true,
+          autoApproveJoins: false,
+          showLeaderboard: true,
+          allowMemberChat: true,
+        },
+      });
+      this.isCreateModalOpen = true;
+    }
   }
 }
