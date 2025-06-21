@@ -61,8 +61,7 @@ import {
   personOutline,
   personAddOutline,
   lockClosedOutline,
-  lockOpenOutline,
-} from 'ionicons/icons';
+  lockOpenOutline, calendarOutline, eyeOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
@@ -192,21 +191,7 @@ export class GroupsPage implements OnInit {
     private alertController: AlertController,
     private groupService: GroupService
   ) {
-    addIcons({
-      peopleOutline,
-      trophyOutline,
-      cashOutline,
-      createOutline,
-      trashOutline,
-      addOutline,
-      closeOutline,
-      personOutline,
-      personAddOutline,
-      personRemoveOutline,
-      lockClosedOutline,
-      lockOpenOutline,
-      copyOutline,
-    });
+    addIcons({addOutline,closeOutline,trophyOutline,cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,settingsOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,});
     this.initForm();
     this.loadGroups();
   }
