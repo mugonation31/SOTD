@@ -26,7 +26,6 @@ import {
   starOutline,
   cashOutline,
   logInOutline,
-  personCircleOutline,
 } from 'ionicons/icons';
 import { AuthService } from '@core/services/auth.service';
 
@@ -97,7 +96,6 @@ export class WelcomePage {
       starOutline,
       cashOutline,
       logInOutline,
-      personCircleOutline,
     });
   }
 
@@ -123,9 +121,5 @@ export class WelcomePage {
 
   login() {
     this.router.navigate(['/auth/login']);
-  }
-
-  signup() {
-    this.router.navigate(['/auth/signup']);
   }
 } 
