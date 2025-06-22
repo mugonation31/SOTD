@@ -172,6 +172,12 @@ ion-toolbar {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 .football-icon {

@@ -1,9 +1,12 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title class="logo-title">
+    <div class="logo-container" (click)="navigateToWelcome()">
       <ion-icon name="football-outline" class="football-icon"></ion-icon>
-      SOTD Predict 3
-    </ion-title>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
   </ion-toolbar>
 </ion-header>
 

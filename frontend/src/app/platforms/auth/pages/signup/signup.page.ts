@@ -233,4 +233,8 @@ export class SignupPage implements OnInit {
       },
     });
   }
+
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
+  }
 }

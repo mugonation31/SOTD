@@ -24,8 +24,7 @@ import {
   logoInstagram,
   logoX,
   eye,
-  eyeOff,
-} from 'ionicons/icons';
+  eyeOff, footballOutline } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import {
   validateEmail,
@@ -91,14 +90,7 @@ export class LoginPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    addIcons({
-      logoGoogle,
-      logoFacebook,
-      logoInstagram,
-      logoX,
-      eye,
-      eyeOff,
-    });
+    addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,});
   }
 
   ngOnInit() {
@@ -152,5 +144,9 @@ export class LoginPage implements OnInit {
         console.error('Login error:', error);
       },
     });
+  }
+
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
   }
 }

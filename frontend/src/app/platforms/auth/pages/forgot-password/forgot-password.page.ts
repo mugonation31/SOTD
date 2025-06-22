@@ -77,4 +77,8 @@ export class ForgotPasswordPage {
     // TODO: Implement password reset functionality
     console.log('Password reset requested for:', this.email);
   }
+
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
+  }
 }

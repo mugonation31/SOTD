@@ -11,9 +11,12 @@ import {
   IonCard,
   IonCardContent,
   IonText,
+  IonIcon,
 } from '@ionic/angular/standalone';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { addIcons } from 'ionicons';
+import { footballOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-otp',
@@ -32,6 +35,7 @@ import { FormsModule } from '@angular/forms';
     IonCard,
     IonCardContent,
     IonText,
+    IonIcon,
     RouterLink,
     FormsModule,
   ],
@@ -39,11 +43,19 @@ import { FormsModule } from '@angular/forms';
 export class OtpPage {
   otp: string = '';
 
+  constructor(private router: Router) {
+    addIcons({ footballOutline });
+  }
+
   onVerify() {
     console.log('Verifying OTP:', this.otp);
   }
 
   resendOTP() {
     console.log('Resending OTP');
+  }
+
+  navigateToWelcome() {
+    this.router.navigate(['/welcome']);
   }
 }
