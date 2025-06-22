@@ -104,7 +104,10 @@ export class WelcomePage {
       this.router.navigate(['/group-admin/groups']);
     } else {
       this.router.navigate(['/auth/signup'], {
-        queryParams: { returnUrl: '/group-admin/groups' }
+        queryParams: { 
+          role: 'group-admin',
+          returnUrl: '/group-admin/groups' 
+        }
       });
     }
   }
@@ -114,7 +117,10 @@ export class WelcomePage {
       this.router.navigate(['/join-group']);
     } else {
       this.router.navigate(['/auth/signup'], {
-        queryParams: { returnUrl: '/join-group' }
+        queryParams: { 
+          role: 'player',
+          returnUrl: '/join-group' 
+        }
       });
     }
   }

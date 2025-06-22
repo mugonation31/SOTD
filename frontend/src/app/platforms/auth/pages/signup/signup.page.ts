@@ -127,6 +127,14 @@ export class SignupPage implements OnInit {
     );
   }
 
+  get isGroupAdminSignup(): boolean {
+    return this.signupData.role === 'group-admin';
+  }
+
+  get isPlayerSignup(): boolean {
+    return this.signupData.role === 'player';
+  }
+
   constructor(
     private authService: AuthService,
     private router: Router,
@@ -136,9 +144,14 @@ export class SignupPage implements OnInit {
   }
 
   ngOnInit() {
-    // Get return URL from route parameters or default to '/welcome'
+    // Get return URL and role from route parameters
     this.route.queryParams.subscribe(params => {
       this.returnUrl = params['returnUrl'] || '/welcome';
+      
+      // Set the role based on the query parameter
+      if (params['role']) {
+        this.signupData.role = params['role'] as UserRole;
+      }
     });
   }
 
@@ -223,6 +236,7 @@ export class SignupPage implements OnInit {
     this.authService.signup(signupPayload).subscribe({
       next: () => {
         // After successful signup, redirect to login with returnUrl
+        // This ensures the user gets logged in and then redirected to the appropriate section
         this.router.navigate(['/auth/login'], {
           queryParams: { returnUrl: this.returnUrl }
         });

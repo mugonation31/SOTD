@@ -15,7 +15,9 @@
     <ion-card-content>
       <div class="auth-header">
         <h1>Create Account</h1>
-        <p>Join us and start predicting matches</p>
+        <p *ngIf="isGroupAdminSignup">Create your account to start managing prediction groups</p>
+        <p *ngIf="isPlayerSignup">Create your account to join prediction groups</p>
+        <p *ngIf="!isGroupAdminSignup && !isPlayerSignup">Join us and start predicting matches</p>
       </div>
 
       <form (ngSubmit)="onSignup()">
@@ -106,7 +108,11 @@
         </ion-list>
 
         <div class="auth-actions">
-          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Create Account</ion-button>
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit">
+            <span *ngIf="isGroupAdminSignup">Create Group Admin Account</span>
+            <span *ngIf="isPlayerSignup">Create Player Account</span>
+            <span *ngIf="!isGroupAdminSignup && !isPlayerSignup">Create Account</span>
+          </ion-button>
         </div>
 
         <div class="auth-footer">
