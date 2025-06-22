@@ -248,51 +248,7 @@ export class GroupsPage implements OnInit {
     this.onGroupTypeChange();
   }
 
-  calculatePrize(position: number): number {
-    const totalPool = this.calculateTotalPool();
-    const distribution = this.getPrizeDistribution(this.currentMemberCount);
-    return totalPool * distribution[position];
-  }
 
-  calculateTotalPool(): number {
-    const entryFee = this.groupForm.get('entryFee')?.value || 0;
-    return entryFee * this.currentMemberCount;
-  }
-
-  getPrizeDistribution(memberCount: number): { [key: number]: number } {
-    // For very small groups (3-5 members)
-    if (memberCount <= 5) {
-      return {
-        1: 1.0, // 100% for first place when very few members
-        2: 0, // No second place prize
-        3: 0, // No third place prize
-      };
-    }
-    // For small groups (6-10 members)
-    else if (memberCount <= 10) {
-      return {
-        1: 0.7, // 70% for first place
-        2: 0.3, // 30% for second place
-        3: 0, // No third place prize
-      };
-    }
-    // For medium groups (11-20 members)
-    else if (memberCount <= 20) {
-      return {
-        1: 0.5, // 50% for first place
-        2: 0.3, // 30% for second place
-        3: 0.2, // 20% for third place
-      };
-    }
-    // For large groups (21+ members)
-    else {
-      return {
-        1: 0.45, // 45% for first place
-        2: 0.35, // 35% for second place
-        3: 0.2, // 20% for third place
-      };
-    }
-  }
 
   async createGroup() {
     if (this.groupForm.valid) {

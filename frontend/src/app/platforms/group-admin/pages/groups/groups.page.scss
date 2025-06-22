@@ -1062,102 +1062,18 @@ ion-header {
       font-style: italic;
     }
     
-    .prize-breakdown {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      border: 1px solid #e9ecef;
-      
-      h4 {
-        font-size: 18px;
-        font-weight: 700;
-        margin: 0 0 20px 0;
-        color: var(--ion-color-dark);
-        text-align: center;
-      }
-      
-      .prize-info {
-        margin-bottom: 24px;
-        
-        .prize-detail {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 0;
-          
-          &.total {
-            border-top: 2px solid #e9ecef;
-            margin-top: 12px;
-            padding-top: 16px;
-            font-weight: 700;
-            font-size: 16px;
-          }
-          
-          .label {
-            color: var(--ion-color-medium);
-            font-size: 14px;
-          }
-          
-          .value {
-            color: var(--ion-color-dark);
-            font-weight: 600;
-            font-size: 14px;
-          }
-        }
-      }
-      
-      .prize-positions {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 20px;
-        
-        .position-card {
-          flex: 1;
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 16px 12px;
-          text-align: center;
-          
-          &.first {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #8b5a00;
-          }
-          
-          &.second {
-            background: linear-gradient(135deg, #c0c0c0, #d4d4d4);
-            color: #4a4a4a;
-          }
-          
-          &.third {
-            background: linear-gradient(135deg, #cd7f32, #e69c5a);
-            color: #5d3a1a;
-          }
-          
-          .position-label {
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .prize-amount {
-            font-size: 16px;
-            font-weight: 700;
-          }
-        }
-      }
-      
-      .prize-note {
-        font-size: 12px;
-        color: var(--ion-color-medium);
-        text-align: center;
-        margin: 0;
-        font-style: italic;
-        line-height: 1.4;
-      }
-    }
+         .prize-note {
+       font-size: 14px;
+       color: var(--ion-color-medium);
+       text-align: center;
+       margin: 16px 0 0 0;
+       font-style: italic;
+       line-height: 1.4;
+       padding: 16px;
+       background: rgba(var(--ion-color-primary-rgb), 0.05);
+       border-radius: 8px;
+       border-left: 4px solid var(--ion-color-primary);
+     }
   }
 
   .form-actions {

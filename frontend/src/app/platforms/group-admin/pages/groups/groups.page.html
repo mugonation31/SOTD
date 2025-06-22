@@ -94,42 +94,7 @@
             </div>
             
             <p class="fee-description">Set entry fee between £1 and £100</p>
-
-            <!-- Prize Breakdown -->
-            <div class="prize-breakdown">
-              <h4>Prize Breakdown</h4>
-              <div class="prize-info">
-                <div class="prize-detail">
-                  <span class="label">Entry Fee:</span>
-                  <span class="value">£{{ groupForm.get('entryFee')?.value || 0 }}.00</span>
-                </div>
-                <div class="prize-detail">
-                  <span class="label">Current Members:</span>
-                  <span class="value">{{ currentMemberCount || 1 }}</span>
-                </div>
-                <div class="prize-detail total">
-                  <span class="label">Potential Prize Pool:</span>
-                  <span class="value">£{{ calculateTotalPool() || 0 }}.00</span>
-                </div>
-              </div>
-
-              <div class="prize-positions">
-                <div class="position-card first">
-                  <div class="position-label">1st</div>
-                  <div class="prize-amount">£{{ calculatePrize(1) || 0 }}.00</div>
-                </div>
-                <div class="position-card second">
-                  <div class="position-label">2nd</div>
-                  <div class="prize-amount">£{{ calculatePrize(2) || 0 }}.00</div>
-                </div>
-                <div class="position-card third">
-                  <div class="position-label">3rd</div>
-                  <div class="prize-amount">£{{ calculatePrize(3) || 0 }}.00</div>
-                </div>
-              </div>
-
-              <p class="prize-note">* Prize amounts will be finalized once all members have joined and paid</p>
-            </div>
+            <p class="prize-note">Prize breakdown can be configured after group creation when you know the final member count.</p>
           </div>
 
           <!-- Submit Button -->
