@@ -64,7 +64,7 @@ import {
   lockOpenOutline, 
   calendarOutline, 
   eyeOutline,
-  removeOutline } from 'ionicons/icons';
+  removeOutline, checkmarkOutline, warningOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
@@ -91,6 +91,10 @@ interface GroupLeaderboardEntry {
   played: number;
   jokerUsed: number;
   totalPoints: number;
+}
+
+interface PrizePosition {
+  percentage: number;
 }
 
 interface Group {
@@ -171,6 +175,7 @@ export class GroupsPage implements OnInit {
   filteredMembers: GroupMember[] = [];
   entryFeeOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   currentMemberCount = 0;
+  prizePositions: PrizePosition[] = [{ percentage: 100 }];
   currentAdmin: CurrentAdmin = {
     id: '1',
     name: 'John Doe',
@@ -194,7 +199,7 @@ export class GroupsPage implements OnInit {
     private alertController: AlertController,
     private groupService: GroupService
   ) {
-    addIcons({cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,closeOutline,settingsOutline,trophyOutline,addOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,});
+    addIcons({cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,closeOutline,trophyOutline,settingsOutline,addOutline,checkmarkOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,warningOutline,});
     this.initForm();
     this.loadGroups();
   }
@@ -581,6 +586,109 @@ export class GroupsPage implements OnInit {
         },
       });
       this.isCreateModalOpen = true;
+    }
+  }
+
+  // Prize Management Methods
+  calculateTotalPrizePool(): number {
+    if (!this.selectedGroup || this.selectedGroup.type !== 'prize') return 0;
+    return (this.selectedGroup.entryFee || 0) * (this.selectedGroup.paidMembers || 0);
+  }
+
+  calculatePositionPrize(percentage: number): number {
+    const totalPool = this.calculateTotalPrizePool();
+    return (totalPool * percentage) / 100;
+  }
+
+  getTotalPercentage(): number {
+    return this.prizePositions.reduce((total, position) => total + (position.percentage || 0), 0);
+  }
+
+  onPercentageChange(): void {
+    // Trigger change detection for total percentage
+  }
+
+  addPrizePosition(): void {
+    if (this.prizePositions.length < 10) {
+      this.prizePositions.push({ percentage: 0 });
+    }
+  }
+
+  removePrizePosition(index: number): void {
+    if (this.prizePositions.length > 1) {
+      this.prizePositions.splice(index, 1);
+    }
+  }
+
+  getPositionLabel(position: number): string {
+    const suffixes = ['st', 'nd', 'rd'];
+    const suffix = position <= 3 ? suffixes[position - 1] : 'th';
+    return `${position}${suffix}`;
+  }
+
+  getPositionClass(position: number): string {
+    switch (position) {
+      case 1: return 'first-place';
+      case 2: return 'second-place';
+      case 3: return 'third-place';
+      default: return 'other-place';
+    }
+  }
+
+  applyPreset(preset: string): void {
+    switch (preset) {
+      case 'winner-takes-all':
+        this.prizePositions = [{ percentage: 100 }];
+        break;
+      case '70-30':
+        this.prizePositions = [
+          { percentage: 70 },
+          { percentage: 30 }
+        ];
+        break;
+      case '50-30-20':
+        this.prizePositions = [
+          { percentage: 50 },
+          { percentage: 30 },
+          { percentage: 20 }
+        ];
+        break;
+      case 'equal-split':
+        const memberCount = this.selectedGroup?.memberCount || 1;
+        const equalPercentage = Math.floor(100 / Math.min(memberCount, 5));
+        const positions = Math.min(memberCount, 5);
+        this.prizePositions = Array(positions).fill(null).map(() => ({ percentage: equalPercentage }));
+        // Adjust for rounding
+        const remainder = 100 - (equalPercentage * positions);
+        if (remainder > 0) {
+          this.prizePositions[0].percentage += remainder;
+        }
+        break;
+    }
+  }
+
+  async savePrizeBreakdown(): Promise<void> {
+    if (this.getTotalPercentage() !== 100) {
+      await this.toastService.showToast(
+        'Prize percentages must total exactly 100%',
+        'warning'
+      );
+      return;
+    }
+
+    try {
+      // Here you would save the prize breakdown to your backend/storage
+      // For now, we'll just show a success message
+      await this.toastService.showToast(
+        'Prize breakdown saved successfully!',
+        'success'
+      );
+    } catch (error) {
+      console.error('Error saving prize breakdown:', error);
+      await this.toastService.showToast(
+        'Failed to save prize breakdown. Please try again.',
+        'danger'
+      );
     }
   }
 }

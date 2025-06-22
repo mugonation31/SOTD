@@ -210,6 +210,10 @@
               <ion-icon name="people-outline"></ion-icon>
               <ion-label>Members</ion-label>
             </ion-segment-button>
+            <ion-segment-button value="prizes" *ngIf="selectedGroup?.type === 'prize'">
+              <ion-icon name="trophy-outline"></ion-icon>
+              <ion-label>Prizes</ion-label>
+            </ion-segment-button>
             <ion-segment-button value="settings">
               <ion-icon name="settings-outline"></ion-icon>
               <ion-label>Settings</ion-label>
@@ -253,6 +257,135 @@
               </ion-buttons>
             </ion-item>
           </ion-list>
+        </div>
+
+        <!-- Prize Management Tab -->
+        <div *ngIf="selectedTab === 'prizes' && selectedGroup?.type === 'prize'" class="prize-management">
+          <div class="prize-overview">
+            <h3>Prize Pool Overview</h3>
+            <div class="pool-stats">
+              <div class="stat-item">
+                <span class="label">Entry Fee:</span>
+                <span class="value">{{ selectedGroup?.entryFee | currency:'GBP' }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="label">Total Members:</span>
+                <span class="value">{{ selectedGroup?.memberCount }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="label">Paid Members:</span>
+                <span class="value">{{ selectedGroup?.paidMembers }}/{{ selectedGroup?.memberCount }}</span>
+              </div>
+              <div class="stat-item total-pool">
+                <span class="label">Total Prize Pool:</span>
+                <span class="value">{{ calculateTotalPrizePool() | currency:'GBP' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="prize-breakdown-config">
+            <h3>Prize Breakdown Configuration</h3>
+            <p class="config-description">Set percentage distribution for prize positions. Total must equal 100%.</p>
+            
+            <div class="prize-positions">
+              <div class="position-config" *ngFor="let position of prizePositions; let i = index">
+                <div class="position-header">
+                  <span class="position-number">{{ getPositionLabel(i + 1) }} Place</span>
+                  <ion-button 
+                    fill="clear" 
+                    color="danger" 
+                    size="small"
+                    (click)="removePrizePosition(i)"
+                    *ngIf="prizePositions.length > 1"
+                  >
+                    <ion-icon name="trash-outline"></ion-icon>
+                  </ion-button>
+                </div>
+                
+                <div class="position-inputs">
+                  <div class="percentage-input">
+                    <ion-input
+                      type="number"
+                      [(ngModel)]="position.percentage"
+                      [min]="1"
+                      [max]="100"
+                      placeholder="0"
+                      (ionInput)="onPercentageChange()"
+                    ></ion-input>
+                    <span class="percentage-symbol">%</span>
+                  </div>
+                  
+                  <div class="prize-amount">
+                    <span class="amount-label">Prize:</span>
+                    <span class="amount-value">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="config-actions">
+              <ion-button 
+                fill="outline" 
+                (click)="addPrizePosition()"
+                [disabled]="prizePositions.length >= 10"
+              >
+                <ion-icon slot="start" name="add-outline"></ion-icon>
+                Add Position
+              </ion-button>
+              
+              <div class="percentage-total" [class.invalid]="getTotalPercentage() !== 100">
+                <span>Total: {{ getTotalPercentage() }}%</span>
+                <ion-icon 
+                  [name]="getTotalPercentage() === 100 ? 'checkmark-circle-outline' : 'warning-outline'"
+                  [color]="getTotalPercentage() === 100 ? 'success' : 'warning'"
+                ></ion-icon>
+              </div>
+            </div>
+
+            <div class="quick-presets">
+              <h4>Quick Presets</h4>
+              <div class="preset-buttons">
+                <ion-button fill="outline" size="small" (click)="applyPreset('winner-takes-all')">
+                  Winner Takes All
+                </ion-button>
+                <ion-button fill="outline" size="small" (click)="applyPreset('70-30')">
+                  70% / 30%
+                </ion-button>
+                <ion-button fill="outline" size="small" (click)="applyPreset('50-30-20')">
+                  50% / 30% / 20%
+                </ion-button>
+                <ion-button fill="outline" size="small" (click)="applyPreset('equal-split')">
+                  Equal Split
+                </ion-button>
+              </div>
+            </div>
+
+            <div class="save-actions">
+              <ion-button 
+                expand="block" 
+                [disabled]="getTotalPercentage() !== 100"
+                (click)="savePrizeBreakdown()"
+              >
+                <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+                Save Prize Breakdown
+              </ion-button>
+            </div>
+          </div>
+
+          <div class="prize-preview" *ngIf="getTotalPercentage() === 100">
+            <h3>Prize Distribution Preview</h3>
+            <div class="preview-cards">
+              <div 
+                class="preview-card" 
+                *ngFor="let position of prizePositions; let i = index"
+                [class]="getPositionClass(i + 1)"
+              >
+                <div class="position-label">{{ getPositionLabel(i + 1) }}</div>
+                <div class="position-percentage">{{ position.percentage }}%</div>
+                <div class="position-prize">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Settings Tab -->
