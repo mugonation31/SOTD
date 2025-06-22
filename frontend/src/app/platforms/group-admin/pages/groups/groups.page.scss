@@ -1171,11 +1171,47 @@ ion-header {
     margin-bottom: 24px;
     border: 1px solid #e9ecef;
     
-    h3 {
-      margin: 0 0 8px 0;
-      color: var(--ion-color-dark);
-      font-size: 18px;
-      font-weight: 700;
+    .config-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      
+      h3 {
+        margin: 0;
+        color: var(--ion-color-dark);
+        font-size: 18px;
+        font-weight: 700;
+      }
+      
+      .config-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #e8f5e8;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #c3e6c3;
+        
+        ion-icon {
+          font-size: 18px;
+        }
+        
+        .status-text {
+          color: var(--ion-color-success);
+          font-weight: 600;
+          font-size: 14px;
+        }
+        
+        .edit-locked-btn {
+          --padding-start: 8px;
+          --padding-end: 8px;
+          --padding-top: 4px;
+          --padding-bottom: 4px;
+          font-size: 12px;
+          margin-left: 8px;
+        }
+      }
     }
     
     .config-description {
@@ -1183,6 +1219,15 @@ ion-header {
       color: var(--ion-color-medium);
       font-size: 14px;
       font-style: italic;
+      
+      &.locked-description {
+        color: var(--ion-color-success);
+        background: #f0f9f0;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border-left: 4px solid var(--ion-color-success);
+        font-style: normal;
+      }
     }
     
     .prize-positions {
@@ -1323,6 +1368,55 @@ ion-header {
         --padding-bottom: 16px;
         font-weight: 600;
         text-transform: none;
+        margin-bottom: 8px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+    
+    .prize-positions-locked {
+      .locked-position {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+        border-left: 4px solid var(--ion-color-success);
+        
+        .position-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          
+          .position-label {
+            font-weight: 600;
+            color: var(--ion-color-dark);
+            font-size: 14px;
+          }
+          
+          .position-details {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            
+            .percentage {
+              background: var(--ion-color-success);
+              color: white;
+              padding: 4px 12px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 14px;
+            }
+            
+            .amount {
+              color: var(--ion-color-primary);
+              font-weight: 700;
+              font-size: 16px;
+            }
+          }
+        }
       }
     }
   }

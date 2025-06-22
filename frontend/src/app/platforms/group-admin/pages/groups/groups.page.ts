@@ -97,6 +97,12 @@ interface PrizePosition {
   percentage: number;
 }
 
+interface PrizeBreakdown {
+  positions: PrizePosition[];
+  isLocked: boolean;
+  lockedAt?: Date;
+}
+
 interface Group {
   id: string;
   name: string;
@@ -111,6 +117,7 @@ interface Group {
   totalPrizePool?: number;
   adminName: string;
   leaderboard: GroupLeaderboardEntry[];
+  prizeBreakdown?: PrizeBreakdown;
 }
 
 interface CurrentAdmin {
@@ -176,6 +183,7 @@ export class GroupsPage implements OnInit {
   entryFeeOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   currentMemberCount = 0;
   prizePositions: PrizePosition[] = [{ percentage: 100 }];
+  isEditingLockedBreakdown = false;
   currentAdmin: CurrentAdmin = {
     id: '1',
     name: 'John Doe',
@@ -361,6 +369,17 @@ export class GroupsPage implements OnInit {
   async showGroupDetails(group: Group) {
     this.selectedGroup = group;
     this.filteredMembers = [...group.members];
+    
+    // Load existing prize breakdown if available
+    if (group.prizeBreakdown?.positions) {
+      this.prizePositions = [...group.prizeBreakdown.positions];
+    } else {
+      // Reset to default if no existing breakdown
+      this.prizePositions = [{ percentage: 100 }];
+    }
+    
+    // Reset edit state
+    this.isEditingLockedBreakdown = false;
   }
 
   filterMembers() {
@@ -677,18 +696,71 @@ export class GroupsPage implements OnInit {
     }
 
     try {
-      // Here you would save the prize breakdown to your backend/storage
-      // For now, we'll just show a success message
-      await this.toastService.showToast(
-        'Prize breakdown saved successfully!',
-        'success'
-      );
+      if (this.selectedGroup) {
+        // Save the prize breakdown and lock it
+        this.selectedGroup.prizeBreakdown = {
+          positions: [...this.prizePositions],
+          isLocked: true,
+          lockedAt: new Date()
+        };
+
+        // Reset edit state
+        this.isEditingLockedBreakdown = false;
+
+        // Here you would save the prize breakdown to your backend/storage
+        // For now, we'll just show a success message
+        await this.toastService.showToast(
+          'Prize breakdown saved and locked successfully!',
+          'success'
+        );
+      }
     } catch (error) {
       console.error('Error saving prize breakdown:', error);
       await this.toastService.showToast(
         'Failed to save prize breakdown. Please try again.',
         'danger'
       );
+    }
+  }
+
+  isPrizeBreakdownLocked(): boolean {
+    return this.selectedGroup?.prizeBreakdown?.isLocked ?? false;
+  }
+
+  canEditPrizeBreakdown(): boolean {
+    return !this.isPrizeBreakdownLocked() || this.isEditingLockedBreakdown;
+  }
+
+  async editLockedPrizeBreakdown(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Edit Prize Configuration',
+      message: 'Are you sure you want to edit this locked configuration?',
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'Edit',
+          handler: () => {
+            this.isEditingLockedBreakdown = true;
+            // Load existing breakdown for editing
+            if (this.selectedGroup?.prizeBreakdown?.positions) {
+              this.prizePositions = [...this.selectedGroup.prizeBreakdown.positions];
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  cancelEditLockedBreakdown(): void {
+    this.isEditingLockedBreakdown = false;
+    // Restore original positions
+    if (this.selectedGroup?.prizeBreakdown?.positions) {
+      this.prizePositions = [...this.selectedGroup.prizeBreakdown.positions];
     }
   }
 }

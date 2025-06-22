@@ -284,10 +284,30 @@
           </div>
 
           <div class="prize-breakdown-config">
-            <h3>Prize Breakdown Configuration</h3>
-            <p class="config-description">Set percentage distribution for prize positions. Total must equal 100%.</p>
+            <div class="config-header">
+              <h3>Prize Breakdown Configuration</h3>
+              <div class="config-status" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
+                <ion-icon name="lock-closed-outline" color="success"></ion-icon>
+                <span class="status-text">Configuration Locked</span>
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  (click)="editLockedPrizeBreakdown()"
+                  class="edit-locked-btn"
+                >
+                  <ion-icon slot="start" name="create-outline"></ion-icon>
+                  Edit
+                </ion-button>
+              </div>
+            </div>
+            <p class="config-description" *ngIf="!isPrizeBreakdownLocked() || isEditingLockedBreakdown">
+              Set percentage distribution for prize positions. Total must equal 100%.
+            </p>
+            <p class="config-description locked-description" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
+              Prize breakdown is configured and locked. Click "Edit" to make changes.
+            </p>
             
-            <div class="prize-positions">
+            <div class="prize-positions" *ngIf="canEditPrizeBreakdown()">
               <div class="position-config" *ngFor="let position of prizePositions; let i = index">
                 <div class="position-header">
                   <span class="position-number">{{ getPositionLabel(i + 1) }} Place</span>
@@ -323,7 +343,20 @@
               </div>
             </div>
 
-            <div class="config-actions">
+            <!-- Locked View -->
+            <div class="prize-positions-locked" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
+              <div class="locked-position" *ngFor="let position of prizePositions; let i = index">
+                <div class="position-info">
+                  <span class="position-label">{{ getPositionLabel(i + 1) }} Place</span>
+                  <div class="position-details">
+                    <span class="percentage">{{ position.percentage }}%</span>
+                    <span class="amount">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="config-actions" *ngIf="canEditPrizeBreakdown()">
               <ion-button 
                 fill="outline" 
                 (click)="addPrizePosition()"
@@ -342,7 +375,7 @@
               </div>
             </div>
 
-            <div class="quick-presets">
+            <div class="quick-presets" *ngIf="canEditPrizeBreakdown()">
               <h4>Quick Presets</h4>
               <div class="preset-buttons">
                 <ion-button fill="outline" size="small" (click)="applyPreset('winner-takes-all')">
@@ -360,7 +393,7 @@
               </div>
             </div>
 
-            <div class="save-actions">
+            <div class="save-actions" *ngIf="canEditPrizeBreakdown()">
               <ion-button 
                 expand="block" 
                 [disabled]="getTotalPercentage() !== 100"
@@ -368,6 +401,18 @@
               >
                 <ion-icon slot="start" name="checkmark-outline"></ion-icon>
                 Save Prize Breakdown
+              </ion-button>
+              
+              <!-- Cancel button for editing locked breakdown -->
+              <ion-button 
+                expand="block" 
+                fill="outline" 
+                color="medium"
+                (click)="cancelEditLockedBreakdown()"
+                *ngIf="isEditingLockedBreakdown"
+              >
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                Cancel Changes
               </ion-button>
             </div>
           </div>
