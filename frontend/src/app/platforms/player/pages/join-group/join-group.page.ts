@@ -73,7 +73,8 @@ interface Group {
 })
 export class JoinGroupPage {
   groupCode: string = '';
-  isLoading: boolean = false;
+  isSearching: boolean = false;
+  isJoining: boolean = false;
   isValidCode: boolean = false;
   showGroupDetails: boolean = false;
   foundGroup: Group | null = null;
@@ -92,10 +93,11 @@ export class JoinGroupPage {
       role: 'cancel',
       handler: () => {
         this.showGroupDetails = false;
+        this.foundGroup = null;
       },
     },
     {
-      text: 'Join',
+      text: 'Join Group',
       handler: () => {
         this.confirmJoinGroup();
       },
@@ -133,9 +135,9 @@ export class JoinGroupPage {
   }
 
   async joinGroup() {
-    if (!this.isValidCode) return;
+    if (!this.isValidCode || this.isSearching) return;
 
-    this.isLoading = true;
+    this.isSearching = true;
 
     try {
       // Find group by code
@@ -143,24 +145,24 @@ export class JoinGroupPage {
 
       if (group) {
         this.foundGroup = group;
-        // Clear input and reset states after showing dialog
+        this.showGroupDetails = true;
+        // Clear input after finding group
         this.groupCode = '';
         this.isValidCode = false;
-        this.isLoading = false;
-        this.showGroupDetails = true;
       } else {
-        await this.toastService.showToast('Group not found', 'error');
+        await this.toastService.showToast('Group not found with that code', 'error');
         // Clear the input if group is not found
         this.groupCode = '';
         this.isValidCode = false;
       }
     } catch (error) {
-      await this.toastService.showToast('Error finding group', 'error');
+      console.error('Error finding group:', error);
+      await this.toastService.showToast('Error searching for group', 'error');
       // Clear the input on error
       this.groupCode = '';
       this.isValidCode = false;
     } finally {
-      this.isLoading = false;
+      this.isSearching = false;
     }
   }
 
@@ -178,6 +180,8 @@ export class JoinGroupPage {
       message += `Entry Fee: £${this.foundGroup.entryFee}\n`;
     }
 
+    message += '\nDo you want to join this group?';
+
     return message;
   }
 
@@ -189,9 +193,9 @@ export class JoinGroupPage {
   }
 
   async confirmJoinGroup() {
-    if (!this.foundGroup) return;
+    if (!this.foundGroup || this.isJoining) return;
 
-    this.isLoading = true;
+    this.isJoining = true;
 
     try {
       const newMember = {
@@ -209,10 +213,15 @@ export class JoinGroupPage {
       );
 
       if (updatedGroup) {
+        // Close dialog immediately
+        this.showGroupDetails = false;
+        this.foundGroup = null;
+        
         // Reload the groups list after joining
         this.loadMyGroups();
+        
         await this.toastService.showToast(
-          'Successfully joined group!',
+          `Successfully joined ${updatedGroup.name}!`,
           'success'
         );
       } else {
@@ -225,10 +234,7 @@ export class JoinGroupPage {
       }
       await this.toastService.showToast(message, 'error');
     } finally {
-      // Reset all states after join attempt
-      this.isLoading = false;
-      this.showGroupDetails = false;
-      this.foundGroup = null;
+      this.isJoining = false;
     }
   }
 }
