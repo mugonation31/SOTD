@@ -38,6 +38,7 @@ import {
   cameraOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/services/auth.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -568,7 +569,7 @@ export class SettingsPage {
     },
   };
 
-  constructor(private router: Router, private toastService: ToastService) {
+  constructor(private router: Router, private toastService: ToastService, private authService: AuthService) {
     addIcons({
       personCircleOutline,
       keyOutline,
@@ -717,15 +718,18 @@ export class SettingsPage {
 
   async logout() {
     try {
-      // Clear any stored authentication data
-      localStorage.removeItem('group_admin_user');
-      localStorage.removeItem('authToken');
+      // Mark first login as complete since user is logging out from first-time page
+      this.authService.markFirstLoginComplete();
+      
+      // Perform logout
+      this.authService.logout();
       
       await this.toastService.showToast('Logged out successfully', 'success');
       
       // Redirect to centralized auth login
       this.router.navigate(['/auth/login'], { replaceUrl: true });
     } catch (error) {
+      console.error('Logout error:', error);
       await this.toastService.showToast('Error during logout', 'error');
     }
   }

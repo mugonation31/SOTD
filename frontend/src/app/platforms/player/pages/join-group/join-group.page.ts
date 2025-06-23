@@ -28,9 +28,11 @@ import {
   arrowForwardOutline,
   footballOutline,
   personOutline,
+  logOutOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
 
 interface Group {
   id: string;
@@ -107,13 +109,15 @@ export class JoinGroupPage {
   constructor(
     private router: Router,
     private toastService: ToastService,
-    private groupService: GroupService
+    private groupService: GroupService,
+    private authService: AuthService
   ) {
     addIcons({
       peopleCircleOutline,
       arrowForwardOutline,
       footballOutline,
       personOutline,
+      logOutOutline,
     });
     this.loadMyGroups();
   }
@@ -235,6 +239,24 @@ export class JoinGroupPage {
       await this.toastService.showToast(message, 'error');
     } finally {
       this.isJoining = false;
+    }
+  }
+
+  async logout() {
+    try {
+      // Mark first login as complete since user is logging out from first-time page
+      this.authService.markFirstLoginComplete();
+      
+      // Perform logout
+      this.authService.logout();
+      
+      await this.toastService.showToast('Logged out successfully', 'success');
+      
+      // Redirect to centralized auth login
+      this.router.navigate(['/auth/login'], { replaceUrl: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      await this.toastService.showToast('Error during logout', 'error');
     }
   }
 }

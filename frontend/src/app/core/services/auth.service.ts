@@ -297,7 +297,15 @@ export class AuthService {
   }
 
   logout() {
-    // Mark first login as complete when user logs out for the first time
+    this.clearUserStorage();
+    this.currentUserSubject.next(null);
+    if (this.sessionTimer) {
+      clearInterval(this.sessionTimer);
+    }
+  }
+
+  // Method to mark first login as complete (called from first-time pages)
+  markFirstLoginComplete(): void {
     const user = this.getUserFromStorage();
     if (user?.firstLogin) {
       const updatedUser: User = {
@@ -305,12 +313,7 @@ export class AuthService {
         firstLogin: false
       };
       this.setUserInStorage(updatedUser);
-    }
-    
-    this.clearUserStorage();
-    this.currentUserSubject.next(null);
-    if (this.sessionTimer) {
-      clearInterval(this.sessionTimer);
+      console.log('First login marked as complete for user:', updatedUser);
     }
   }
 
