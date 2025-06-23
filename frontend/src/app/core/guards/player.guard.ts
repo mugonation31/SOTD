@@ -13,7 +13,7 @@ export class PlayerGuard {
       return true;
     }
 
-    this.router.navigate(['/join-group']);
+    this.router.navigate(['/player/join-group']);
     return false;
   }
 }
