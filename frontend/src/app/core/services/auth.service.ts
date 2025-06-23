@@ -125,6 +125,15 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
+    // Get stored user data from signup (if exists) to preserve role
+    const storedSignupData = localStorage.getItem('pendingUserData');
+    let userRole: UserRole = 'player'; // Default role
+    
+    if (storedSignupData) {
+      const signupData = JSON.parse(storedSignupData);
+      userRole = signupData.role || 'player';
+    }
+
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -133,7 +142,7 @@ export class AuthService {
         email: loginData.email,
         firstName: 'John', // Mock name
         lastName: 'Doe', // Mock name
-        role: 'player',
+        role: userRole,
       },
     };
 
@@ -142,6 +151,10 @@ export class AuthService {
       setTimeout(() => {
         localStorage.setItem('currentUser', JSON.stringify(mockResponse));
         localStorage.setItem('lastActivity', Date.now().toString());
+        
+        // Clear pending user data after successful login
+        localStorage.removeItem('pendingUserData');
+        
         this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
         subscriber.complete();
@@ -188,6 +201,12 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    // Store user data temporarily for login to preserve role
+    localStorage.setItem('pendingUserData', JSON.stringify(userData));
+    
+    // Set first-time user flag
+    localStorage.setItem('isFirstLogin', 'true');
+
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -196,7 +215,7 @@ export class AuthService {
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: 'player',
+        role: userData.role,
       },
     };
 
@@ -231,6 +250,8 @@ export class AuthService {
   logout() {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('lastActivity');
+    localStorage.removeItem('isFirstLogin');
+    localStorage.removeItem('pendingUserData');
     this.currentUserSubject.next(null);
     if (this.sessionTimer) {
       clearInterval(this.sessionTimer);
@@ -247,5 +268,31 @@ export class AuthService {
 
   getToken(): string | null {
     return this.currentUserValue?.token || null;
+  }
+
+  isFirstTimeUser(): boolean {
+    return localStorage.getItem('isFirstLogin') === 'true';
+  }
+
+  markUserAsReturning(): void {
+    localStorage.removeItem('isFirstLogin');
+  }
+
+  getUserRole(): UserRole | null {
+    return this.currentUserValue?.user.role || null;
+  }
+
+  getDefaultDashboardRoute(): string {
+    const role = this.getUserRole();
+    switch (role) {
+      case 'super-admin':
+        return '/super-admin/dashboard';
+      case 'group-admin':
+        return '/group-admin/dashboard';
+      case 'player':
+        return '/player/dashboard';
+      default:
+        return '/welcome';
+    }
   }
 }

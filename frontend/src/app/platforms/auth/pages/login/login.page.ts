@@ -94,9 +94,9 @@ export class LoginPage implements OnInit {
   }
 
   ngOnInit() {
-    // Get return URL from route parameters or default to '/welcome'
+    // Get return URL from route parameters
     this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/welcome';
+      this.returnUrl = params['returnUrl'] || '';
     });
   }
 
@@ -138,12 +138,29 @@ export class LoginPage implements OnInit {
 
     this.authService.login(this.loginData).subscribe({
       next: () => {
-        this.router.navigate([this.returnUrl], { replaceUrl: true });
+        this.handleSuccessfulLogin();
       },
       error: (error) => {
         console.error('Login error:', error);
       },
     });
+  }
+
+  private handleSuccessfulLogin() {
+    const isFirstTime = this.authService.isFirstTimeUser();
+    
+    if (isFirstTime && this.returnUrl) {
+      // First-time user with specific return URL from signup flow
+      this.authService.markUserAsReturning();
+      this.router.navigate([this.returnUrl], { replaceUrl: true });
+    } else {
+      // Returning user OR first-time user without specific returnUrl: go to their dashboard
+      if (isFirstTime) {
+        this.authService.markUserAsReturning();
+      }
+      const dashboardRoute = this.authService.getDefaultDashboardRoute();
+      this.router.navigate([dashboardRoute], { replaceUrl: true });
+    }
   }
 
   navigateToWelcome() {
