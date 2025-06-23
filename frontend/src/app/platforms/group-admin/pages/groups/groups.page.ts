@@ -310,22 +310,12 @@ export class GroupsPage implements OnInit {
 
         // Show success message and close modal
         await this.toastService.showToast(
-          'Group created successfully!',
+          `Group "${newGroup.name}" created successfully! Ready to create another group.`,
           'success'
         );
 
-        // Reset form and close create form
-        this.groupForm.reset({
-          name: '',
-          type: 'casual',
-          entryFee: 10,
-          settings: {
-            allowPlayerInvites: true,
-            autoApproveJoins: false,
-            showLeaderboard: true,
-            allowMemberChat: true,
-          },
-        });
+        // Reset form to clean state and close create form
+        this.resetCreateForm();
         this.isCreateModalOpen = false;
       } catch (error) {
         console.error('Error creating group:', error);
@@ -586,24 +576,38 @@ export class GroupsPage implements OnInit {
     this.router.navigate(['/group-admin/groups', group.id, 'leaderboard']);
   }
 
+  // Reset form to clean default state
+  private resetCreateForm() {
+    this.groupForm.reset({
+      name: '',
+      type: 'casual',
+      entryFee: 10, // Clean default starting value
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: false,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+    });
+    
+    // Ensure entry fee control state is properly reset
+    const entryFeeControl = this.groupForm.get('entryFee');
+    if (entryFeeControl) {
+      entryFeeControl.disable(); // Start with casual (disabled state)
+    }
+    
+    // Trigger change detection to ensure UI is updated
+    this.onGroupTypeChange();
+  }
+
   // Add method to handle create button click
   toggleCreateForm() {
     if (this.isCreateModalOpen) {
       // Close the form
       this.isCreateModalOpen = false;
     } else {
-      // Reset form before showing
-      this.groupForm.reset({
-        name: '',
-        type: 'casual',
-        entryFee: 10,
-        settings: {
-          allowPlayerInvites: true,
-          autoApproveJoins: false,
-          showLeaderboard: true,
-          allowMemberChat: true,
-        },
-      });
+      // Reset form before showing with clean state
+      this.resetCreateForm();
       this.isCreateModalOpen = true;
     }
   }
