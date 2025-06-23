@@ -144,15 +144,38 @@ export class SignupPage implements OnInit {
   }
 
   ngOnInit() {
-    // Get return URL and role from route parameters
-    this.route.queryParams.subscribe(params => {
-      this.returnUrl = params['returnUrl'] || '/welcome';
-      
-      // Set the role based on the query parameter
-      if (params['role']) {
-        this.signupData.role = params['role'] as UserRole;
-      }
-    });
+    // Check if user is already authenticated
+    if (this.authService.isAuthenticated()) {
+      // User is already logged in, check if they have the right role
+      this.route.queryParams.subscribe(params => {
+        const requiredRole = params['role'] as UserRole;
+        const currentRole = this.authService.getUserRole();
+        const returnUrl = params['returnUrl'] || '/welcome';
+        
+        if (currentRole === requiredRole || 
+            (requiredRole === 'group-admin' && currentRole === 'super-admin')) {
+          // User has the required role, redirect to destination
+          this.router.navigate([returnUrl], { replaceUrl: true });
+        } else {
+          // User doesn't have the required role, they need to logout and signup with new role
+          // For now, let them continue with signup to create a new account
+          this.returnUrl = returnUrl;
+          if (requiredRole) {
+            this.signupData.role = requiredRole;
+          }
+        }
+      });
+    } else {
+      // User is not authenticated, proceed with normal signup flow
+      this.route.queryParams.subscribe(params => {
+        this.returnUrl = params['returnUrl'] || '/welcome';
+        
+        // Set the role based on the query parameter
+        if (params['role']) {
+          this.signupData.role = params['role'] as UserRole;
+        }
+      });
+    }
   }
 
   validateRequired(field: keyof ValidationErrors, value: string) {

@@ -271,7 +271,9 @@ export class AuthService {
   }
 
   isFirstTimeUser(): boolean {
-    return localStorage.getItem('isFirstLogin') === 'true';
+    const isFirst = localStorage.getItem('isFirstLogin') === 'true';
+    console.log('AuthService - isFirstTimeUser:', isFirst, 'localStorage value:', localStorage.getItem('isFirstLogin'));
+    return isFirst;
   }
 
   markUserAsReturning(): void {

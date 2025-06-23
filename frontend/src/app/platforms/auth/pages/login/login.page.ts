@@ -74,7 +74,7 @@ export class LoginPage implements OnInit {
   };
 
   showPassword = false;
-  private returnUrl: string = '/welcome';
+  private returnUrl: string = '';
 
   get canSubmit(): boolean {
     return Boolean(
@@ -148,9 +148,11 @@ export class LoginPage implements OnInit {
 
   private handleSuccessfulLogin() {
     const isFirstTime = this.authService.isFirstTimeUser();
+    console.log('Login Debug - isFirstTime:', isFirstTime, 'returnUrl:', this.returnUrl);
     
-    if (isFirstTime && this.returnUrl) {
+    if (isFirstTime && this.returnUrl && this.returnUrl.trim() !== '') {
       // First-time user with specific return URL from signup flow
+      console.log('First-time user flow - navigating to:', this.returnUrl);
       this.authService.markUserAsReturning();
       this.router.navigate([this.returnUrl], { replaceUrl: true });
     } else {
@@ -159,6 +161,7 @@ export class LoginPage implements OnInit {
         this.authService.markUserAsReturning();
       }
       const dashboardRoute = this.authService.getDefaultDashboardRoute();
+      console.log('Dashboard flow - navigating to:', dashboardRoute);
       this.router.navigate([dashboardRoute], { replaceUrl: true });
     }
   }

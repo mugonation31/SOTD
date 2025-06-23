@@ -101,7 +101,20 @@ export class WelcomePage {
 
   createGroup() {
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/group-admin/groups']);
+      // Check if user has the right role for group creation
+      const userRole = this.authService.getUserRole();
+      if (userRole === 'group-admin' || userRole === 'super-admin') {
+        this.router.navigate(['/group-admin/groups']);
+      } else {
+        // User is authenticated but doesn't have group-admin role
+        // They need to signup as group-admin
+        this.router.navigate(['/auth/signup'], {
+          queryParams: { 
+            role: 'group-admin',
+            returnUrl: '/group-admin/groups' 
+          }
+        });
+      }
     } else {
       this.router.navigate(['/auth/signup'], {
         queryParams: { 
@@ -114,12 +127,13 @@ export class WelcomePage {
 
   joinGroup() {
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/join-group']);
+      // Authenticated users can join groups regardless of role
+      this.router.navigate(['/player/join-group']);
     } else {
       this.router.navigate(['/auth/signup'], {
         queryParams: { 
           role: 'player',
-          returnUrl: '/join-group' 
+          returnUrl: '/player/join-group' 
         }
       });
     }
