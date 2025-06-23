@@ -148,21 +148,60 @@ export class LoginPage implements OnInit {
 
   private handleSuccessfulLogin() {
     const isFirstTime = this.authService.isFirstTimeUser();
-    console.log('Login Debug - isFirstTime:', isFirstTime, 'returnUrl:', this.returnUrl);
+    const userRole = this.authService.getUserRole();
     
-    if (isFirstTime && this.returnUrl && this.returnUrl.trim() !== '') {
-      // First-time user with specific return URL from signup flow
-      console.log('First-time user flow - navigating to:', this.returnUrl);
-      this.authService.markUserAsReturning();
+    console.log('Login Debug - Role:', userRole, 'First Time:', isFirstTime, 'Return URL:', this.returnUrl);
+    
+    // Handle specific return URL from external navigation (e.g., guard redirects)
+    if (this.returnUrl && this.returnUrl.trim() !== '') {
+      console.log('Redirecting to return URL:', this.returnUrl);
       this.router.navigate([this.returnUrl], { replaceUrl: true });
+      return;
+    }
+
+    // Role-based redirection based on firstLogin status
+    this.redirectBasedOnUserStatus(userRole, isFirstTime);
+  }
+
+  private redirectBasedOnUserStatus(role: string | null, isFirstTime: boolean) {
+    let targetRoute: string;
+
+    if (isFirstTime) {
+      // First-time login redirection
+      targetRoute = this.getFirstTimeRoute(role);
+      console.log('First-time user flow - navigating to:', targetRoute);
     } else {
-      // Returning user OR first-time user without specific returnUrl: go to their dashboard
-      if (isFirstTime) {
-        this.authService.markUserAsReturning();
-      }
-      const dashboardRoute = this.authService.getDefaultDashboardRoute();
-      console.log('Dashboard flow - navigating to:', dashboardRoute);
-      this.router.navigate([dashboardRoute], { replaceUrl: true });
+      // Returning user redirection
+      targetRoute = this.getDashboardRoute(role);
+      console.log('Returning user flow - navigating to:', targetRoute);
+    }
+
+    this.router.navigate([targetRoute], { replaceUrl: true });
+  }
+
+  private getFirstTimeRoute(role: string | null): string {
+    switch (role) {
+      case 'group-admin':
+        return '/group-admin/groups';
+      case 'player':
+        return '/player/join-group';
+      case 'super-admin':
+        return '/super-admin/dashboard'; // Super admin always goes to dashboard
+      default:
+        return '/welcome';
+    }
+  }
+
+  private getDashboardRoute(role: string | null): string {
+    switch (role) {
+      case 'group-admin':
+        return '/group-admin/dashboard';
+      case 'player':
+        return '/player/dashboard';
+      case 'super-admin':
+        return '/super-admin/dashboard';
+      default:
+        return '/welcome';
     }
   }
 

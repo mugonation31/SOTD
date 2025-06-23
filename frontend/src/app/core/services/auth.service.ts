@@ -7,8 +7,18 @@ import {
   encryptSensitiveData,
   hashSecurityAnswer,
 } from '../utils/encryption.utils';
+import { User } from '../interfaces/user.interface';
 
 export type UserRole = 'super-admin' | 'group-admin' | 'player';
+
+// Storage Keys - Centralized for easy management
+const STORAGE_KEYS = {
+  USER: 'user',
+  CURRENT_USER: 'currentUser', // Legacy - will be migrated
+  LAST_ACTIVITY: 'lastActivity',
+  PENDING_USER_DATA: 'pendingUserData',
+  IS_FIRST_LOGIN: 'isFirstLogin', // Legacy - will be migrated
+} as const;
 
 export interface SignupData {
   username?: string;
@@ -62,16 +72,38 @@ export class AuthService {
     this.initializeSessionTimer();
   }
 
+  // Centralized storage methods
+  private setUserInStorage(user: User): void {
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  }
+
+  private getUserFromStorage(): User | null {
+    try {
+      const userJson = localStorage.getItem(STORAGE_KEYS.USER);
+      return userJson ? JSON.parse(userJson) : null;
+    } catch (error) {
+      console.error('Error parsing user data from storage:', error);
+      return null;
+    }
+  }
+
+  private clearUserStorage(): void {
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
+    localStorage.removeItem(STORAGE_KEYS.PENDING_USER_DATA);
+    localStorage.removeItem(STORAGE_KEYS.IS_FIRST_LOGIN);
+  }
+
   private getStoredUser(): AuthResponse | null {
-    const storedUser = localStorage.getItem('currentUser');
+    const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (!storedUser) return null;
 
     const user = JSON.parse(storedUser);
-    const lastActivity = localStorage.getItem('lastActivity');
+    const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
 
     if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('lastActivity');
+      this.clearUserStorage();
       return null;
     }
 
@@ -84,7 +116,7 @@ export class AuthService {
     }
 
     this.sessionTimer = setInterval(() => {
-      const lastActivity = localStorage.getItem('lastActivity');
+      const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
       if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
         this.logout();
       }
@@ -92,7 +124,7 @@ export class AuthService {
   }
 
   private updateLastActivity() {
-    localStorage.setItem('lastActivity', Date.now().toString());
+    localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
   }
 
   private checkLoginAttempts(email: string): boolean {
@@ -126,12 +158,14 @@ export class AuthService {
 
   login(loginData: LoginData): Observable<AuthResponse> {
     // Get stored user data from signup (if exists) to preserve role
-    const storedSignupData = localStorage.getItem('pendingUserData');
+    const storedSignupData = localStorage.getItem(STORAGE_KEYS.PENDING_USER_DATA);
     let userRole: UserRole = 'player'; // Default role
+    let isFirstLogin = false;
     
     if (storedSignupData) {
       const signupData = JSON.parse(storedSignupData);
       userRole = signupData.role || 'player';
+      isFirstLogin = true; // New signup means first login
     }
 
     // Mock response for frontend development
@@ -149,11 +183,20 @@ export class AuthService {
     // Return mock response
     return new Observable((subscriber) => {
       setTimeout(() => {
-        localStorage.setItem('currentUser', JSON.stringify(mockResponse));
-        localStorage.setItem('lastActivity', Date.now().toString());
+        // Store in legacy format for compatibility
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(mockResponse));
+        localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
+        
+        // Store in new format for AuthGuard
+        const user: User = {
+          id: mockResponse.user.id,
+          role: mockResponse.user.role,
+          firstLogin: isFirstLogin
+        };
+        this.setUserInStorage(user);
         
         // Clear pending user data after successful login
-        localStorage.removeItem('pendingUserData');
+        localStorage.removeItem(STORAGE_KEYS.PENDING_USER_DATA);
         
         this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
@@ -183,7 +226,7 @@ export class AuthService {
           this.updateLastActivity();
         }),
         map((response) => {
-          localStorage.setItem('currentUser', JSON.stringify(response));
+          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response));
           this.currentUserSubject.next(response);
           return response;
         }),
@@ -202,10 +245,7 @@ export class AuthService {
 
   signup(userData: SignupData): Observable<AuthResponse> {
     // Store user data temporarily for login to preserve role
-    localStorage.setItem('pendingUserData', JSON.stringify(userData));
-    
-    // Set first-time user flag
-    localStorage.setItem('isFirstLogin', 'true');
+    localStorage.setItem(STORAGE_KEYS.PENDING_USER_DATA, JSON.stringify(userData));
 
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
@@ -223,8 +263,17 @@ export class AuthService {
     return new Observable((subscriber) => {
       setTimeout(() => {
         // Store both token and user data
-        localStorage.setItem('currentUser', JSON.stringify(mockResponse));
-        localStorage.setItem('lastActivity', Date.now().toString());
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(mockResponse));
+        localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
+        
+        // Store in new format for AuthGuard
+        const user: User = {
+          id: mockResponse.user.id,
+          role: mockResponse.user.role,
+          firstLogin: true // Signup means first login
+        };
+        this.setUserInStorage(user);
+        
         this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
         subscriber.complete();
@@ -238,8 +287,8 @@ export class AuthService {
       .post<AuthResponse>(`${this.apiUrl}/auth/signup`, signupData)
       .pipe(
         map((response) => {
-          localStorage.setItem('currentUser', JSON.stringify(response));
-          localStorage.setItem('lastActivity', Date.now().toString());
+          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response));
+          localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
           this.currentUserSubject.next(response);
           return response;
         })
@@ -248,10 +297,17 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('lastActivity');
-    localStorage.removeItem('isFirstLogin');
-    localStorage.removeItem('pendingUserData');
+    // Mark first login as complete when user logs out for the first time
+    const user = this.getUserFromStorage();
+    if (user?.firstLogin) {
+      const updatedUser: User = {
+        ...user,
+        firstLogin: false
+      };
+      this.setUserInStorage(updatedUser);
+    }
+    
+    this.clearUserStorage();
     this.currentUserSubject.next(null);
     if (this.sessionTimer) {
       clearInterval(this.sessionTimer);
@@ -270,18 +326,27 @@ export class AuthService {
     return this.currentUserValue?.token || null;
   }
 
+  // Updated to use new storage format
   isFirstTimeUser(): boolean {
-    const isFirst = localStorage.getItem('isFirstLogin') === 'true';
-    console.log('AuthService - isFirstTimeUser:', isFirst, 'localStorage value:', localStorage.getItem('isFirstLogin'));
-    return isFirst;
+    const user = this.getUserFromStorage();
+    return user?.firstLogin === true;
   }
 
+  // Updated to use new storage format
   markUserAsReturning(): void {
-    localStorage.removeItem('isFirstLogin');
+    const user = this.getUserFromStorage();
+    if (user) {
+      const updatedUser: User = {
+        ...user,
+        firstLogin: false
+      };
+      this.setUserInStorage(updatedUser);
+    }
   }
 
   getUserRole(): UserRole | null {
-    return this.currentUserValue?.user.role || null;
+    const user = this.getUserFromStorage();
+    return user?.role || this.currentUserValue?.user.role || null;
   }
 
   getDefaultDashboardRoute(): string {
@@ -293,6 +358,21 @@ export class AuthService {
         return '/group-admin/dashboard';
       case 'player':
         return '/player/dashboard';
+      default:
+        return '/welcome';
+    }
+  }
+
+  // New method to get first-time routes
+  getFirstTimeRoute(): string {
+    const role = this.getUserRole();
+    switch (role) {
+      case 'group-admin':
+        return '/group-admin/groups';
+      case 'player':
+        return '/player/join-group';
+      case 'super-admin':
+        return '/super-admin/dashboard'; // Super admin always goes to dashboard
       default:
         return '/welcome';
     }
