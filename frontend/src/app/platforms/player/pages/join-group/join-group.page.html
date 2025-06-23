@@ -1,0 +1,96 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/player/settings')">
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="people-circle-outline"></ion-icon>
+        Join a Group
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="description">
+        Enter a group code to join an existing prediction group
+      </p>
+      <div class="join-form">
+        <ion-input
+          type="text"
+          [(ngModel)]="groupCode"
+          (ionInput)="onGroupCodeInput($event)"
+          placeholder="Enter group code"
+          class="group-code-input"
+          [disabled]="isLoading"
+          maxlength="6"
+        ></ion-input>
+        <ion-button
+          expand="block"
+          (click)="joinGroup()"
+          [disabled]="!isValidCode || isLoading"
+        >
+          <ion-spinner name="dots" *ngIf="isLoading"></ion-spinner>
+          <span *ngIf="!isLoading">
+            <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+            Join Group
+          </span>
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="people-outline"></ion-icon>
+        My Groups
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div *ngIf="myGroups.length === 0" class="no-groups">
+        <p>You haven't joined any groups yet.</p>
+      </div>
+      <ion-list *ngIf="myGroups.length > 0">
+        <ion-item *ngFor="let group of myGroups">
+          <div class="group-item">
+            <div class="group-info">
+              <h3>{{ group.name }}</h3>
+              <p class="admin">Admin: {{ group.adminName }}</p>
+              <p class="members">{{ group.memberCount }} Members</p>
+            </div>
+            <div class="group-type">
+              <ion-badge
+                [color]="group.type === 'prize' ? 'warning' : 'primary'"
+              >
+                {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
+              </ion-badge>
+              <span *ngIf="group.type === 'prize'" class="entry-fee">
+                Entry Fee: £{{ group.entryFee }}
+              </span>
+            </div>
+          </div>
+        </ion-item>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
+
+<ion-alert
+  [isOpen]="showGroupDetails"
+  header="Group Details"
+  [message]="getGroupDetailsMessage()"
+  [buttons]="alertButtons"
+></ion-alert> 
