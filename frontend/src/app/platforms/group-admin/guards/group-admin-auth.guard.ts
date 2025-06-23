@@ -16,7 +16,10 @@ export class GroupAdminAuthGuard implements CanActivate {
       return true;
     }
 
-    this.router.navigate(['/group-admin/login']);
+    // Redirect to centralized auth login
+    this.router.navigate(['/auth/login'], {
+      queryParams: { returnUrl: '/group-admin/dashboard' }
+    });
     return false;
   }
 }

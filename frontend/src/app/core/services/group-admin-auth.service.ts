@@ -56,8 +56,9 @@ export class GroupAdminAuthService {
 
   logout() {
     localStorage.removeItem('group_admin_user');
+    localStorage.removeItem('authToken');
     this.currentUserSubject.next(null);
-    this.router.navigate(['/group-admin/login'], { replaceUrl: true });
+    this.router.navigate(['/auth/login'], { replaceUrl: true });
   }
 
   isAuthenticated(): boolean {

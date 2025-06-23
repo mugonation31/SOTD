@@ -717,9 +717,14 @@ export class SettingsPage {
 
   async logout() {
     try {
-      // TODO: Implement proper logout
-      await this.toastService.showToast('Logging out...', 'warning');
-      this.router.navigate(['/group-admin/login']);
+      // Clear any stored authentication data
+      localStorage.removeItem('group_admin_user');
+      localStorage.removeItem('authToken');
+      
+      await this.toastService.showToast('Logged out successfully', 'success');
+      
+      // Redirect to centralized auth login
+      this.router.navigate(['/auth/login'], { replaceUrl: true });
     } catch (error) {
       await this.toastService.showToast('Error during logout', 'error');
     }
