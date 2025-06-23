@@ -1,23 +1,30 @@
 import { Routes } from '@angular/router';
+import { AuthGuard, NoAuthGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'welcome',
+    canActivate: [NoAuthGuard],
     loadChildren: () =>
       import('./platforms/welcome/welcome.routes').then((m) => m.routes),
   },
   {
     path: 'auth',
+    canActivate: [NoAuthGuard],
     loadChildren: () =>
       import('./platforms/auth/auth.routes').then((m) => m.routes),
   },
   {
     path: 'player',
+    canActivate: [AuthGuard],
+    data: { expectedRole: 'player' },
     loadChildren: () =>
       import('./platforms/player/player.routes').then((m) => m.routes),
   },
   {
     path: 'group-admin',
+    canActivate: [AuthGuard],
+    data: { expectedRole: 'group-admin' },
     loadChildren: () =>
       import('./platforms/group-admin/group-admin.routes').then(
         (m) => m.routes
@@ -25,6 +32,8 @@ export const routes: Routes = [
   },
   {
     path: 'super-admin',
+    canActivate: [AuthGuard],
+    data: { expectedRole: 'super-admin' },
     loadChildren: () =>
       import('./platforms/super-admin/super-admin.routes').then(
         (m) => m.routes
@@ -35,4 +44,9 @@ export const routes: Routes = [
     redirectTo: 'welcome',
     pathMatch: 'full',
   },
+  // Fallback route for any unmatched paths
+  { 
+    path: '**', 
+    redirectTo: '/auth/login' 
+  }
 ];

@@ -1,10 +1,8 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from '../../core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    canActivate: [AuthGuard],
     loadComponent: () =>
       import('./layout/player-layout.page').then((m) => m.PlayerLayoutPage),
     children: [
@@ -45,6 +43,11 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
+        path: 'groups',
+        loadComponent: () =>
+          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
       },
       {
         path: '',
