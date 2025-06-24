@@ -162,9 +162,11 @@ export class AuthService {
     let userRole: UserRole = 'player'; // Default role
     let isFirstLogin = false;
     
+    let username = 'user'; // Default fallback
     if (storedSignupData) {
       const signupData = JSON.parse(storedSignupData);
       userRole = signupData.role || 'player';
+      username = signupData.username || 'user';
       isFirstLogin = true; // New signup means first login
     }
 
@@ -192,6 +194,7 @@ export class AuthService {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
           firstLogin: isFirstLogin,
+          username: username,
           firstName: mockResponse.user.firstName,
           lastName: mockResponse.user.lastName,
           email: mockResponse.user.email
@@ -274,6 +277,7 @@ export class AuthService {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
           firstLogin: true, // Signup means first login
+          username: userData.username || 'user',
           firstName: mockResponse.user.firstName,
           lastName: mockResponse.user.lastName,
           email: mockResponse.user.email
@@ -390,14 +394,8 @@ export class AuthService {
   // Get user display name for greetings
   getUserDisplayName(): string {
     const user = this.getUserFromStorage();
-    if (user?.firstName) {
-      return user.firstName;
-    }
-    // Fallback to email username if no first name
-    if (user?.email) {
-      return user.email.split('@')[0];
-    }
-    return 'User';
+    // Use username for greetings (always available since it's required)
+    return user?.username || 'User';
   }
 
   // Get time-based greeting
@@ -408,10 +406,10 @@ export class AuthService {
     return 'Good evening';
   }
 
-  // Get personalized greeting message
+  // Get personalized greeting message using username
   getPersonalizedGreeting(): string {
-    const name = this.getUserDisplayName();
+    const username = this.getUserDisplayName();
     const timeGreeting = this.getTimeBasedGreeting();
-    return `${timeGreeting}, ${name}!`;
+    return `${timeGreeting}, ${username}!`;
   }
 }

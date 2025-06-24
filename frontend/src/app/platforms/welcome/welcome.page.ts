@@ -104,7 +104,7 @@ export class WelcomePage {
       // Check if user has the right role for group creation
       const userRole = this.authService.getUserRole();
       if (userRole === 'group-admin' || userRole === 'super-admin') {
-        this.router.navigate(['/group-admin/groups']);
+      this.router.navigate(['/group-admin/groups']);
       } else {
         // User is authenticated but doesn't have group-admin role
         // They need to signup as group-admin

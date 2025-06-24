@@ -29,8 +29,8 @@ export class AuthGuard {
 
       // Check if user role matches expected role
       if (user.role === expectedRole) {
-        return true;
-      }
+      return true;
+    }
 
       // Role mismatch - redirect to login
       this.router.navigate(['/auth/login']);
@@ -38,8 +38,8 @@ export class AuthGuard {
     } catch (error) {
       // Error parsing user data - redirect to login
       console.error('Error parsing user data from localStorage:', error);
-      this.router.navigate(['/auth/login']);
-      return false;
+    this.router.navigate(['/auth/login']);
+    return false;
     }
   }
 }
@@ -69,10 +69,10 @@ export class NoAuthGuard {
           this.router.navigate(['/player/dashboard']);
           break;
         default:
-          this.router.navigate(['/welcome']);
+    this.router.navigate(['/welcome']);
       }
       
-      return false;
+    return false;
     } catch (error) {
       console.error('Error parsing user data from localStorage:', error);
       return true; // Allow access to public routes if there's an error

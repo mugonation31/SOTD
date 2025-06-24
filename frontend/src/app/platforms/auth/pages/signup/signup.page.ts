@@ -112,7 +112,7 @@ export class SignupPage implements OnInit {
   get canSubmit(): boolean {
     return Boolean(
       this.signupData.username &&
-        this.signupData.firstName &&
+      this.signupData.firstName &&
         this.signupData.lastName &&
         this.signupData.email &&
         this.signupData.password &&
@@ -142,12 +142,12 @@ export class SignupPage implements OnInit {
   ) {
     addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,checkmarkCircle,ellipseOutline,});
   }
-
+  
   ngOnInit() {
     // Check if user is already authenticated
     if (this.authService.isAuthenticated()) {
       // User is already logged in, check if they have the right role
-      this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(params => {
         const requiredRole = params['role'] as UserRole;
         const currentRole = this.authService.getUserRole();
         const returnUrl = params['returnUrl'] || '/welcome';
@@ -173,8 +173,8 @@ export class SignupPage implements OnInit {
         // Set the role based on the query parameter
         if (params['role']) {
           this.signupData.role = params['role'] as UserRole;
-        }
-      });
+      }
+    });
     }
   }
 
