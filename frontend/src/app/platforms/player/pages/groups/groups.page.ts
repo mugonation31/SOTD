@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -18,9 +18,13 @@ import {
   IonFabButton,
   IonModal,
   IonInput,
+  IonNote,
+  IonButtons,
 } from '@ionic/angular/standalone';
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
@@ -29,16 +33,26 @@ import {
   addOutline,
   closeOutline,
   enterOutline,
+  footballOutline,
+  personOutline,
+  eyeOutline,
+  cashOutline,
+  hourglassOutline,
 } from 'ionicons/icons';
+import { GroupService } from '@core/services/group.service';
+import { ToastService } from '@core/services/toast.service';
+import { UserGreetingComponent } from '../../../../shared/components/user-greeting/user-greeting.component';
 
 interface Group {
   id: string;
   name: string;
+  code: string;
   adminName: string;
   memberCount: number;
-  yourPosition: number;
-  totalMembers: number;
-  joinCode?: string;
+  type: 'casual' | 'prize';
+  entryFee?: number;
+  members: any[];
+  createdAt: Date;
 }
 
 @Component({
@@ -65,36 +79,27 @@ interface Group {
     IonFabButton,
     IonModal,
     IonInput,
+    IonNote,
+    IonButtons,
     NgFor,
     NgIf,
+    DatePipe,
     FormsModule,
+    UserGreetingComponent,
   ],
 })
-export class GroupsPage {
+export class GroupsPage implements OnInit, OnDestroy {
   isJoinModalOpen = false;
   joinCode = '';
+  isJoining = false;
+  myGroups: Group[] = [];
+  private groupsSubscription?: Subscription;
 
-  // Mock data for groups
-  myGroups: Group[] = [
-    {
-      id: '1',
-      name: 'Premier League Fanatics',
-      adminName: 'John Smith',
-      memberCount: 25,
-      yourPosition: 3,
-      totalMembers: 25,
-    },
-    {
-      id: '2',
-      name: 'Office League',
-      adminName: 'Sarah Wilson',
-      memberCount: 12,
-      yourPosition: 1,
-      totalMembers: 12,
-    },
-  ];
-
-  constructor() {
+  constructor(
+    private router: Router,
+    private groupService: GroupService,
+    private toastService: ToastService
+  ) {
     addIcons({
       peopleOutline,
       trophyOutline,
@@ -102,7 +107,31 @@ export class GroupsPage {
       addOutline,
       closeOutline,
       enterOutline,
+      footballOutline,
+      personOutline,
+      eyeOutline,
+      cashOutline,
+      hourglassOutline,
     });
+  }
+
+  ngOnInit() {
+    this.loadUserGroups();
+    
+    // Subscribe to real-time group updates
+    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
+      this.loadUserGroups();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.groupsSubscription) {
+      this.groupsSubscription.unsubscribe();
+    }
+  }
+
+  private loadUserGroups() {
+    this.myGroups = this.groupService.getUserGroups();
   }
 
   openJoinModal() {
@@ -112,19 +141,62 @@ export class GroupsPage {
 
   closeJoinModal() {
     this.isJoinModalOpen = false;
+    this.joinCode = '';
   }
 
-  joinGroup() {
-    if (this.joinCode.trim()) {
-      // TODO: Implement group joining logic
-      console.log('Joining group with code:', this.joinCode);
-      this.closeJoinModal();
+  onJoinCodeInput(event: any) {
+    const value = event.target.value.toUpperCase();
+    this.joinCode = value;
+  }
+
+  validateGroupCode(code: string): boolean {
+    const regex = /^[A-Z0-9]{6}$/;
+    return regex.test(code);
+  }
+
+  async joinGroup() {
+    if (!this.validateGroupCode(this.joinCode) || this.isJoining) return;
+
+    this.isJoining = true;
+
+    try {
+      const group = this.groupService.findGroupByCode(this.joinCode);
+      
+      if (!group) {
+        await this.toastService.showToast('Group not found with that code', 'error');
+        return;
+      }
+
+      const updatedGroup = this.groupService.joinGroup(this.joinCode);
+      
+      if (updatedGroup) {
+        await this.toastService.showToast(
+          `Successfully joined ${updatedGroup.name}!`,
+          'success'
+        );
+        this.closeJoinModal();
+      }
+    } catch (error) {
+      let message = 'Error joining group';
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      await this.toastService.showToast(message, 'error');
+    } finally {
+      this.isJoining = false;
     }
   }
 
-  viewGroupDetails(groupId: string) {
-    // TODO: Navigate to group details page
-    console.log('Viewing group details:', groupId);
+  viewGroupDetails(group: Group) {
+    // Navigate to group details/leaderboard
+    this.router.navigate(['/player/standings'], { 
+      queryParams: { groupId: group.id } 
+    });
+  }
+
+  viewGroupMembers(group: Group) {
+    // Show group members in a modal or navigate to members page
+    console.log('Viewing members for group:', group.name, group.members);
   }
 
   getPositionSuffix(position: number): string {
@@ -139,5 +211,14 @@ export class GroupsPage {
       default:
         return 'th';
     }
+  }
+
+  getUserPosition(group: Group): number {
+    // TODO: Implement actual leaderboard position calculation
+    return Math.floor(Math.random() * group.memberCount) + 1;
+  }
+
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 }

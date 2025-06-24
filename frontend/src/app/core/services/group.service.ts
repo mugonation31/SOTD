@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, BehaviorSubject } from 'rxjs';
+import { AuthService } from './auth.service';
 
 interface GroupMember {
   id: string;
@@ -45,12 +46,28 @@ interface CreateGroupDto {
 })
 export class GroupService {
   private readonly STORAGE_KEY = 'sotd_groups';
+  private readonly USER_GROUPS_KEY = 'sotd_user_groups';
+  
+  // Observable for real-time group updates
+  private groupsSubject = new BehaviorSubject<Group[]>([]);
+  public groups$ = this.groupsSubject.asObservable();
 
-  constructor() {
+  constructor(private authService: AuthService) {
     // Initialize storage if empty
     if (!localStorage.getItem(this.STORAGE_KEY)) {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
     }
+    if (!localStorage.getItem(this.USER_GROUPS_KEY)) {
+      localStorage.setItem(this.USER_GROUPS_KEY, JSON.stringify([]));
+    }
+    
+    // Load initial groups
+    this.loadGroups();
+  }
+
+  private loadGroups(): void {
+    const groups = this.getAllGroups();
+    this.groupsSubject.next(groups);
   }
 
   getAllGroups(): Group[] {
@@ -66,6 +83,30 @@ export class GroupService {
     }));
   }
 
+  // Get groups that the current user is a member of
+  getUserGroups(): Group[] {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.email) return [];
+
+    const allGroups = this.getAllGroups();
+    return allGroups.filter(group => 
+      group.members.some(member => member.email === currentUser.email)
+    );
+  }
+
+  // Get groups created by the current user (group admin)
+  getAdminGroups(): Group[] {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.email) return [];
+
+    const allGroups = this.getAllGroups();
+    return allGroups.filter(group => 
+      group.members.some(member => 
+        member.email === currentUser.email && member.role === 'admin'
+      )
+    );
+  }
+
   saveGroup(group: Group): void {
     const groups = this.getAllGroups();
     const existingIndex = groups.findIndex((g) => g.id === group.id);
@@ -77,6 +118,9 @@ export class GroupService {
     }
 
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    
+    // Trigger real-time updates
+    this.loadGroups();
   }
 
   findGroupByCode(code: string): Group | null {
@@ -85,7 +129,10 @@ export class GroupService {
     return group || null;
   }
 
-  joinGroup(groupCode: string, member: GroupMember): Group | null {
+  joinGroup(groupCode: string, customMember?: GroupMember): Group | null {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
     const groups = this.getAllGroups();
     const groupIndex = groups.findIndex((g) => g.code === groupCode);
 
@@ -93,18 +140,31 @@ export class GroupService {
 
     const group = groups[groupIndex];
 
-    // Check if member already exists
-    if (group.members.some((m) => m.email === member.email)) {
+    // Check if user already exists
+    if (group.members.some((m) => m.email === currentUser.email)) {
       throw new Error('You are already a member of this group');
     }
+
+    // Create member from current user data or use custom member
+    const member: GroupMember = customMember || {
+      id: currentUser.id,
+      name: currentUser.firstName && currentUser.lastName 
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : currentUser.username,
+      email: currentUser.email || '',
+      joinedAt: new Date(),
+      status: 'active',
+      role: 'player'
+    };
 
     // Add member to group
     group.members.push(member);
     group.memberCount = group.members.length;
 
-    // Update storage
+    // Update storage and trigger updates
     groups[groupIndex] = group;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    this.loadGroups();
 
     return group;
   }

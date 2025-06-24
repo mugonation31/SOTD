@@ -190,10 +190,8 @@ export class JoinGroupPage {
   }
 
   private loadMyGroups() {
-    const allGroups = this.groupService.getAllGroups();
-    this.myGroups = allGroups.filter((group) =>
-      group.members.some((member) => member.email === this.currentPlayer.email)
-    );
+    // Use enhanced group service to get user's groups
+    this.myGroups = this.groupService.getUserGroups();
   }
 
   async confirmJoinGroup() {
@@ -202,19 +200,8 @@ export class JoinGroupPage {
     this.isJoining = true;
 
     try {
-      const newMember = {
-        id: this.currentPlayer.id,
-        name: this.currentPlayer.name,
-        email: this.currentPlayer.email,
-        joinedAt: new Date(),
-        status: 'active' as const,
-        role: 'player' as const,
-      };
-
-      const updatedGroup = this.groupService.joinGroup(
-        this.foundGroup.code,
-        newMember
-      );
+      // Use enhanced join method that automatically uses current user data
+      const updatedGroup = this.groupService.joinGroup(this.foundGroup.code);
 
       if (updatedGroup) {
         // Close dialog immediately
@@ -228,6 +215,9 @@ export class JoinGroupPage {
           `Successfully joined ${updatedGroup.name}!`,
           'success'
         );
+        
+        // Navigate to groups page to see the new membership
+        this.router.navigate(['/player/groups'], { replaceUrl: true });
       } else {
         throw new Error('Failed to join group');
       }

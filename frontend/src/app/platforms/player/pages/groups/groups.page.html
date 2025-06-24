@@ -1,80 +1,152 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>My Groups</ion-title>
+    <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/player/settings')">
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
+  <!-- User Greeting -->
+  <app-user-greeting></app-user-greeting>
+
   <!-- My Groups -->
-  <ion-card>
+  <ion-card class="groups-card">
     <ion-card-header>
-      <ion-card-title>
+      <ion-card-title class="section-title">
         <ion-icon name="people-outline"></ion-icon>
-        Your Groups
+        Your Groups ({{ myGroups.length }})
       </ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <ion-list>
-        <ion-item *ngFor="let group of myGroups" button detail (click)="viewGroupDetails(group.id)">
-          <div class="group-container">
+      <!-- Groups List -->
+      <div *ngIf="myGroups.length > 0" class="groups-list">
+        <div *ngFor="let group of myGroups" class="group-item" (click)="viewGroupDetails(group)">
+          <div class="group-header">
             <div class="group-info">
-              <h2>{{ group.name }}</h2>
-              <p class="admin">Admin: {{ group.adminName }}</p>
+              <h3 class="group-name">{{ group.name }}</h3>
+              <p class="group-admin">
+                <ion-icon name="person-outline"></ion-icon>
+                Admin: {{ group.adminName }}
+              </p>
             </div>
-            <div class="group-stats">
-              <div class="members">
-                <ion-icon name="people-outline"></ion-icon>
-                <span>{{ group.memberCount }} members</span>
+            <div class="group-type">
+              <ion-badge [color]="group.type === 'prize' ? 'warning' : 'primary'">
+                {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
+              </ion-badge>
+            </div>
+          </div>
+
+          <div class="group-stats">
+            <div class="stat-item">
+              <ion-icon name="people-outline" color="primary"></ion-icon>
+              <div class="stat-info">
+                <span class="stat-value">{{ group.memberCount }}</span>
+                <span class="stat-label">Members</span>
               </div>
-              <div class="position">
-                <ion-icon name="trophy-outline"></ion-icon>
-                <span>{{ group.yourPosition }}<sup>{{ getPositionSuffix(group.yourPosition) }}</sup> of {{
-                  group.totalMembers }}</span>
+            </div>
+            
+            <div class="stat-item">
+              <ion-icon name="trophy-outline" color="warning"></ion-icon>
+              <div class="stat-info">
+                <span class="stat-value">#{{ getUserPosition(group) }}</span>
+                <span class="stat-label">Your Rank</span>
+              </div>
+            </div>
+
+            <div class="stat-item" *ngIf="group.type === 'prize'">
+              <ion-icon name="cash-outline" color="success"></ion-icon>
+              <div class="stat-info">
+                <span class="stat-value">£{{ group.entryFee }}</span>
+                <span class="stat-label">Entry Fee</span>
               </div>
             </div>
           </div>
-        </ion-item>
-      </ion-list>
+
+          <div class="group-actions">
+            <ion-button fill="clear" size="small" (click)="viewGroupMembers(group); $event.stopPropagation()">
+              <ion-icon name="people-outline" slot="start"></ion-icon>
+              Members
+            </ion-button>
+            <ion-button fill="clear" size="small" (click)="viewGroupDetails(group); $event.stopPropagation()">
+              <ion-icon name="eye-outline" slot="start"></ion-icon>
+              Leaderboard
+            </ion-button>
+          </div>
+        </div>
+      </div>
 
       <!-- Empty state -->
       <div class="empty-state" *ngIf="myGroups.length === 0">
-        <ion-icon name="people-outline"></ion-icon>
+        <div class="empty-icon">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
         <h3>No Groups Yet</h3>
-        <p>Join a group to compete with friends and colleagues</p>
+        <p>Join a group to compete with friends and colleagues in prediction challenges</p>
+        <ion-button expand="block" (click)="openJoinModal()" class="join-first-group-btn">
+          <ion-icon name="person-add-outline" slot="start"></ion-icon>
+          Join Your First Group
+        </ion-button>
       </div>
     </ion-card-content>
   </ion-card>
 
   <!-- Join Group FAB -->
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" *ngIf="myGroups.length > 0">
     <ion-fab-button (click)="openJoinModal()">
-      <ion-icon name="person-add-outline"></ion-icon>
+      <ion-icon name="add-outline"></ion-icon>
     </ion-fab-button>
   </ion-fab>
 
   <!-- Join Group Modal -->
-  <ion-modal [isOpen]="isJoinModalOpen" [breakpoints]="[0.5]" [initialBreakpoint]="0.5">
+  <ion-modal [isOpen]="isJoinModalOpen" [breakpoints]="[0, 0.5, 0.8]" [initialBreakpoint]="0.5">
     <ng-template>
-      <ion-content>
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>Join a Group</h2>
-            <ion-button fill="clear" (click)="closeJoinModal()">
-              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
-            </ion-button>
-          </div>
+      <ion-content class="modal-content">
+        <div class="modal-header">
+          <h2>Join a Group</h2>
+          <ion-button fill="clear" (click)="closeJoinModal()">
+            <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
 
-          <div class="join-form">
-            <p>Enter the group join code provided by the group admin</p>
-            <ion-input label="Join Code" labelPlacement="stacked" [(ngModel)]="joinCode" placeholder="Enter code"
-              class="join-input">
-            </ion-input>
+        <div class="join-form">
+          <p class="modal-description">
+            Enter the 6-character group code provided by the group admin
+          </p>
+          
+          <ion-input 
+            label="Group Code" 
+            labelPlacement="stacked" 
+            [(ngModel)]="joinCode" 
+            (ionInput)="onJoinCodeInput($event)"
+            placeholder="Enter 6-character code"
+            maxlength="6"
+            class="join-input"
+            [disabled]="isJoining">
+          </ion-input>
 
-            <ion-button expand="block" (click)="joinGroup()" [disabled]="!joinCode.trim()">
-              <ion-icon name="enter-outline" slot="start"></ion-icon>
-              Join Group
-            </ion-button>
-          </div>
+          <ion-note *ngIf="joinCode && !validateGroupCode(joinCode)" color="danger">
+            Group code must be 6 characters (letters and numbers only)
+          </ion-note>
+
+          <ion-button 
+            expand="block" 
+            (click)="joinGroup()" 
+            [disabled]="!validateGroupCode(joinCode) || isJoining"
+            class="join-button">
+            <ion-icon *ngIf="!isJoining" name="enter-outline" slot="start"></ion-icon>
+            <ion-icon *ngIf="isJoining" name="hourglass-outline" slot="start"></ion-icon>
+            {{ isJoining ? 'Joining...' : 'Join Group' }}
+          </ion-button>
         </div>
       </ion-content>
     </ng-template>

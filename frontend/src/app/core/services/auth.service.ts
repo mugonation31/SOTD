@@ -412,4 +412,9 @@ export class AuthService {
     const timeGreeting = this.getTimeBasedGreeting();
     return `${timeGreeting}, ${username}!`;
   }
+
+  // Public method to get current user data
+  getCurrentUser(): User | null {
+    return this.getUserFromStorage();
+  }
 }
