@@ -32,6 +32,7 @@ import {
   removeOutline,
   personOutline,
 } from 'ionicons/icons';
+import { UserGreetingComponent } from '../../../../shared/components/user-greeting/user-greeting.component';
 
 interface GameweekMatch {
   homeTeam: string;
@@ -89,6 +90,7 @@ interface LeaderboardPlayer {
     DatePipe,
     NgFor,
     NgIf,
+    UserGreetingComponent,
   ],
 })
 export class DashboardPage {

@@ -191,7 +191,10 @@ export class AuthService {
         const user: User = {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
-          firstLogin: isFirstLogin
+          firstLogin: isFirstLogin,
+          firstName: mockResponse.user.firstName,
+          lastName: mockResponse.user.lastName,
+          email: mockResponse.user.email
         };
         this.setUserInStorage(user);
         
@@ -270,7 +273,10 @@ export class AuthService {
         const user: User = {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
-          firstLogin: true // Signup means first login
+          firstLogin: true, // Signup means first login
+          firstName: mockResponse.user.firstName,
+          lastName: mockResponse.user.lastName,
+          email: mockResponse.user.email
         };
         this.setUserInStorage(user);
         
@@ -379,5 +385,33 @@ export class AuthService {
       default:
         return '/welcome';
     }
+  }
+
+  // Get user display name for greetings
+  getUserDisplayName(): string {
+    const user = this.getUserFromStorage();
+    if (user?.firstName) {
+      return user.firstName;
+    }
+    // Fallback to email username if no first name
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  }
+
+  // Get time-based greeting
+  getTimeBasedGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  // Get personalized greeting message
+  getPersonalizedGreeting(): string {
+    const name = this.getUserDisplayName();
+    const timeGreeting = this.getTimeBasedGreeting();
+    return `${timeGreeting}, ${name}!`;
   }
 }

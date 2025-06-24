@@ -32,11 +32,13 @@ import {
   footballOutline,
   eyeOutline,
   starOutline,
+  star,
   checkmarkCircleOutline,
   mailOutline,
   flashOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
+import { UserGreetingComponent } from '../../../../shared/components/user-greeting/user-greeting.component';
 
 interface TopPerformer {
   name: string;
@@ -101,6 +103,7 @@ interface GroupStats {
     CurrencyPipe,
     NgFor,
     NgIf,
+    UserGreetingComponent,
   ],
 })
 export class DashboardPage {
@@ -171,20 +174,7 @@ export class DashboardPage {
   };
 
   constructor(private router: Router, private toastService: ToastService) {
-    addIcons({
-      peopleOutline,
-      cashOutline,
-      trophyOutline,
-      statsChartOutline,
-      timeOutline,
-      peopleCircleOutline,
-      footballOutline,
-      eyeOutline,
-      starOutline,
-      checkmarkCircleOutline,
-      mailOutline,
-      flashOutline,
-    });
+    addIcons({trophyOutline,checkmarkCircleOutline,star,footballOutline,timeOutline,mailOutline,peopleOutline,cashOutline,starOutline,statsChartOutline,flashOutline,eyeOutline,peopleCircleOutline,});
   }
 
   async sendReminder(member: PendingMember) {
