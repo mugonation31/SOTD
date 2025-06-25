@@ -16,139 +16,52 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <!-- Segment Control -->
-  <ion-segment [(ngModel)]="selectedSegment" class="standings-segment">
-    <ion-segment-button value="group">
-      <ion-icon name="people-outline"></ion-icon>
-      My Group
-    </ion-segment-button>
-    <ion-segment-button value="overall">
-      <ion-icon name="trophy-outline"></ion-icon>
-      Overall League
-    </ion-segment-button>
-  </ion-segment>
-
-  <!-- Overall Standings -->
-  <div *ngIf="selectedSegment === 'overall'">
-    <ion-card>
-      <ion-card-header>
-        <ion-card-title>Overall League Standings</ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <!-- Table Header -->
-        <div class="table-header">
-          <div class="position-col">Position</div>
-          <div class="name-col">Name</div>
-          <div class="gameweek-col">Game Week</div>
-          <div class="joker-col">Played Joker</div>
-          <div class="points-col">Points</div>
-        </div>
-
-        <!-- Table Body -->
-        <div class="table-body">
-          <div class="table-row" *ngFor="let player of overallStandings">
-            <div class="position-col">
-              {{ player.position }}
-              <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
-                [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))"
-                class="position-change-icon">
-              </ion-icon>
-            </div>
-            <div class="name-col">{{ player.name }}</div>
-            <div class="gameweek-col">{{ player.played }}</div>
-            <div class="joker-col">{{ player.jokerUsed || '0' }}/2</div>
-            <div class="points-col">{{ player.points }}</div>
-          </div>
-        </div>
-      </ion-card-content>
-    </ion-card>
+  <!-- Page Title -->
+  <div class="page-header">
+    <h1>My Groups</h1>
+    <p *ngIf="groupStandings.length > 0">{{ groupStandings.length }} group{{ groupStandings.length === 1 ? '' : 's' }} joined</p>
   </div>
 
-  <!-- Group Standings -->
-  <div *ngIf="selectedSegment === 'group'">
-    <!-- No Groups Message -->
-    <ion-card *ngIf="groupStandings.length === 0">
-      <ion-card-content class="text-center">
-        <ion-icon name="people-outline" size="large" color="medium"></ion-icon>
-        <h3>No Groups Joined</h3>
-        <p>Join a group to see your standings!</p>
-        <ion-button (click)="navigateTo('/player/join-group')" fill="outline">
-          <ion-icon name="person-add-outline" slot="start"></ion-icon>
-          Join a Group
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
+  <!-- No Groups Message -->
+  <ion-card *ngIf="groupStandings.length === 0" class="empty-state">
+    <ion-card-content>
+      <ion-icon name="people-outline" size="large" color="medium"></ion-icon>
+      <h3>No Groups Joined</h3>
+      <p>Join a group to see your standings!</p>
+      <ion-button (click)="navigateTo('/player/join-group')" fill="outline">
+        <ion-icon name="person-add-outline" slot="start"></ion-icon>
+        Join a Group
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
 
-    <!-- Group Selection (if multiple groups) -->
-    <ion-card *ngIf="groupStandings.length > 1" class="group-selector">
-      <ion-card-content>
-        <h4>Select Group:</h4>
-        <ion-segment [(ngModel)]="selectedGroupIndex" class="group-segment">
-          <ion-segment-button 
-            *ngFor="let standing of groupStandings; index as i" 
-            [value]="i"
-            (click)="selectGroup(i)">
-            {{ standing.group.name }}
-            <ion-badge *ngIf="standing.userPosition" color="primary">
-              #{{ standing.userPosition }}
-            </ion-badge>
-          </ion-segment-button>
-        </ion-segment>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- Current Group Standings -->
-    <ion-card *ngIf="currentGroup">
-      <ion-card-header>
-        <ion-card-title>
-          {{ currentGroup.group.name }} Standings
-        </ion-card-title>
-        <div class="group-info">
-          <ion-badge color="medium">{{ currentGroup.group.memberCount }} members</ion-badge>
-          <ion-badge [color]="currentGroup.group.type === 'prize' ? 'warning' : 'success'">
-            {{ currentGroup.group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
-          </ion-badge>
-          <span class="group-code">Code: {{ currentGroup.group.code }}</span>
-        </div>
-      </ion-card-header>
-      <ion-card-content>
-        <!-- Your Position Highlight -->
-        <div *ngIf="currentGroup.userPosition" class="user-position-highlight">
-          <h4>Your Position: #{{ currentGroup.userPosition }}</h4>
-        </div>
-
-        <!-- Table Header -->
-        <div class="table-header">
-          <div class="position-col">Position</div>
-          <div class="name-col">Name</div>
-          <div class="gameweek-col">Game Week</div>
-          <div class="joker-col">Played Joker</div>
-          <div class="points-col">Points</div>
-        </div>
-
-        <!-- Table Body -->
-        <div class="table-body">
-          <div 
-            class="table-row" 
-            *ngFor="let player of currentGroupStandings"
-            [class.current-user]="isCurrentUser(player.userId)">
-            <div class="position-col">
-              {{ player.position }}
-              <ion-icon [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
-                [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))"
-                class="position-change-icon">
-              </ion-icon>
-            </div>
-            <div class="name-col">
-              {{ player.name }}
-              <ion-badge *ngIf="isCurrentUser(player.userId)" color="primary" class="you-badge">YOU</ion-badge>
-            </div>
-            <div class="gameweek-col">{{ player.played }}</div>
-            <div class="joker-col">{{ player.jokerUsed || '0' }}/2</div>
-            <div class="points-col">{{ player.points }}</div>
+  <!-- Groups List -->
+  <ion-list *ngIf="groupStandings.length > 0">
+    <ion-item 
+      *ngFor="let groupStanding of groupStandings; trackBy: trackByGroupId" 
+      button 
+      (click)="viewGroupStandings(groupStanding.group.id)"
+      class="group-item">
+      
+      <div class="group-content">
+        <div class="group-main">
+          <h3 class="group-name">{{ groupStanding.group.name }}</h3>
+          <div class="group-details">
+            <span class="member-count">{{ groupStanding.group.memberCount }} members</span>
+            <span class="group-type" [class.prize]="groupStanding.group.type === 'prize'">
+              {{ groupStanding.group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
+            </span>
           </div>
+          <p class="group-code">Code: {{ groupStanding.group.code }}</p>
         </div>
-      </ion-card-content>
-    </ion-card>
-  </div>
+        
+        <div class="user-position" *ngIf="groupStanding.userPosition">
+          <div class="position-number">#{{ groupStanding.userPosition }}</div>
+          <div class="position-label">Your Position</div>
+        </div>
+      </div>
+      
+      <ion-icon name="chevron-forward-outline" slot="end" color="medium"></ion-icon>
+    </ion-item>
+  </ion-list>
 </ion-content>

@@ -29,7 +29,7 @@ import {
   removeOutline,
   peopleOutline,
   footballOutline,
-  personOutline, personAddOutline } from 'ionicons/icons';
+  personOutline, personAddOutline, chevronForwardOutline } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
@@ -91,55 +91,16 @@ interface GroupStanding {
   ],
 })
 export class StandingsPage implements OnInit, OnDestroy {
-  selectedSegment = 'group';
   currentUserId: string | null = null;
   groupStandings: GroupStanding[] = [];
-  selectedGroupIndex = 0;
   private groupsSubscription?: Subscription;
-
-  // Mock data for overall standings (keep for now)
-  overallStandings: Standing[] = [
-    {
-      position: 1,
-      previousPosition: 1,
-      userId: '1',
-      name: 'John Smith',
-      played: 15,
-      points: 245,
-      correctScores: 18,
-      correctResults: 35,
-      jokerUsed: 1,
-    },
-    {
-      position: 2,
-      previousPosition: 3,
-      userId: '2',
-      name: 'You',
-      played: 15,
-      points: 230,
-      correctScores: 16,
-      correctResults: 32,
-      jokerUsed: 2,
-    },
-    {
-      position: 3,
-      previousPosition: 2,
-      userId: '3',
-      name: 'Sarah Wilson',
-      played: 15,
-      points: 225,
-      correctScores: 15,
-      correctResults: 33,
-      jokerUsed: 1,
-    },
-  ];
 
   constructor(
     private router: Router,
     private groupService: GroupService,
     private authService: AuthService
   ) {
-    addIcons({footballOutline,personOutline,peopleOutline,trophyOutline,personAddOutline,arrowUpOutline,arrowDownOutline,removeOutline,});
+    addIcons({footballOutline,personOutline,peopleOutline,personAddOutline,chevronForwardOutline,trophyOutline,arrowUpOutline,arrowDownOutline,removeOutline,});
   }
 
   ngOnInit() {
@@ -196,16 +157,13 @@ export class StandingsPage implements OnInit, OnDestroy {
     }));
   }
 
-  get currentGroupStandings(): Standing[] {
-    return this.groupStandings[this.selectedGroupIndex]?.leaderboard || [];
+  // Track by function for better performance when rendering groups
+  trackByGroupId(index: number, item: GroupStanding): string {
+    return item.group.id;
   }
 
-  get currentGroup(): GroupStanding | null {
-    return this.groupStandings[this.selectedGroupIndex] || null;
-  }
-
-  selectGroup(index: number) {
-    this.selectedGroupIndex = index;
+  viewGroupStandings(groupId: string) {
+    this.router.navigate(['/player/group-standings', groupId]);
   }
 
   getPositionChange(current: number, previous: number): string {
