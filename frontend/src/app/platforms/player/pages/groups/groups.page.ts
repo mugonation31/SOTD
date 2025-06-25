@@ -41,7 +41,6 @@ import {
 } from 'ionicons/icons';
 import { GroupService } from '@core/services/group.service';
 import { ToastService } from '@core/services/toast.service';
-import { UserGreetingComponent } from '../../../../shared/components/user-greeting/user-greeting.component';
 
 interface Group {
   id: string;
@@ -85,7 +84,6 @@ interface Group {
     NgIf,
     DatePipe,
     FormsModule,
-    UserGreetingComponent,
   ],
 })
 export class GroupsPage implements OnInit, OnDestroy {

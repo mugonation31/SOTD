@@ -157,19 +157,6 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
-    // Get stored user data from signup (if exists) to preserve role
-    const storedSignupData = localStorage.getItem(STORAGE_KEYS.PENDING_USER_DATA);
-    let userRole: UserRole = 'player'; // Default role
-    let isFirstLogin = false;
-    
-    let username = 'user'; // Default fallback
-    if (storedSignupData) {
-      const signupData = JSON.parse(storedSignupData);
-      userRole = signupData.role || 'player';
-      username = signupData.username || 'user';
-      isFirstLogin = true; // New signup means first login
-    }
-
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -178,7 +165,7 @@ export class AuthService {
         email: loginData.email,
         firstName: 'John', // Mock name
         lastName: 'Doe', // Mock name
-        role: userRole,
+        role: 'player', // Default role for now
       },
     };
 
@@ -193,16 +180,13 @@ export class AuthService {
         const user: User = {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
-          firstLogin: isFirstLogin,
-          username: username,
+          firstLogin: false, // Keep it simple
+          username: 'user', // Default username
           firstName: mockResponse.user.firstName,
           lastName: mockResponse.user.lastName,
           email: mockResponse.user.email
         };
         this.setUserInStorage(user);
-        
-        // Clear pending user data after successful login
-        localStorage.removeItem(STORAGE_KEYS.PENDING_USER_DATA);
         
         this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
@@ -250,9 +234,6 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
-    // Store user data temporarily for login to preserve role
-    localStorage.setItem(STORAGE_KEYS.PENDING_USER_DATA, JSON.stringify(userData));
-
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -265,26 +246,9 @@ export class AuthService {
       },
     };
 
-    // Return mock response
+    // Return mock response - just return success without storing
     return new Observable((subscriber) => {
       setTimeout(() => {
-        // Store both token and user data
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(mockResponse));
-        localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
-        
-        // Store in new format for AuthGuard
-        const user: User = {
-          id: mockResponse.user.id,
-          role: mockResponse.user.role,
-          firstLogin: true, // Signup means first login
-          username: userData.username || 'user',
-          firstName: mockResponse.user.firstName,
-          lastName: mockResponse.user.lastName,
-          email: mockResponse.user.email
-        };
-        this.setUserInStorage(user);
-        
-        this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
         subscriber.complete();
       }, 500); // Simulate network delay

@@ -53,6 +53,7 @@ import {
   banOutline,
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
+import { GroupService } from '@core/services/group.service';
 
 interface Member {
   id: string;
@@ -626,7 +627,7 @@ export class MembersPage implements OnInit {
 
   filteredMembers: Member[] = [];
 
-  constructor() {
+  constructor(private groupService: GroupService) {
     addIcons({
       personOutline,
       peopleOutline,
@@ -647,7 +648,31 @@ export class MembersPage implements OnInit {
   }
 
   ngOnInit() {
+    this.loadMembersFromGroups();
     this.applyFilters();
+  }
+
+  private loadMembersFromGroups() {
+    // Get all groups and extract members
+    const groups = this.groupService.getAdminGroups();
+    const allMembers: Member[] = [];
+
+    groups.forEach(group => {
+      group.members.forEach(member => {
+        allMembers.push({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          joinedAt: member.joinedAt,
+          groupName: group.name,
+          role: member.role,
+          predictions: 0, // TODO: Get from predictions service
+          status: member.status === 'inactive' ? 'removed' : member.status,
+        });
+      });
+    });
+
+    this.members = allMembers;
   }
 
   getMemberCount(filter: string): number {

@@ -82,12 +82,7 @@ export class JoinGroupPage {
   foundGroup: Group | null = null;
   myGroups: Group[] = [];
 
-  // Mock current player data - in a real app, this would come from an auth service
-  currentPlayer = {
-    id: crypto.randomUUID(),
-    name: 'Player User',
-    email: 'player@example.com',
-  };
+  currentPlayer = this.authService.getCurrentUser();
 
   alertButtons = [
     {
@@ -232,21 +227,5 @@ export class JoinGroupPage {
     }
   }
 
-  async logout() {
-    try {
-      // Mark first login as complete since user is logging out from first-time page
-      this.authService.markFirstLoginComplete();
-      
-      // Perform logout
-      this.authService.logout();
-      
-      await this.toastService.showToast('Logged out successfully', 'success');
-      
-      // Redirect to centralized auth login
-      this.router.navigate(['/auth/login'], { replaceUrl: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-      await this.toastService.showToast('Error during logout', 'error');
-    }
-  }
+
 }

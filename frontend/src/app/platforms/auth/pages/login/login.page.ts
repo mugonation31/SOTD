@@ -147,10 +147,7 @@ export class LoginPage implements OnInit {
   }
 
   private handleSuccessfulLogin() {
-    const isFirstTime = this.authService.isFirstTimeUser();
     const userRole = this.authService.getUserRole();
-    
-    console.log('Login Debug - Role:', userRole, 'First Time:', isFirstTime, 'Return URL:', this.returnUrl);
     
     // Handle specific return URL from external navigation (e.g., guard redirects)
     if (this.returnUrl && this.returnUrl.trim() !== '') {
@@ -159,50 +156,29 @@ export class LoginPage implements OnInit {
       return;
     }
 
-    // Role-based redirection based on firstLogin status
-    this.redirectBasedOnUserStatus(userRole, isFirstTime);
+    // Simple role-based redirection to dashboards
+    this.redirectBasedOnRole(userRole);
   }
 
-  private redirectBasedOnUserStatus(role: string | null, isFirstTime: boolean) {
+  private redirectBasedOnRole(role: string | null) {
     let targetRoute: string;
 
-    if (isFirstTime) {
-      // First-time login redirection
-      targetRoute = this.getFirstTimeRoute(role);
-      console.log('First-time user flow - navigating to:', targetRoute);
-    } else {
-      // Returning user redirection
-      targetRoute = this.getDashboardRoute(role);
-      console.log('Returning user flow - navigating to:', targetRoute);
+    switch (role) {
+      case 'group-admin':
+        targetRoute = '/group-admin/dashboard';
+        break;
+      case 'player':
+        targetRoute = '/player/dashboard';
+        break;
+      case 'super-admin':
+        targetRoute = '/super-admin/dashboard';
+        break;
+      default:
+        targetRoute = '/welcome';
     }
 
+    console.log('Redirecting to dashboard:', targetRoute);
     this.router.navigate([targetRoute], { replaceUrl: true });
-  }
-
-  private getFirstTimeRoute(role: string | null): string {
-    switch (role) {
-      case 'group-admin':
-        return '/group-admin/groups';
-      case 'player':
-        return '/player/join-group';
-      case 'super-admin':
-        return '/super-admin/dashboard'; // Super admin always goes to dashboard
-      default:
-        return '/welcome';
-    }
-  }
-
-  private getDashboardRoute(role: string | null): string {
-    switch (role) {
-      case 'group-admin':
-        return '/group-admin/dashboard';
-      case 'player':
-        return '/player/dashboard';
-      case 'super-admin':
-        return '/super-admin/dashboard';
-      default:
-        return '/welcome';
-    }
   }
 
   navigateToWelcome() {

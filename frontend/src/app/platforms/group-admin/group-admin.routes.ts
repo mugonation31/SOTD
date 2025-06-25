@@ -55,6 +55,11 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'leaderboard',
+        loadComponent: () =>
+          import('./pages/leaderboard/leaderboard.page').then((m) => m.LeaderboardPage),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
