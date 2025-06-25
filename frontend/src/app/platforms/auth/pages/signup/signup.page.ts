@@ -258,8 +258,13 @@ export class SignupPage implements OnInit {
     const { confirmPassword, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
       next: () => {
-        // After successful signup, redirect to login
-        this.router.navigate(['/auth/login']);
+        // After successful signup, redirect to login with role and return URL
+        this.router.navigate(['/auth/login'], {
+          queryParams: {
+            returnUrl: this.returnUrl,
+            role: this.signupData.role
+          }
+        });
       },
       error: (error) => {
         // TODO: Add proper error handling with Toast service

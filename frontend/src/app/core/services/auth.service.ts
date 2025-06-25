@@ -93,6 +93,14 @@ export class AuthService {
     localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
     localStorage.removeItem(STORAGE_KEYS.PENDING_USER_DATA);
     localStorage.removeItem(STORAGE_KEYS.IS_FIRST_LOGIN);
+    
+    // Clean up any pending role data (mock behavior cleanup)
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('pendingRole_')) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 
   private getStoredUser(): AuthResponse | null {
@@ -157,6 +165,18 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
+    // For mock purposes, try to determine role from stored signup data or default to player
+    // In a real app, this would come from the backend
+    let userRole: UserRole = 'player';
+    
+    // Check if we have stored role information from signup
+    const storedRole = localStorage.getItem(`pendingRole_${loginData.email}`);
+    if (storedRole && ['player', 'group-admin', 'super-admin'].includes(storedRole)) {
+      userRole = storedRole as UserRole;
+      // Clean up the temporary role storage
+      localStorage.removeItem(`pendingRole_${loginData.email}`);
+    }
+
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -165,7 +185,7 @@ export class AuthService {
         email: loginData.email,
         firstName: 'John', // Mock name
         lastName: 'Doe', // Mock name
-        role: 'player', // Default role for now
+        role: userRole,
       },
     };
 
@@ -177,10 +197,14 @@ export class AuthService {
         localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
         
         // Store in new format for AuthGuard
+        // Check if this user has completed first login before
+        const hasCompletedFirstLogin = localStorage.getItem(`firstLoginComplete_${mockResponse.user.email}`) === 'true';
+        const isFirstLogin = !hasCompletedFirstLogin;
+        
         const user: User = {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
-          firstLogin: false, // Keep it simple
+          firstLogin: isFirstLogin,
           username: 'user', // Default username
           firstName: mockResponse.user.firstName,
           lastName: mockResponse.user.lastName,
@@ -234,6 +258,9 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    // Store the role temporarily for login (mock behavior)
+    localStorage.setItem(`pendingRole_${userData.email}`, userData.role);
+    
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
@@ -271,10 +298,21 @@ export class AuthService {
   }
 
   logout() {
+    // Store user email to track that they have completed first login
+    const user = this.getUserFromStorage();
+    if (user?.firstLogin && user.email) {
+      // Mark this user as having completed first login
+      localStorage.setItem(`firstLoginComplete_${user.email}`, 'true');
+    }
+    
     this.clearUserStorage();
     this.currentUserSubject.next(null);
     if (this.sessionTimer) {
       clearInterval(this.sessionTimer);
+    }
+    // Redirect to login page after logout
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.href = '/auth/login';
     }
   }
 

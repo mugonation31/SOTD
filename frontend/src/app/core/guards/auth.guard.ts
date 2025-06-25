@@ -57,19 +57,40 @@ export class NoAuthGuard {
         return true; // No authenticated user, allow access to public routes
       }
 
-      // User is authenticated, redirect to their appropriate dashboard
-      switch (user.role) {
-        case 'super-admin':
-          this.router.navigate(['/super-admin/dashboard']);
-          break;
-        case 'group-admin':
-          this.router.navigate(['/group-admin/dashboard']);
-          break;
-        case 'player':
-          this.router.navigate(['/player/dashboard']);
-          break;
-        default:
-    this.router.navigate(['/welcome']);
+      // User is authenticated, redirect to their appropriate route
+      // Check if this is a first login to determine destination
+      const isFirstLogin = user.firstLogin === true;
+      
+      if (isFirstLogin) {
+        // First time user - redirect to first-time routes
+        switch (user.role) {
+          case 'super-admin':
+            this.router.navigate(['/super-admin/dashboard']);
+            break;
+          case 'group-admin':
+            this.router.navigate(['/group-admin/groups']);
+            break;
+          case 'player':
+            this.router.navigate(['/player/join-group']);
+            break;
+          default:
+            this.router.navigate(['/welcome']);
+        }
+      } else {
+        // Returning user - redirect to dashboard
+        switch (user.role) {
+          case 'super-admin':
+            this.router.navigate(['/super-admin/dashboard']);
+            break;
+          case 'group-admin':
+            this.router.navigate(['/group-admin/dashboard']);
+            break;
+          case 'player':
+            this.router.navigate(['/player/dashboard']);
+            break;
+          default:
+            this.router.navigate(['/welcome']);
+        }
       }
       
     return false;

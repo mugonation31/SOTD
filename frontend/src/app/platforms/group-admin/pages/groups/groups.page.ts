@@ -68,6 +68,7 @@ import {
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
 
 interface GroupMember {
   id: string;
@@ -205,7 +206,8 @@ export class GroupsPage implements OnInit {
     private toastService: ToastService,
     private router: Router,
     private alertController: AlertController,
-    private groupService: GroupService
+    private groupService: GroupService,
+    private authService: AuthService
   ) {
     addIcons({cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,closeOutline,trophyOutline,settingsOutline,addOutline,checkmarkOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,warningOutline,});
     this.initForm();

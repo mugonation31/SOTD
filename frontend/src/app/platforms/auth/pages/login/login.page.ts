@@ -163,21 +163,41 @@ export class LoginPage implements OnInit {
   private redirectBasedOnRole(role: string | null) {
     let targetRoute: string;
 
-    switch (role) {
-      case 'group-admin':
-        targetRoute = '/group-admin/dashboard';
-        break;
-      case 'player':
-        targetRoute = '/player/dashboard';
-        break;
-      case 'super-admin':
-        targetRoute = '/super-admin/dashboard';
-        break;
-      default:
-        targetRoute = '/welcome';
+    // Check if this is a first login - redirect to appropriate first-time route
+    const isFirstLogin = this.authService.isFirstTimeUser();
+    
+    if (isFirstLogin) {
+      switch (role) {
+        case 'group-admin':
+          targetRoute = '/group-admin/groups';
+          break;
+        case 'player':
+          targetRoute = '/player/join-group';
+          break;
+        case 'super-admin':
+          targetRoute = '/super-admin/dashboard';
+          break;
+        default:
+          targetRoute = '/welcome';
+      }
+    } else {
+      // Returning user - redirect to dashboard
+      switch (role) {
+        case 'group-admin':
+          targetRoute = '/group-admin/dashboard';
+          break;
+        case 'player':
+          targetRoute = '/player/dashboard';
+          break;
+        case 'super-admin':
+          targetRoute = '/super-admin/dashboard';
+          break;
+        default:
+          targetRoute = '/welcome';
+      }
     }
 
-    console.log('Redirecting to dashboard:', targetRoute);
+    console.log('Redirecting to:', targetRoute, 'isFirstLogin:', isFirstLogin);
     this.router.navigate([targetRoute], { replaceUrl: true });
   }
 
