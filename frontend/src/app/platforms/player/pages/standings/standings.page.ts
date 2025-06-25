@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -29,9 +29,11 @@ import {
   removeOutline,
   peopleOutline,
   footballOutline,
-  personOutline,
-} from 'ionicons/icons';
+  personOutline, personAddOutline } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
+import { GroupService } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface Standing {
   position: number;
@@ -44,6 +46,18 @@ interface Standing {
   correctScores: number;
   correctResults: number;
   jokerUsed: number;
+}
+
+interface GroupStanding {
+  group: {
+    id: string;
+    name: string;
+    code: string;
+    memberCount: number;
+    type: 'casual' | 'prize';
+  };
+  leaderboard: Standing[];
+  userPosition: number | null;
 }
 
 @Component({
@@ -76,11 +90,14 @@ interface Standing {
     IonButton,
   ],
 })
-export class StandingsPage {
+export class StandingsPage implements OnInit, OnDestroy {
   selectedSegment = 'group';
-  currentUserId = '2'; // Mock current user ID
+  currentUserId: string | null = null;
+  groupStandings: GroupStanding[] = [];
+  selectedGroupIndex = 0;
+  private groupsSubscription?: Subscription;
 
-  // Mock data for overall standings
+  // Mock data for overall standings (keep for now)
   overallStandings: Standing[] = [
     {
       position: 1,
@@ -115,46 +132,80 @@ export class StandingsPage {
       correctResults: 33,
       jokerUsed: 1,
     },
-    // Add more players...
   ];
 
-  // Mock data for group standings
-  groupStandings: Standing[] = [
-    {
-      position: 1,
-      previousPosition: 2,
-      userId: '2',
-      name: 'You',
-      played: 15,
-      points: 230,
-      correctScores: 16,
-      correctResults: 32,
-      jokerUsed: 2,
-    },
-    {
-      position: 2,
-      previousPosition: 1,
-      userId: '4',
-      name: 'Mike Johnson',
-      played: 15,
-      points: 220,
-      correctScores: 14,
-      correctResults: 30,
-      jokerUsed: 1,
-    },
-    // Add more group members...
-  ];
+  constructor(
+    private router: Router,
+    private groupService: GroupService,
+    private authService: AuthService
+  ) {
+    addIcons({footballOutline,personOutline,peopleOutline,trophyOutline,personAddOutline,arrowUpOutline,arrowDownOutline,removeOutline,});
+  }
 
-  constructor(private router: Router) {
-    addIcons({
-      trophyOutline,
-      arrowUpOutline,
-      arrowDownOutline,
-      removeOutline,
-      peopleOutline,
-      footballOutline,
-      personOutline,
+  ngOnInit() {
+    this.currentUserId = this.authService.getCurrentUser()?.id || null;
+    this.loadGroupStandings();
+    
+    // Subscribe to group updates
+    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
+      this.loadGroupStandings();
     });
+  }
+
+  ngOnDestroy() {
+    if (this.groupsSubscription) {
+      this.groupsSubscription.unsubscribe();
+    }
+  }
+
+  private loadGroupStandings() {
+    const groupsWithLeaderboards = this.groupService.getUserGroupsWithLeaderboards();
+    this.groupStandings = groupsWithLeaderboards.map(item => {
+      const convertedLeaderboard = this.convertToStandings(item.leaderboard);
+      const currentUser = this.authService.getCurrentUser();
+      const userPosition = currentUser 
+        ? convertedLeaderboard.findIndex(entry => entry.userId === currentUser.id) + 1
+        : null;
+      
+      return {
+        group: {
+          id: item.group.id,
+          name: item.group.name,
+          code: item.group.code,
+          memberCount: item.group.memberCount,
+          type: item.group.type
+        },
+        leaderboard: convertedLeaderboard,
+        userPosition: userPosition || null
+      };
+    });
+  }
+
+  // Convert GroupLeaderboardEntry to Standing format
+  private convertToStandings(entries: any[]): Standing[] {
+    return entries.map(entry => ({
+      position: entry.position,
+      previousPosition: entry.position, // Use same as position for now
+      userId: entry.memberId,
+      name: entry.name,
+      played: entry.played,
+      points: entry.points,
+      correctScores: Math.floor(entry.points * 0.1), // Mock calculation
+      correctResults: Math.floor(entry.points * 0.2), // Mock calculation
+      jokerUsed: entry.jokerUsed
+    }));
+  }
+
+  get currentGroupStandings(): Standing[] {
+    return this.groupStandings[this.selectedGroupIndex]?.leaderboard || [];
+  }
+
+  get currentGroup(): GroupStanding | null {
+    return this.groupStandings[this.selectedGroupIndex] || null;
+  }
+
+  selectGroup(index: number) {
+    this.selectedGroupIndex = index;
   }
 
   getPositionChange(current: number, previous: number): string {

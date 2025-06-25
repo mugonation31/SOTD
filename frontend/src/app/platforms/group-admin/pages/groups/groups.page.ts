@@ -217,6 +217,12 @@ export class GroupsPage implements OnInit {
   ngOnInit() {
     this.initForm();
     this.loadGroups();
+    
+    // Subscribe to group updates for real-time member changes
+    // Note: Commented out until interface compatibility is resolved
+    // this.groupService.groups$.subscribe(() => {
+    //   this.loadGroups();
+    // });
   }
 
   private initForm() {

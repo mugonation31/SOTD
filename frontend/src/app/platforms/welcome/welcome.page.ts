@@ -127,9 +127,10 @@ export class WelcomePage {
 
   joinGroup() {
     if (this.authService.isAuthenticated()) {
-      // Authenticated users can join groups regardless of role
+      // Authenticated users who want to join groups always go to player journey
       this.router.navigate(['/player/join-group']);
     } else {
+      // Not authenticated - go to signup as player first
       this.router.navigate(['/auth/signup'], {
         queryParams: { 
           role: 'player',

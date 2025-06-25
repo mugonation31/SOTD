@@ -211,8 +211,8 @@ export class JoinGroupPage {
           'success'
         );
         
-        // Navigate to groups page to see the new membership
-        this.router.navigate(['/player/groups'], { replaceUrl: true });
+        // Navigate to standings page to see the new membership
+        this.router.navigate(['/player/standings'], { replaceUrl: true });
       } else {
         throw new Error('Failed to join group');
       }

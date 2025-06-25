@@ -18,6 +18,19 @@ interface GroupSettings {
   allowMemberChat: boolean;
 }
 
+interface GroupLeaderboardEntry {
+  position: number;
+  name: string;
+  played: number;
+  points: number;
+  totalPoints: number;
+  jokerUsed: number;
+  memberId: string;
+  memberName: string;
+  rank: number;
+  trend: 'up' | 'down' | 'same';
+}
+
 interface Group {
   id: string;
   name: string;
@@ -31,7 +44,7 @@ interface Group {
   paidMembers: number;
   totalPrizePool?: number;
   adminName: string;
-  leaderboard: any[];
+  leaderboard: GroupLeaderboardEntry[];
 }
 
 interface CreateGroupDto {
@@ -90,7 +103,7 @@ export class GroupService {
 
     const allGroups = this.getAllGroups();
     return allGroups.filter(group => 
-      group.members.some(member => member.email === currentUser.email)
+      group.members.some((member: GroupMember) => member.email === currentUser.email)
     );
   }
 
@@ -101,13 +114,13 @@ export class GroupService {
 
     const allGroups = this.getAllGroups();
     return allGroups.filter(group => 
-      group.members.some(member => 
+      group.members.some((member: GroupMember) => 
         member.email === currentUser.email && member.role === 'admin'
       )
     );
   }
 
-  saveGroup(group: Group): void {
+  saveGroup(group: any): void {
     const groups = this.getAllGroups();
     const existingIndex = groups.findIndex((g) => g.id === group.id);
 
@@ -141,7 +154,7 @@ export class GroupService {
     const group = groups[groupIndex];
 
     // Check if user already exists
-    if (group.members.some((m) => m.email === currentUser.email)) {
+    if (group.members.some((m: GroupMember) => m.email === currentUser.email)) {
       throw new Error('You are already a member of this group');
     }
 
@@ -175,13 +188,28 @@ export class GroupService {
   }
 
   createGroup(data: CreateGroupDto): Observable<Group> {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    // Create admin member from current user
+    const adminMember: GroupMember = {
+      id: currentUser.id,
+      name: currentUser.firstName && currentUser.lastName 
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : currentUser.username,
+      email: currentUser.email || '',
+      joinedAt: new Date(),
+      status: 'active',
+      role: 'admin'
+    };
+
     const newGroup: Group = {
       id: crypto.randomUUID(),
       name: data.name,
       code: this.generateGroupCode(),
       memberCount: 1,
       createdAt: new Date(),
-      members: [],
+      members: [adminMember], // Add the creator as admin
       settings: {
         allowPlayerInvites: true,
         autoApproveJoins: false,
@@ -192,12 +220,68 @@ export class GroupService {
       entryFee: data.entryFee,
       paidMembers: 0,
       totalPrizePool: 0,
-      adminName: 'Current User', // Replace with actual user name
+      adminName: adminMember.name,
       leaderboard: [],
     };
 
     this.saveGroup(newGroup);
     return of(newGroup);
+  }
+
+  // Get leaderboard for a specific group
+  getGroupLeaderboard(groupId: string): GroupLeaderboardEntry[] {
+    const group = this.getAllGroups().find(g => g.id === groupId);
+    if (!group) return [];
+
+    // If no leaderboard exists, generate mock data for members
+    if (group.leaderboard.length === 0) {
+      const mockLeaderboard = this.generateMockLeaderboard(group);
+      // Update the group with the generated leaderboard
+      group.leaderboard = mockLeaderboard;
+      this.saveGroup(group);
+      return mockLeaderboard;
+    }
+
+    return group.leaderboard;
+  }
+
+  // Generate mock leaderboard data for testing
+  private generateMockLeaderboard(group: Group): GroupLeaderboardEntry[] {
+    const currentUser = this.authService.getCurrentUser();
+    
+    const basePoints = Math.floor(Math.random() * 100) + 150;
+    return group.members.map((member: GroupMember, index: number) => ({
+      position: index + 1,
+      memberId: member.id,
+      memberName: member.id === currentUser?.id ? 'You' : member.name,
+      name: member.id === currentUser?.id ? 'You' : member.name,
+      played: Math.floor(Math.random() * 15) + 10, // 10-25 games
+      points: basePoints + (index * 10), // 150-250 points
+      totalPoints: basePoints + (index * 10), // Same as points for compatibility
+      jokerUsed: Math.floor(Math.random() * 3) + 1, // 1-3 jokers used
+      rank: index + 1,
+      trend: 'same' as 'up' | 'down' | 'same',
+    })).sort((a: any, b: any) => b.points - a.points) // Sort by points descending
+      .map((entry: any, index: number) => ({ ...entry, position: index + 1, rank: index + 1 })); // Update positions
+  }
+
+  // Get all groups where the current user is a member (for standings page)
+  getUserGroupsWithLeaderboards(): { group: Group; leaderboard: GroupLeaderboardEntry[]; userPosition: number | null }[] {
+    const userGroups = this.getUserGroups();
+    const currentUser = this.authService.getCurrentUser();
+    
+    return userGroups.map(group => {
+      const leaderboard = this.getGroupLeaderboard(group.id);
+      const userPosition = currentUser 
+        ? leaderboard.findIndex(entry => entry.memberId === currentUser.id) + 1
+        : null;
+      
+      return {
+        group,
+        leaderboard,
+        userPosition: userPosition || null
+      };
+    });
   }
 
   private generateGroupCode(): string {
@@ -207,5 +291,49 @@ export class GroupService {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return code;
+  }
+
+  // Helper method to create a test group for demonstration
+  createTestGroup(): Group {
+    const testGroup: Group = {
+      id: crypto.randomUUID(),
+      name: 'Test Football Group',
+      code: 'TEST01',
+      memberCount: 2,
+      createdAt: new Date(),
+      members: [
+        {
+          id: 'admin-1',
+          name: 'John Admin',
+          email: 'admin@test.com',
+          joinedAt: new Date(),
+          status: 'active',
+          role: 'admin'
+        },
+        {
+          id: 'player-1',
+          name: 'Sarah Player',
+          email: 'player@test.com',
+          joinedAt: new Date(),
+          status: 'active',
+          role: 'player'
+        }
+      ],
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: true,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+      type: 'casual',
+      entryFee: 0,
+      paidMembers: 0,
+      totalPrizePool: 0,
+      adminName: 'John Admin',
+      leaderboard: [],
+    };
+
+    this.saveGroup(testGroup);
+    return testGroup;
   }
 }
