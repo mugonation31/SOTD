@@ -94,10 +94,13 @@ export class AuthService {
     localStorage.removeItem(STORAGE_KEYS.PENDING_USER_DATA);
     localStorage.removeItem(STORAGE_KEYS.IS_FIRST_LOGIN);
     
-    // Clean up any pending role data (mock behavior cleanup)
+    // Clean up any pending signup data (mock behavior cleanup)
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
-      if (key.startsWith('pendingRole_')) {
+      if (key.startsWith('pendingRole_') || 
+          key.startsWith('pendingUsername_') || 
+          key.startsWith('pendingFirstName_') || 
+          key.startsWith('pendingLastName_')) {
         localStorage.removeItem(key);
       }
     });
@@ -165,16 +168,30 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
-    // For mock purposes, try to determine role from stored signup data or default to player
+    // For mock purposes, try to determine user data from stored signup data or use defaults
     // In a real app, this would come from the backend
     let userRole: UserRole = 'player';
+    let username = 'User';
+    let firstName = 'John';
+    let lastName = 'Doe';
     
-    // Check if we have stored role information from signup
+    // Check if we have stored user information from signup
     const storedRole = localStorage.getItem(`pendingRole_${loginData.email}`);
+    const storedUsername = localStorage.getItem(`pendingUsername_${loginData.email}`);
+    const storedFirstName = localStorage.getItem(`pendingFirstName_${loginData.email}`);
+    const storedLastName = localStorage.getItem(`pendingLastName_${loginData.email}`);
+    
     if (storedRole && ['player', 'group-admin', 'super-admin'].includes(storedRole)) {
       userRole = storedRole as UserRole;
-      // Clean up the temporary role storage
-      localStorage.removeItem(`pendingRole_${loginData.email}`);
+    }
+    if (storedUsername) {
+      username = storedUsername;
+    }
+    if (storedFirstName) {
+      firstName = storedFirstName;
+    }
+    if (storedLastName) {
+      lastName = storedLastName;
     }
 
     // Mock response for frontend development
@@ -183,8 +200,8 @@ export class AuthService {
       user: {
         id: 'mock-user-id',
         email: loginData.email,
-        firstName: 'John', // Mock name
-        lastName: 'Doe', // Mock name
+        firstName: firstName,
+        lastName: lastName,
         role: userRole,
       },
     };
@@ -205,12 +222,18 @@ export class AuthService {
           id: mockResponse.user.id,
           role: mockResponse.user.role,
           firstLogin: isFirstLogin,
-          username: 'user', // Default username
+          username: username,
           firstName: mockResponse.user.firstName,
           lastName: mockResponse.user.lastName,
           email: mockResponse.user.email
         };
         this.setUserInStorage(user);
+        
+        // Clean up the temporary signup storage after successful login
+        localStorage.removeItem(`pendingRole_${loginData.email}`);
+        localStorage.removeItem(`pendingUsername_${loginData.email}`);
+        localStorage.removeItem(`pendingFirstName_${loginData.email}`);
+        localStorage.removeItem(`pendingLastName_${loginData.email}`);
         
         this.currentUserSubject.next(mockResponse);
         subscriber.next(mockResponse);
@@ -258,8 +281,11 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
-    // Store the role temporarily for login (mock behavior)
+    // Store the role and username temporarily for login (mock behavior)
     localStorage.setItem(`pendingRole_${userData.email}`, userData.role);
+    localStorage.setItem(`pendingUsername_${userData.email}`, userData.username || '');
+    localStorage.setItem(`pendingFirstName_${userData.email}`, userData.firstName);
+    localStorage.setItem(`pendingLastName_${userData.email}`, userData.lastName);
     
     // Mock response for frontend development
     const mockResponse: AuthResponse = {
