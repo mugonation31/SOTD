@@ -66,6 +66,31 @@ export class GroupService {
   public groups$ = this.groupsSubject.asObservable();
 
   constructor(private authService: AuthService) {
+    // Clear old test data that might have wrong emails
+    if (typeof window !== 'undefined') {
+      const existingGroups = localStorage.getItem(this.STORAGE_KEY);
+      if (existingGroups) {
+        try {
+          const groups = JSON.parse(existingGroups);
+          // Check if any groups have hardcoded test emails - if so, clear them
+          const hasTestData = groups.some((g: any) => 
+            g.members?.some((m: any) => 
+              m.email === 'john@example.com' || 
+              m.email === 'admin@test.com' || 
+              m.email === 'player@test.com'
+            )
+          );
+          if (hasTestData) {
+            console.log('🧹 Clearing old test data with hardcoded emails...');
+            localStorage.removeItem(this.STORAGE_KEY);
+          }
+        } catch (e) {
+          // If parsing fails, clear it anyway
+          localStorage.removeItem(this.STORAGE_KEY);
+        }
+      }
+    }
+    
     // Initialize storage if empty
     if (!localStorage.getItem(this.STORAGE_KEY)) {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
@@ -110,7 +135,10 @@ export class GroupService {
   // Get groups created by the current user (group admin)
   getAdminGroups(): Group[] {
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser?.email) return [];
+    
+    if (!currentUser?.email) {
+      return [];
+    }
 
     const allGroups = this.getAllGroups();
     return allGroups.filter(group => 
@@ -280,6 +308,26 @@ export class GroupService {
         group,
         leaderboard,
         userPosition: userPosition || null
+      };
+    });
+  }
+
+  // Get all groups where the current user is admin (for group-admin leaderboard page)
+  getAdminGroupsWithLeaderboards(): { group: Group; leaderboard: GroupLeaderboardEntry[]; adminPosition: number | null }[] {
+    const adminGroups = this.getAdminGroups();
+    const currentUser = this.authService.getCurrentUser();
+    
+    return adminGroups.map(group => {
+      const leaderboard = this.getGroupLeaderboard(group.id);
+      // For admins, we might want to show their position too if they're also participating
+      const adminPosition = currentUser 
+        ? leaderboard.findIndex(entry => entry.memberId === currentUser.id) + 1
+        : null;
+      
+      return {
+        group,
+        leaderboard,
+        adminPosition: adminPosition || null
       };
     });
   }

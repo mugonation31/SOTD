@@ -186,19 +186,10 @@ export class GroupsPage implements OnInit {
   prizePositions: PrizePosition[] = [{ percentage: 100 }];
   isEditingLockedBreakdown = false;
   currentAdmin: CurrentAdmin = {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    members: [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        joinedAt: new Date(),
-        status: 'active',
-        role: 'admin',
-      },
-    ],
+    id: '',
+    name: '',
+    email: '',
+    members: [],
   };
 
   constructor(
@@ -217,12 +208,28 @@ export class GroupsPage implements OnInit {
   ngOnInit() {
     this.initForm();
     this.loadGroups();
+    this.initCurrentAdmin();
     
     // Subscribe to group updates for real-time member changes
     // Note: Commented out until interface compatibility is resolved
     // this.groupService.groups$.subscribe(() => {
     //   this.loadGroups();
     // });
+  }
+
+  private initCurrentAdmin() {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.currentAdmin = {
+        id: currentUser.id,
+        name: currentUser.firstName && currentUser.lastName 
+          ? `${currentUser.firstName} ${currentUser.lastName}`
+          : currentUser.username,
+        email: currentUser.email || '',
+        members: []
+      };
+      console.log('✅ Current admin initialized:', this.currentAdmin);
+    }
   }
 
   private initForm() {
