@@ -1,0 +1,91 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button 
+        text="Groups" 
+        defaultHref="/player/standings"
+        (click)="goBack()">
+      </ion-back-button>
+    </ion-buttons>
+    <ion-title *ngIf="group">{{ group.name }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Group Info Card -->
+  <ion-card *ngIf="group" class="group-info-card">
+    <ion-card-header>
+      <ion-card-title>
+        {{ group.name }}
+        <ion-badge *ngIf="userPosition" color="primary" class="position-badge">
+          Your Position: #{{ userPosition }}
+        </ion-badge>
+      </ion-card-title>
+      <div class="group-details">
+        <ion-badge color="medium">{{ group.memberCount }} members</ion-badge>
+        <ion-badge [color]="group.type === 'prize' ? 'primary' : 'secondary'">
+          {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
+        </ion-badge>
+        <span class="group-code">Code: {{ group.code }}</span>
+      </div>
+    </ion-card-header>
+  </ion-card>
+
+  <!-- Standings Table -->
+  <ion-card class="standings-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="trophy-outline"></ion-icon>
+        Leaderboard
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <!-- Table Header -->
+      <div class="table-header">
+        <div class="position-col">Pos</div>
+        <div class="name-col">Name</div>
+        <div class="played-col">Played</div>
+        <div class="scores-col">Scores</div>
+        <div class="results-col">Results</div>
+        <div class="joker-col">Joker</div>
+        <div class="points-col">Points</div>
+      </div>
+
+      <!-- Table Body -->
+      <div class="table-body">
+        <div 
+          class="table-row" 
+          *ngFor="let player of standings"
+          [class.current-user]="isCurrentUser(player.userId)">
+          
+          <div class="position-col">
+            {{ player.position }}
+            <ion-icon 
+              [name]="getPositionIcon(getPositionChange(player.position, player.previousPosition))"
+              [color]="getPositionColor(getPositionChange(player.position, player.previousPosition))"
+              class="position-change-icon">
+            </ion-icon>
+          </div>
+          
+          <div class="name-col">
+            {{ player.name }}
+            <ion-badge *ngIf="isCurrentUser(player.userId)" color="primary" class="you-badge">YOU</ion-badge>
+          </div>
+          
+          <div class="played-col">{{ player.played }}</div>
+          <div class="scores-col">{{ player.correctScores }}</div>
+          <div class="results-col">{{ player.correctResults }}</div>
+          <div class="joker-col">{{ player.jokerUsed }}/2</div>
+          <div class="points-col">{{ player.points }}</div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="standings.length === 0" class="empty-state">
+        <ion-icon name="people-outline" size="large" color="medium"></ion-icon>
+        <h3>No Standings Available</h3>
+        <p>Standings will appear once predictions are made.</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+</ion-content> 

@@ -183,6 +183,20 @@ ion-list {
   background: transparent;
 }
 
+ion-item.joined-group-item {
+  --background: var(--ion-background-color);
+  --border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--ion-color-light-shade);
+  
+  &:hover {
+    --background: var(--ion-color-light-tint);
+    border-color: var(--ion-color-medium-tint);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
 .group-item {
   width: 100%;
   padding: 16px 0;

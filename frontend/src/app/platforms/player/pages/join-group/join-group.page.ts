@@ -28,8 +28,7 @@ import {
   arrowForwardOutline,
   footballOutline,
   personOutline,
-  logOutOutline,
-} from 'ionicons/icons';
+  logOutOutline, peopleOutline, chevronForwardOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
@@ -107,13 +106,7 @@ export class JoinGroupPage {
     private groupService: GroupService,
     private authService: AuthService
   ) {
-    addIcons({
-      peopleCircleOutline,
-      arrowForwardOutline,
-      footballOutline,
-      personOutline,
-      logOutOutline,
-    });
+    addIcons({footballOutline,personOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
     this.loadMyGroups();
   }
 
@@ -187,6 +180,10 @@ export class JoinGroupPage {
   private loadMyGroups() {
     // Use enhanced group service to get user's groups
     this.myGroups = this.groupService.getUserGroups();
+  }
+
+  viewGroupStandings(groupId: string) {
+    this.router.navigate(['/player/group-standings', groupId]);
   }
 
   async confirmJoinGroup() {

@@ -33,6 +33,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'group-standings/:groupId',
+        loadComponent: () =>
+          import('./pages/group-standings/group-standings.page').then(
+            (m) => m.GroupStandingsPage
+          ),
+      },
+      {
         path: 'join-group',
         loadComponent: () =>
           import('./pages/join-group/join-group.page').then(

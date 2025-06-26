@@ -66,7 +66,11 @@
         <p>You haven't joined any groups yet.</p>
       </div>
       <ion-list *ngIf="myGroups.length > 0">
-        <ion-item *ngFor="let group of myGroups">
+        <ion-item 
+          *ngFor="let group of myGroups" 
+          button 
+          (click)="viewGroupStandings(group.id)"
+          class="joined-group-item">
           <div class="group-item">
             <div class="group-info">
               <h3>{{ group.name }}</h3>
@@ -75,7 +79,7 @@
             </div>
             <div class="group-type">
               <ion-badge
-                [color]="group.type === 'prize' ? 'warning' : 'primary'"
+                [color]="group.type === 'prize' ? 'primary' : 'secondary'"
               >
                 {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
               </ion-badge>
@@ -84,6 +88,7 @@
               </span>
             </div>
           </div>
+          <ion-icon name="chevron-forward-outline" slot="end" color="medium"></ion-icon>
         </ion-item>
       </ion-list>
     </ion-card-content>
