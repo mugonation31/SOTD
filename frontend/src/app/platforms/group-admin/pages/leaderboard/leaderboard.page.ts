@@ -106,19 +106,19 @@ interface GroupStanding {
                 <span class="group-type" [class.prize]="groupStanding.group.type === 'prize'">
                   {{ groupStanding.group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
                 </span>
-              </div>
+                </div>
               <p class="group-code">Code: {{ groupStanding.group.code }}</p>
-            </div>
+                    </div>
             
             <div class="admin-info">
               <div class="admin-label">Admin</div>
               <div class="member-stats">{{ groupStanding.group.memberCount }} {{ groupStanding.group.memberCount === 1 ? 'player' : 'players' }}</div>
-            </div>
-          </div>
+                  </div>
+                </div>
           
           <ion-icon name="chevron-forward-outline" slot="end" color="medium"></ion-icon>
-        </ion-item>
-      </ion-list>
+            </ion-item>
+          </ion-list>
     </ion-content>
   `,
   styles: [`
@@ -136,15 +136,15 @@ interface GroupStanding {
     }
 
     .football-icon {
-      font-size: 24px;
+          font-size: 24px;
       color: var(--ion-color-primary);
     }
 
     .logo-text {
       display: flex;
       flex-direction: column;
-      line-height: 1;
-    }
+          line-height: 1;
+        }
 
     .logo-sotd {
       font-size: 18px;
@@ -153,8 +153,8 @@ interface GroupStanding {
     }
 
     .logo-subtitle {
-      font-size: 12px;
-      color: var(--ion-color-medium);
+          font-size: 12px;
+          color: var(--ion-color-medium);
     }
 
     // Page header
@@ -183,9 +183,9 @@ interface GroupStanding {
       
       ion-card-content {
         padding: 40px 24px;
-      }
-      
-      ion-icon {
+        }
+
+        ion-icon {
         margin-bottom: 16px;
         opacity: 0.6;
       }
@@ -209,8 +209,8 @@ interface GroupStanding {
         --padding-end: 20px;
         --padding-top: 12px;
         --padding-bottom: 12px;
-        font-weight: 500;
-      }
+          font-weight: 500;
+        }
     }
 
     // Groups list
@@ -246,11 +246,11 @@ interface GroupStanding {
     }
 
     .group-content {
-      display: flex;
-      align-items: center;
+        display: flex;
+        align-items: center;
       justify-content: space-between;
       width: 100%;
-      gap: 16px;
+        gap: 16px;
     }
 
     .group-main {
@@ -269,8 +269,8 @@ interface GroupStanding {
     }
 
     .group-details {
-      display: flex;
-      align-items: center;
+          display: flex;
+          align-items: center;
       gap: 12px;
       margin-bottom: 4px;
     }
