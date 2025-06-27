@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -32,6 +32,7 @@ import {
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface Group {
   id: string;
@@ -72,7 +73,7 @@ interface Group {
     NgFor,
   ],
 })
-export class JoinGroupPage {
+export class JoinGroupPage implements OnInit, OnDestroy {
   groupCode: string = '';
   isSearching: boolean = false;
   isJoining: boolean = false;
@@ -80,6 +81,7 @@ export class JoinGroupPage {
   showGroupDetails: boolean = false;
   foundGroup: Group | null = null;
   myGroups: Group[] = [];
+  private groupsSubscription?: Subscription;
 
   currentPlayer = this.authService.getCurrentUser();
 
@@ -107,7 +109,21 @@ export class JoinGroupPage {
     private authService: AuthService
   ) {
     addIcons({footballOutline,personOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
+  }
+
+  ngOnInit() {
     this.loadMyGroups();
+    
+    // Subscribe to group updates for real-time UI updates
+    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
+      this.loadMyGroups();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.groupsSubscription) {
+      this.groupsSubscription.unsubscribe();
+    }
   }
 
   navigateTo(path: string) {
@@ -190,6 +206,7 @@ export class JoinGroupPage {
     if (!this.foundGroup || this.isJoining) return;
 
     this.isJoining = true;
+    const groupName = this.foundGroup.name;
 
     try {
       // Use enhanced join method that automatically uses current user data
@@ -200,16 +217,16 @@ export class JoinGroupPage {
         this.showGroupDetails = false;
         this.foundGroup = null;
         
-        // Reload the groups list after joining
-        this.loadMyGroups();
-        
+        // Show success message with enhanced feedback
         await this.toastService.showToast(
-          `Successfully joined ${updatedGroup.name}!`,
+          `🎉 Successfully joined ${groupName}! Check "My Groups" below.`,
           'success'
         );
         
-        // Navigate to standings page to see the new membership
-        this.router.navigate(['/player/standings'], { replaceUrl: true });
+        // Note: My Groups list will automatically update via the groups$ subscription
+        
+        // Stay on the same page - no navigation redirect
+        // User can see their updated "My Groups" section and join more groups if needed
       } else {
         throw new Error('Failed to join group');
       }
