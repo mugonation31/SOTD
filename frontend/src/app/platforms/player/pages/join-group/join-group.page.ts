@@ -28,20 +28,27 @@ import {
   arrowForwardOutline,
   footballOutline,
   personOutline,
-  logOutOutline, peopleOutline, chevronForwardOutline } from 'ionicons/icons';
+  logOutOutline, peopleOutline, chevronForwardOutline, addOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { Subscription } from 'rxjs';
 
+// Use the Group interface that matches GroupService
 interface Group {
   id: string;
   name: string;
   code: string;
   memberCount: number;
-  adminName: string;
+  createdAt: Date;
+  members: any[];
+  settings: any;
   type: 'casual' | 'prize';
   entryFee?: number;
+  paidMembers: number;
+  totalPrizePool?: number;
+  adminName: string;
+  leaderboard: any[];
 }
 
 @Component({
@@ -108,7 +115,7 @@ export class JoinGroupPage implements OnInit, OnDestroy {
     private groupService: GroupService,
     private authService: AuthService
   ) {
-    addIcons({footballOutline,personOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
+    addIcons({footballOutline,personOutline,addOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
   }
 
   ngOnInit() {
@@ -238,6 +245,19 @@ export class JoinGroupPage implements OnInit, OnDestroy {
       await this.toastService.showToast(message, 'error');
     } finally {
       this.isJoining = false;
+    }
+  }
+
+  // Create a test group for testing join functionality
+  createTestGroup() {
+    try {
+      const testGroup = this.groupService.createJoinableTestGroup();
+      this.toastService.showToast(
+        `Test group created! Use code: ${testGroup.code}`,
+        'success'
+      );
+    } catch (error) {
+      this.toastService.showToast('Error creating test group', 'error');
     }
   }
 

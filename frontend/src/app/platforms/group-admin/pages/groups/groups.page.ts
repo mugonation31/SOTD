@@ -64,7 +64,7 @@ import {
   lockOpenOutline, 
   calendarOutline, 
   eyeOutline,
-  removeOutline, checkmarkOutline, warningOutline } from 'ionicons/icons';
+  removeOutline, checkmarkOutline, warningOutline, bugOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
@@ -186,19 +186,10 @@ export class GroupsPage implements OnInit {
   prizePositions: PrizePosition[] = [{ percentage: 100 }];
   isEditingLockedBreakdown = false;
   currentAdmin: CurrentAdmin = {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    members: [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        joinedAt: new Date(),
-        status: 'active',
-        role: 'admin',
-      },
-    ],
+    id: '',
+    name: '',
+    email: '',
+    members: []
   };
 
   constructor(
@@ -209,20 +200,34 @@ export class GroupsPage implements OnInit {
     private groupService: GroupService,
     private authService: AuthService
   ) {
-    addIcons({cashOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,eyeOutline,trashOutline,closeOutline,trophyOutline,settingsOutline,addOutline,checkmarkOutline,createOutline,personAddOutline,personRemoveOutline,lockClosedOutline,lockOpenOutline,removeOutline,warningOutline,});
+    addIcons({cashOutline,bugOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,trophyOutline,eyeOutline,trashOutline,closeOutline,settingsOutline,lockClosedOutline,createOutline,addOutline,checkmarkOutline,personAddOutline,personRemoveOutline,lockOpenOutline,removeOutline,warningOutline,});
     this.initForm();
     this.loadGroups();
   }
 
   ngOnInit() {
+    this.initCurrentAdmin();
     this.initForm();
     this.loadGroups();
     
     // Subscribe to group updates for real-time member changes
-    // Note: Commented out until interface compatibility is resolved
-    // this.groupService.groups$.subscribe(() => {
-    //   this.loadGroups();
-    // });
+    this.groupService.groups$.subscribe(() => {
+      this.loadGroups();
+    });
+  }
+
+  private initCurrentAdmin() {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.currentAdmin = {
+        id: currentUser.id,
+        name: currentUser.firstName && currentUser.lastName 
+          ? `${currentUser.firstName} ${currentUser.lastName}`
+          : currentUser.username,
+        email: currentUser.email || '',
+        members: []
+      };
+    }
   }
 
   private initForm() {
@@ -250,7 +255,8 @@ export class GroupsPage implements OnInit {
   }
 
   private loadGroups() {
-    this.groups = this.groupService.getAllGroups();
+    // Only load groups where the current user is an admin
+    this.groups = this.groupService.getAdminGroups();
   }
 
   onGroupTypeChange() {
@@ -277,61 +283,46 @@ export class GroupsPage implements OnInit {
         this.isLoading = true;
         const formValue = this.groupForm.value;
 
-        // Create initial leaderboard with members in alphabetical order
-        const initialLeaderboard: GroupLeaderboardEntry[] = [];
-
-        const newGroup: Group = {
-          id: crypto.randomUUID(),
+        // Use GroupService createGroup method
+        const createGroupData = {
           name: formValue.name,
-          code: this.generateGroupCode(),
-          memberCount: 1,
-          createdAt: new Date(),
-          members: [
-            {
-              id: this.currentAdmin.id,
-              name: this.currentAdmin.name,
-              email: this.currentAdmin.email,
-              joinedAt: new Date(),
-              status: 'active',
-              role: 'admin',
-            },
-          ],
-          settings: {
-            allowPlayerInvites: true,
-            autoApproveJoins: false,
-            showLeaderboard: true,
-            allowMemberChat: true,
-          },
-          type: formValue.type,
-          entryFee: formValue.type === 'prize' ? formValue.entryFee : undefined,
-          paidMembers: 0,
-          totalPrizePool: 0,
-          adminName: this.currentAdmin.name,
-          leaderboard: initialLeaderboard,
+          description: '', // Add description if needed
+          entryFee: formValue.type === 'prize' ? formValue.entryFee : 0,
+          isPrivate: false // Add privacy setting if needed
         };
 
-        // Save group to storage
-        this.groupService.saveGroup(newGroup);
+        // Create group using GroupService
+        this.groupService.createGroup(createGroupData).subscribe({
+          next: (newGroup) => {
+            // Show success message and close modal
+            this.toastService.showToast(
+              `Group "${newGroup.name}" created successfully! Code: ${newGroup.code}`,
+              'success'
+            );
 
-        // Update local groups array by appending the new group
-        this.groups = [...this.groups, newGroup];
+            // Reset form to clean state and close create form
+            this.resetCreateForm();
+            this.isCreateModalOpen = false;
 
-        // Show success message and close modal
-        await this.toastService.showToast(
-          `Group "${newGroup.name}" created successfully! Ready to create another group.`,
-          'success'
-        );
-
-        // Reset form to clean state and close create form
-        this.resetCreateForm();
-        this.isCreateModalOpen = false;
+            // Groups will be reloaded automatically via subscription
+          },
+          error: (error) => {
+            console.error('Error creating group:', error);
+            this.toastService.showToast(
+              'Failed to create group. Please try again.',
+              'danger'
+            );
+          },
+          complete: () => {
+            this.isLoading = false;
+          }
+        });
       } catch (error) {
         console.error('Error creating group:', error);
         await this.toastService.showToast(
           'Failed to create group. Please try again.',
           'danger'
         );
-      } finally {
         this.isLoading = false;
       }
     } else {
@@ -775,4 +766,6 @@ export class GroupsPage implements OnInit {
       this.prizePositions = [...this.selectedGroup.prizeBreakdown.positions];
     }
   }
+
+
 }

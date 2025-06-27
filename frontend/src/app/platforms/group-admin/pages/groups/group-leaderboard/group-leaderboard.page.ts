@@ -29,6 +29,7 @@ import {
   chevronBackOutline,
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
+import { GroupService } from '@core/services/group.service';
 
 interface GroupLeaderboardEntry {
   position: number;
@@ -184,7 +185,8 @@ export class GroupLeaderboardPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     public seasonService: SeasonService,
-    private router: Router
+    private router: Router,
+    private groupService: GroupService
   ) {
     addIcons({
       trophyOutline,
@@ -200,47 +202,34 @@ export class GroupLeaderboardPage implements OnInit {
   ngOnInit() {
     this.route.params.subscribe((params) => {
       this.groupId = params['id'];
-      // Mock data for demonstration - replace with actual API call
-      this.groupName = 'Premier League Predictions';
-      this.leaderboard = [
-        {
-          position: 1,
-          name: 'Alice Smith',
-          played: 15,
-          jokerUsed: 1,
-          totalPoints: 45,
-        },
-        {
-          position: 2,
-          name: 'Bob Johnson',
-          played: 15,
-          jokerUsed: 2,
-          totalPoints: 42,
-        },
-        {
-          position: 3,
-          name: 'Charlie Brown',
-          played: 14,
-          jokerUsed: 1,
-          totalPoints: 38,
-        },
-        {
-          position: 4,
-          name: 'David Wilson',
-          played: 15,
-          jokerUsed: 0,
-          totalPoints: 35,
-        },
-        {
-          position: 5,
-          name: 'Emma Davis',
-          played: 13,
-          jokerUsed: 1,
-          totalPoints: 32,
-        },
-      ];
-      this.sortLeaderboard();
+      this.loadGroupData();
     });
+  }
+
+  private loadGroupData() {
+    // Get the group data from GroupService
+    const allGroups = this.groupService.getAllGroups();
+    const group = allGroups.find(g => g.id === this.groupId);
+    
+    if (group) {
+      this.groupName = group.name;
+      // Get the leaderboard for this group
+      const groupLeaderboard = this.groupService.getGroupLeaderboard(this.groupId);
+      
+      // Convert GroupLeaderboardEntry to our interface format
+      this.leaderboard = groupLeaderboard.map(entry => ({
+        position: entry.position,
+        name: entry.name,
+        played: entry.played,
+        jokerUsed: entry.jokerUsed,
+        totalPoints: entry.totalPoints
+      }));
+      
+      this.sortLeaderboard();
+    } else {
+      // Group not found, navigate back
+      this.router.navigate(['/group-admin/groups']);
+    }
   }
 
   private sortLeaderboard() {

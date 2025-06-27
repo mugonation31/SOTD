@@ -179,9 +179,13 @@
 
         <!-- Group Actions -->
         <div class="group-actions">
+          <ion-button fill="clear" (click)="viewGroupLeaderboard(group)">
+            <ion-icon slot="start" name="trophy-outline"></ion-icon>
+            LEADERBOARD
+          </ion-button>
           <ion-button fill="clear" (click)="showGroupDetails(group)">
             <ion-icon slot="start" name="eye-outline"></ion-icon>
-            VIEW
+            MANAGE
           </ion-button>
           <ion-button fill="clear" color="danger" (click)="deleteGroup(group)">
             <ion-icon slot="start" name="trash-outline"></ion-icon>

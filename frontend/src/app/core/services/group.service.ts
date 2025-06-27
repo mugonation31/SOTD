@@ -116,22 +116,11 @@ export class GroupService {
     }
 
     const allGroups = this.getAllGroups();
-    console.log('🔍 DEBUG: Current user email:', currentUser.email);
-    console.log('🔍 DEBUG: Looking for admin groups...');
-    
-    const adminGroups = allGroups.filter(group => {
-      const isAdmin = group.members.some((member: GroupMember) => {
-        const match = member.email === currentUser.email && member.role === 'admin';
-        if (member.role === 'admin') {
-          console.log(`🔍 DEBUG: Group "${group.name}" has admin "${member.name}" with email "${member.email}" - Match: ${match}`);
-        }
-        return match;
-      });
-      return isAdmin;
-    });
-    
-    console.log('🔍 DEBUG: Found', adminGroups.length, 'admin groups for user');
-    return adminGroups;
+    return allGroups.filter(group => 
+      group.members.some((member: GroupMember) => 
+        member.email === currentUser.email && member.role === 'admin'
+      )
+    );
   }
 
   saveGroup(group: any): void {
@@ -167,9 +156,20 @@ export class GroupService {
 
     const group = groups[groupIndex];
 
-    // Check if user already exists
-    if (group.members.some((m: GroupMember) => m.email === currentUser.email)) {
-      throw new Error('You are already a member of this group');
+    // Check if user already exists - use ID instead of email for more accurate checking
+    const existingMember = group.members.find((m: GroupMember) => 
+      m.id === currentUser.id || m.email === currentUser.email
+    );
+    
+    if (existingMember) {
+      // If user is already an admin, they can't join as a player
+      if (existingMember.role === 'admin') {
+        throw new Error('You are the admin of this group');
+      }
+      // If user is already a player member
+      if (existingMember.role === 'player') {
+        throw new Error('You are already a member of this group');
+      }
     }
 
     // Create member from current user data or use custom member
@@ -370,4 +370,43 @@ export class GroupService {
     this.saveGroup(testGroup);
     return testGroup;
   }
+
+  // Create a test group that current user can join as player
+  createJoinableTestGroup(): Group {
+    const testGroup: Group = {
+      id: crypto.randomUUID(),
+      name: 'Joinable Test Group',
+      code: 'JOIN01',
+      memberCount: 1,
+      createdAt: new Date(),
+      members: [
+        {
+          id: 'different-admin-id',
+          name: 'Test Admin',
+          email: 'testadmin@example.com',
+          joinedAt: new Date(),
+          status: 'active',
+          role: 'admin'
+        }
+      ],
+      settings: {
+        allowPlayerInvites: true,
+        autoApproveJoins: true,
+        showLeaderboard: true,
+        allowMemberChat: true,
+      },
+      type: 'casual',
+      entryFee: 0,
+      paidMembers: 0,
+      totalPrizePool: 0,
+      adminName: 'Test Admin',
+      leaderboard: [],
+    };
+
+    this.saveGroup(testGroup);
+    console.log('Created joinable test group with code:', testGroup.code);
+    return testGroup;
+  }
+
+
 }
