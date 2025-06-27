@@ -324,6 +324,19 @@ export class AuthService {
   }
 
   logout() {
+    this.performLogout();
+    // Redirect to login page after logout
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.href = '/auth/login';
+    }
+  }
+
+  // Logout without redirect (for use in signup flow)
+  logoutSilent() {
+    this.performLogout();
+  }
+
+  private performLogout() {
     // Store user email to track that they have completed first login
     const user = this.getUserFromStorage();
     if (user?.firstLogin && user.email) {
@@ -335,10 +348,6 @@ export class AuthService {
     this.currentUserSubject.next(null);
     if (this.sessionTimer) {
       clearInterval(this.sessionTimer);
-    }
-    // Redirect to login page after logout
-    if (typeof window !== 'undefined' && window.location) {
-      window.location.href = '/auth/login';
     }
   }
 

@@ -100,44 +100,27 @@ export class WelcomePage {
   }
 
   createGroup() {
-    if (this.authService.isAuthenticated()) {
-      // Check if user has the right role for group creation
-      const userRole = this.authService.getUserRole();
-      if (userRole === 'group-admin' || userRole === 'super-admin') {
-      this.router.navigate(['/group-admin/groups']);
-      } else {
-        // User is authenticated but doesn't have group-admin role
-        // They need to signup as group-admin
-        this.router.navigate(['/auth/signup'], {
-          queryParams: { 
-            role: 'group-admin',
-            returnUrl: '/group-admin/groups' 
-          }
-        });
+    // ALWAYS force Group-Admin Journey regardless of current authentication
+    // This ensures "Create a Group" always leads to group-admin flow
+    this.router.navigate(['/auth/signup'], {
+      queryParams: { 
+        role: 'group-admin',
+        returnUrl: '/group-admin/groups',
+        forceRole: 'true' // Force this role selection
       }
-    } else {
-      this.router.navigate(['/auth/signup'], {
-        queryParams: { 
-          role: 'group-admin',
-          returnUrl: '/group-admin/groups' 
-        }
-      });
-    }
+    });
   }
 
   joinGroup() {
-    if (this.authService.isAuthenticated()) {
-      // Authenticated users who want to join groups always go to player journey
-      this.router.navigate(['/player/join-group']);
-    } else {
-      // Not authenticated - go to signup as player first
-      this.router.navigate(['/auth/signup'], {
-        queryParams: { 
-          role: 'player',
-          returnUrl: '/player/join-group' 
-        }
-      });
-    }
+    // ALWAYS force Player Journey regardless of current authentication
+    // This ensures "Join a Group" always leads to player flow
+    this.router.navigate(['/auth/signup'], {
+      queryParams: { 
+        role: 'player',
+        returnUrl: '/player/join-group',
+        forceRole: 'true' // Force this role selection
+      }
+    });
   }
 
   login() {

@@ -101,6 +101,7 @@ export class SignupPage implements OnInit {
   showPassword = false;
   showConfirmPassword = false;
   private returnUrl: string = '/welcome';
+  private isRoleForced = false; // Track if role selection was forced from welcome page
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -144,38 +145,42 @@ export class SignupPage implements OnInit {
   }
   
   ngOnInit() {
-    // Check if user is already authenticated
-    if (this.authService.isAuthenticated()) {
-      // User is already logged in, check if they have the right role
     this.route.queryParams.subscribe(params => {
-        const requiredRole = params['role'] as UserRole;
+      const requiredRole = params['role'] as UserRole;
+      const returnUrl = params['returnUrl'] || '/welcome';
+      const forceRole = params['forceRole'] === 'true';
+      
+      this.returnUrl = returnUrl;
+      this.isRoleForced = forceRole;
+      
+      // Set the role based on the query parameter
+      if (requiredRole) {
+        this.signupData.role = requiredRole;
+      }
+      
+      // If forceRole is true, always logout current user and force new signup
+      // This ensures clean session separation between different user roles
+      if (forceRole && this.authService.isAuthenticated()) {
+        console.log('🔄 Force role signup detected - logging out current user silently');
+        this.authService.logoutSilent();
+        // Continue with signup flow after silent logout
+      }
+      
+      // Check if user is already authenticated with the correct role
+      if (this.authService.isAuthenticated() && !forceRole) {
         const currentRole = this.authService.getUserRole();
-        const returnUrl = params['returnUrl'] || '/welcome';
         
         if (currentRole === requiredRole || 
             (requiredRole === 'group-admin' && currentRole === 'super-admin')) {
           // User has the required role, redirect to destination
           this.router.navigate([returnUrl], { replaceUrl: true });
-        } else {
-          // User doesn't have the required role, they need to logout and signup with new role
-          // For now, let them continue with signup to create a new account
-          this.returnUrl = returnUrl;
-          if (requiredRole) {
-            this.signupData.role = requiredRole;
-          }
+          return;
         }
-      });
-    } else {
-      // User is not authenticated, proceed with normal signup flow
-      this.route.queryParams.subscribe(params => {
-        this.returnUrl = params['returnUrl'] || '/welcome';
-        
-        // Set the role based on the query parameter
-        if (params['role']) {
-          this.signupData.role = params['role'] as UserRole;
       }
+      
+      // Continue with signup flow
+      console.log('📝 Signup flow for role:', requiredRole);
     });
-    }
   }
 
   validateRequired(field: keyof ValidationErrors, value: string) {
