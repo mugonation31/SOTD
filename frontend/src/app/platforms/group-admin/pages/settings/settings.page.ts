@@ -726,8 +726,12 @@ export class SettingsPage {
       
       await this.toastService.showToast('Logged out successfully', 'success');
       
-      // Redirect to centralized auth login
-      this.router.navigate(['/auth/login'], { replaceUrl: true });
+      // Redirect to login page WITHOUT any returnUrl or query parameters
+      // This ensures clean navigation and the logo will go to welcome page
+      this.router.navigate(['/auth/login'], { 
+        replaceUrl: true,
+        queryParams: {} // Clear any existing query parameters
+      });
     } catch (error) {
       console.error('Logout error:', error);
       await this.toastService.showToast('Error during logout', 'error');

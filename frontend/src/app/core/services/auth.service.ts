@@ -323,12 +323,10 @@ export class AuthService {
     */
   }
 
-  logout() {
+  logout(): void {
     this.performLogout();
-    // Redirect to login page after logout
-    if (typeof window !== 'undefined' && window.location) {
-      window.location.href = '/auth/login';
-    }
+    // Note: Don't redirect here - let the calling component handle navigation
+    // This prevents issues with returnUrl and ensures clean navigation flow
   }
 
   // Logout without redirect (for use in signup flow)

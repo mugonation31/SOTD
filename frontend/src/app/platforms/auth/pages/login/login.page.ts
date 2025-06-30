@@ -202,6 +202,9 @@ export class LoginPage implements OnInit {
   }
 
   navigateToWelcome() {
-    this.router.navigate(['/welcome']);
+    // Clear any stored returnUrl and navigate to welcome page
+    // This ensures users always go to welcome when clicking logo
+    this.returnUrl = '';
+    this.router.navigate(['/welcome'], { replaceUrl: true });
   }
 }

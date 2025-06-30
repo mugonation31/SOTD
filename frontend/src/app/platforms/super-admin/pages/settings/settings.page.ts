@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   IonHeader,
   IonToolbar,
@@ -51,6 +52,7 @@ import {
   saveOutline,
 } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/services/auth.service';
 
 interface SystemSettings {
   predictionDeadlines: {
@@ -969,7 +971,11 @@ export class SettingsPage {
     },
   };
 
-  constructor(private toastService: ToastService) {
+  constructor(
+    private toastService: ToastService,
+    private router: Router,
+    private authService: AuthService
+  ) {
     addIcons({
       settingsOutline,
       keyOutline,
@@ -1104,12 +1110,23 @@ export class SettingsPage {
 
   async logout() {
     try {
-      // TODO: Implement API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Mark first login as complete since user is logging out from first-time page
+      this.authService.markFirstLoginComplete();
+      
+      // Perform logout
+      this.authService.logout();
+      
       await this.toastService.showToast('Logged out successfully', 'success');
-      // TODO: Redirect to login page
+      
+      // Redirect to login page WITHOUT any returnUrl or query parameters
+      // This ensures clean navigation and the logo will go to welcome page
+      this.router.navigate(['/auth/login'], { 
+        replaceUrl: true,
+        queryParams: {} // Clear any existing query parameters
+      });
     } catch (error) {
-      await this.toastService.showToast('Failed to logout', 'error');
+      console.error('Logout error:', error);
+      await this.toastService.showToast('Error during logout', 'error');
     }
   }
 
