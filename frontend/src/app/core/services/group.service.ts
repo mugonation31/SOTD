@@ -140,31 +140,58 @@ export class GroupService {
   }
 
   findGroupByCode(code: string): Group | null {
+    console.log('🔍 Looking for group with code:', code);
     const groups = this.getAllGroups();
+    console.log('📂 Available groups:', groups.length);
+    console.log('📂 Available codes:', groups.map(g => g.code));
+    
     const group = groups.find((g) => g.code === code);
+    console.log('🎯 Found group by code search:', group ? 'YES' : 'NO');
+    
     return group || null;
   }
 
   joinGroup(groupCode: string, customMember?: GroupMember): Group | null {
+    console.log('🚀 Starting joinGroup process with code:', groupCode);
+    
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) throw new Error('User not authenticated');
+    console.log('👤 Current user:', currentUser);
+    console.log('👤 Current user ID:', currentUser?.id);
+    console.log('👤 Current user email:', currentUser?.email);
+    
+    if (!currentUser) {
+      console.log('❌ User not authenticated');
+      throw new Error('User not authenticated');
+    }
 
     const groups = this.getAllGroups();
+    console.log('📂 Total groups available:', groups.length);
+    
     const groupIndex = groups.findIndex((g) => g.code === groupCode);
+    console.log('🔍 Group index found:', groupIndex);
 
-    if (groupIndex === -1) return null;
+    if (groupIndex === -1) {
+      console.log('❌ Group not found with code:', groupCode);
+      return null;
+    }
 
     const group = groups[groupIndex];
+    console.log('🎯 Found group to join:', group);
+    console.log('👑 Group admin member:', group.members.find(m => m.role === 'admin'));
+    console.log('👥 All group members:', group.members.map(m => ({ id: m.id, email: m.email, role: m.role })));
 
     // Check if user already exists in this group
     // Use both ID and email for comprehensive checking, but prioritize ID for accuracy
     const existingMemberById = group.members.find((m: GroupMember) => m.id === currentUser.id);
     const existingMemberByEmail = group.members.find((m: GroupMember) => m.email === currentUser.email);
+    console.log('👥 Existing member by ID:', existingMemberById);
+    console.log('👥 Existing member by email:', existingMemberByEmail);
     
     // If found by ID (most accurate), use that
     const existingMember = existingMemberById || existingMemberByEmail;
     
     if (existingMember) {
+      console.log('⚠️ User already exists in group with role:', existingMember.role);
       // If user is already an admin, they can't join as a player
       if (existingMember.role === 'admin') {
         throw new Error('You are the admin of this group and cannot join as a player');
@@ -187,15 +214,19 @@ export class GroupService {
       role: 'player'
     };
 
+    console.log('➕ Adding new member:', member);
+
     // Add member to group
     group.members.push(member);
     group.memberCount = group.members.length;
+    console.log('📊 Updated group member count:', group.memberCount);
 
     // Update storage and trigger updates
     groups[groupIndex] = group;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
     this.loadGroups();
 
+    console.log('✅ Successfully joined group, returning updated group');
     return group;
   }
 
@@ -241,7 +272,17 @@ export class GroupService {
       leaderboard: [],
     };
 
+    console.log('✅ Creating group:', newGroup);
+    console.log('📝 Group code:', newGroup.code);
+    console.log('👤 Admin member:', adminMember);
+    
     this.saveGroup(newGroup);
+    
+    // Verify group was saved
+    const savedGroups = this.getAllGroups();
+    console.log('💾 All groups after save:', savedGroups);
+    console.log('💾 Saved group codes:', savedGroups.map(g => ({ name: g.name, code: g.code })));
+    
     return of(newGroup);
   }
 

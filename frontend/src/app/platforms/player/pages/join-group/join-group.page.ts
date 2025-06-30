@@ -89,6 +89,7 @@ export class JoinGroupPage implements OnInit, OnDestroy {
   foundGroup: Group | null = null;
   myGroups: Group[] = [];
   private groupsSubscription?: Subscription;
+  groupDetailsMessage: string = '';
 
   currentPlayer = this.authService.getCurrentUser();
 
@@ -97,13 +98,16 @@ export class JoinGroupPage implements OnInit, OnDestroy {
       text: 'Cancel',
       role: 'cancel',
       handler: () => {
+        console.log('🚫 User cancelled group join dialog');
         this.showGroupDetails = false;
         this.foundGroup = null;
+        this.groupDetailsMessage = '';
       },
     },
     {
       text: 'Join Group',
       handler: () => {
+        console.log('✅ User confirmed group join');
         this.confirmJoinGroup();
       },
     },
@@ -155,16 +159,34 @@ export class JoinGroupPage implements OnInit, OnDestroy {
     this.isSearching = true;
 
     try {
+      console.log('🔍 Searching for group with code:', this.groupCode);
+      
+      // Debug: Check all available groups
+      const allGroups = this.groupService.getAllGroups();
+      console.log('📋 All available groups:', allGroups);
+      console.log('📋 Group codes in storage:', allGroups.map(g => ({ name: g.name, code: g.code })));
+      
       // Find group by code
       const group = this.groupService.findGroupByCode(this.groupCode);
+      console.log('🎯 Found group:', group);
 
       if (group) {
+        console.log('✅ Setting foundGroup and showing details dialog');
         this.foundGroup = group;
+        
+        // Generate the message once and store it
+        this.groupDetailsMessage = this.getGroupDetailsMessage();
+        console.log('📝 Generated message:', this.groupDetailsMessage);
+        
         this.showGroupDetails = true;
+        console.log('🔄 showGroupDetails set to:', this.showGroupDetails);
+        console.log('📊 foundGroup set to:', this.foundGroup);
+        
         // Clear input after finding group
         this.groupCode = '';
         this.isValidCode = false;
       } else {
+        console.log('❌ No group found with code:', this.groupCode);
         await this.toastService.showToast('Group not found with that code', 'error');
         // Clear the input if group is not found
         this.groupCode = '';
@@ -182,22 +204,29 @@ export class JoinGroupPage implements OnInit, OnDestroy {
   }
 
   getGroupDetailsMessage(): string {
-    if (!this.foundGroup) return '';
-
-    let message = `Group Name: ${this.foundGroup.name}\n`;
-    message += `Admin: ${this.foundGroup.adminName}\n`;
-    message += `Members: ${this.foundGroup.memberCount}\n`;
-    message += `Type: ${
-      this.foundGroup.type === 'prize' ? 'Prize Pool' : 'Casual'
-    }\n`;
-
-    if (this.foundGroup.type === 'prize') {
-      message += `Entry Fee: £${this.foundGroup.entryFee}\n`;
+    if (!this.foundGroup) {
+      return '';
     }
 
-    message += '\nDo you want to join this group?';
+    try {
+      let message = `Group Name: ${this.foundGroup.name}\n`;
+      message += `Admin: ${this.foundGroup.adminName}\n`;
+      message += `Members: ${this.foundGroup.memberCount}\n`;
+      message += `Type: ${
+        this.foundGroup.type === 'prize' ? 'Prize Pool' : 'Casual'
+      }\n`;
 
-    return message;
+      if (this.foundGroup.type === 'prize') {
+        message += `Entry Fee: £${this.foundGroup.entryFee}\n`;
+      }
+
+      message += '\nDo you want to join this group?';
+
+      return message;
+    } catch (error) {
+      console.error('❌ Error generating group details message:', error);
+      return 'Error loading group details';
+    }
   }
 
   private loadMyGroups() {
@@ -210,19 +239,31 @@ export class JoinGroupPage implements OnInit, OnDestroy {
   }
 
   async confirmJoinGroup() {
-    if (!this.foundGroup || this.isJoining) return;
+    console.log('🚀 Starting confirmJoinGroup process');
+    console.log('📊 Current foundGroup:', this.foundGroup);
+    console.log('🔄 Current isJoining status:', this.isJoining);
+    
+    if (!this.foundGroup || this.isJoining) {
+      console.log('❌ Cannot proceed - no foundGroup or already joining');
+      return;
+    }
 
     this.isJoining = true;
     const groupName = this.foundGroup.name;
+    console.log('💼 Attempting to join group:', groupName);
 
     try {
       // Use enhanced join method that automatically uses current user data
+      console.log('🔗 Calling groupService.joinGroup with code:', this.foundGroup.code);
       const updatedGroup = this.groupService.joinGroup(this.foundGroup.code);
+      console.log('📥 joinGroup result:', updatedGroup);
 
       if (updatedGroup) {
+        console.log('✅ Successfully joined group, closing dialog');
         // Close dialog immediately
         this.showGroupDetails = false;
         this.foundGroup = null;
+        this.groupDetailsMessage = '';
         
         // Show success message with enhanced feedback
         await this.toastService.showToast(
@@ -235,16 +276,20 @@ export class JoinGroupPage implements OnInit, OnDestroy {
         // Stay on the same page - no navigation redirect
         // User can see their updated "My Groups" section and join more groups if needed
       } else {
+        console.log('❌ joinGroup returned null/undefined');
         throw new Error('Failed to join group');
       }
     } catch (error) {
+      console.error('❌ Error in confirmJoinGroup:', error);
       let message = 'Error joining group';
       if (error instanceof Error) {
         message = error.message;
       }
+      console.log('📢 Showing error toast:', message);
       await this.toastService.showToast(message, 'error');
     } finally {
       this.isJoining = false;
+      console.log('🏁 confirmJoinGroup process completed');
     }
   }
 
