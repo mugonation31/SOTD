@@ -156,15 +156,18 @@ export class GroupService {
 
     const group = groups[groupIndex];
 
-    // Check if user already exists - use ID instead of email for more accurate checking
-    const existingMember = group.members.find((m: GroupMember) => 
-      m.id === currentUser.id || m.email === currentUser.email
-    );
+    // Check if user already exists in this group
+    // Use both ID and email for comprehensive checking, but prioritize ID for accuracy
+    const existingMemberById = group.members.find((m: GroupMember) => m.id === currentUser.id);
+    const existingMemberByEmail = group.members.find((m: GroupMember) => m.email === currentUser.email);
+    
+    // If found by ID (most accurate), use that
+    const existingMember = existingMemberById || existingMemberByEmail;
     
     if (existingMember) {
       // If user is already an admin, they can't join as a player
       if (existingMember.role === 'admin') {
-        throw new Error('You are the admin of this group');
+        throw new Error('You are the admin of this group and cannot join as a player');
       }
       // If user is already a player member
       if (existingMember.role === 'player') {

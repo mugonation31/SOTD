@@ -198,7 +198,7 @@ export class AuthService {
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
       user: {
-        id: 'mock-user-id',
+        id: `user_${loginData.email.replace(/[^a-zA-Z0-9]/g, '_')}`, // Generate unique ID based on email
         email: loginData.email,
         firstName: firstName,
         lastName: lastName,
@@ -219,7 +219,7 @@ export class AuthService {
         const isFirstLogin = !hasCompletedFirstLogin;
         
         const user: User = {
-          id: mockResponse.user.id,
+          id: mockResponse.user.id, // This now uses the unique ID we generated above
           role: mockResponse.user.role,
           firstLogin: isFirstLogin,
           username: username,
@@ -291,7 +291,7 @@ export class AuthService {
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
       user: {
-        id: 'mock-user-id',
+        id: `user_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}`, // Generate unique ID based on email
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,

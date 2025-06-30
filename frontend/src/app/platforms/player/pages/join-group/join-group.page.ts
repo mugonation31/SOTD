@@ -28,7 +28,7 @@ import {
   arrowForwardOutline,
   footballOutline,
   personOutline,
-  logOutOutline, peopleOutline, chevronForwardOutline, addOutline } from 'ionicons/icons';
+  logOutOutline, peopleOutline, chevronForwardOutline } from 'ionicons/icons';
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
@@ -115,7 +115,7 @@ export class JoinGroupPage implements OnInit, OnDestroy {
     private groupService: GroupService,
     private authService: AuthService
   ) {
-    addIcons({footballOutline,personOutline,addOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
+    addIcons({footballOutline,personOutline,arrowForwardOutline,peopleOutline,chevronForwardOutline,peopleCircleOutline,logOutOutline,});
   }
 
   ngOnInit() {
@@ -247,19 +247,5 @@ export class JoinGroupPage implements OnInit, OnDestroy {
       this.isJoining = false;
     }
   }
-
-  // Create a test group for testing join functionality
-  createTestGroup() {
-    try {
-      const testGroup = this.groupService.createJoinableTestGroup();
-      this.toastService.showToast(
-        `Test group created! Use code: ${testGroup.code}`,
-        'success'
-      );
-    } catch (error) {
-      this.toastService.showToast('Error creating test group', 'error');
-    }
-  }
-
 
 }
