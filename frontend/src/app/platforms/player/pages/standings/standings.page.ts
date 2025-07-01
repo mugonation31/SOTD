@@ -31,34 +31,9 @@ import {
   footballOutline,
   personOutline, personAddOutline, chevronForwardOutline } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
-import { GroupService } from '@core/services/group.service';
+import { GroupService, Standing, GroupWithStandings } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { Subscription } from 'rxjs';
-
-interface Standing {
-  position: number;
-  previousPosition: number;
-  userId: string;
-  name: string;
-  avatar?: string;
-  played: number;
-  points: number;
-  correctScores: number;
-  correctResults: number;
-  jokerUsed: number;
-}
-
-interface GroupStanding {
-  group: {
-    id: string;
-    name: string;
-    code: string;
-    memberCount: number;
-    type: 'casual' | 'prize';
-  };
-  leaderboard: Standing[];
-  userPosition: number | null;
-}
 
 @Component({
   selector: 'app-standings',
@@ -92,7 +67,7 @@ interface GroupStanding {
 })
 export class StandingsPage implements OnInit, OnDestroy {
   currentUserId: string | null = null;
-  groupStandings: GroupStanding[] = [];
+  groupStandings: GroupWithStandings[] = [];
   private groupsSubscription?: Subscription;
 
   constructor(
@@ -120,45 +95,12 @@ export class StandingsPage implements OnInit, OnDestroy {
   }
 
   private loadGroupStandings() {
-    const groupsWithLeaderboards = this.groupService.getUserGroupsWithLeaderboards();
-    this.groupStandings = groupsWithLeaderboards.map(item => {
-      const convertedLeaderboard = this.convertToStandings(item.leaderboard);
-      const currentUser = this.authService.getCurrentUser();
-      const userPosition = currentUser 
-        ? convertedLeaderboard.findIndex(entry => entry.userId === currentUser.id) + 1
-        : null;
-      
-      return {
-        group: {
-          id: item.group.id,
-          name: item.group.name,
-          code: item.group.code,
-          memberCount: item.group.memberCount,
-          type: item.group.type
-        },
-        leaderboard: convertedLeaderboard,
-        userPosition: userPosition || null
-      };
-    });
-  }
-
-  // Convert GroupLeaderboardEntry to Standing format
-  private convertToStandings(entries: any[]): Standing[] {
-    return entries.map(entry => ({
-      position: entry.position,
-      previousPosition: entry.position, // Use same as position for now
-      userId: entry.memberId,
-      name: entry.name,
-      played: entry.played,
-      points: entry.points,
-      correctScores: Math.floor(entry.points * 0.1), // Mock calculation
-      correctResults: Math.floor(entry.points * 0.2), // Mock calculation
-      jokerUsed: entry.jokerUsed
-    }));
+    // Use the new optimized method from group service
+    this.groupStandings = this.groupService.getUserGroupsWithStandings();
   }
 
   // Track by function for better performance when rendering groups
-  trackByGroupId(index: number, item: GroupStanding): string {
+  trackByGroupId(index: number, item: GroupWithStandings): string {
     return item.group.id;
   }
 

@@ -31,6 +31,20 @@ interface GroupLeaderboardEntry {
   trend: 'up' | 'down' | 'same';
 }
 
+// Standardized Standing interface for compatibility
+export interface Standing {
+  position: number;
+  previousPosition: number;
+  userId: string;
+  name: string;
+  avatar?: string;
+  played: number;
+  points: number;
+  correctScores: number;
+  correctResults: number;
+  jokerUsed: number;
+}
+
 interface Group {
   id: string;
   name: string;
@@ -52,6 +66,19 @@ interface CreateGroupDto {
   description: string;
   entryFee: number;
   isPrivate: boolean;
+}
+
+// Standardized group with standings interface
+export interface GroupWithStandings {
+  group: {
+    id: string;
+    name: string;
+    code: string;
+    memberCount: number;
+    type: 'casual' | 'prize';
+  };
+  leaderboard: Standing[];
+  userPosition: number | null;
 }
 
 @Injectable({
@@ -221,6 +248,9 @@ export class GroupService {
     group.memberCount = group.members.length;
     console.log('📊 Updated group member count:', group.memberCount);
 
+    // Clear existing leaderboard to force regeneration with new member
+    group.leaderboard = [];
+
     // Update storage and trigger updates
     groups[groupIndex] = group;
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
@@ -233,6 +263,7 @@ export class GroupService {
   deleteGroup(groupId: string): void {
     const groups = this.getAllGroups().filter((g) => g.id !== groupId);
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    this.loadGroups();
   }
 
   createGroup(data: CreateGroupDto): Observable<Group> {
@@ -303,27 +334,107 @@ export class GroupService {
     return group.leaderboard;
   }
 
-  // Generate mock leaderboard data for testing
+  // Generate mock leaderboard data for testing with better distribution
   private generateMockLeaderboard(group: Group): GroupLeaderboardEntry[] {
     const currentUser = this.authService.getCurrentUser();
     
-    const basePoints = Math.floor(Math.random() * 100) + 150;
-    return group.members.map((member: GroupMember, index: number) => ({
-      position: index + 1,
-      memberId: member.id,
-      memberName: member.id === currentUser?.id ? 'You' : member.name,
-      name: member.id === currentUser?.id ? 'You' : member.name,
-      played: Math.floor(Math.random() * 15) + 10, // 10-25 games
-      points: basePoints + (index * 10), // 150-250 points
-      totalPoints: basePoints + (index * 10), // Same as points for compatibility
-      jokerUsed: Math.floor(Math.random() * 3) + 1, // 1-3 jokers used
-      rank: index + 1,
-      trend: 'same' as 'up' | 'down' | 'same',
-    })).sort((a: any, b: any) => b.points - a.points) // Sort by points descending
-      .map((entry: any, index: number) => ({ ...entry, position: index + 1, rank: index + 1 })); // Update positions
+    // More realistic point distribution
+    const basePoints = 180 + Math.floor(Math.random() * 40); // 180-220 base range
+    const pointsVariation = Math.floor(Math.random() * 30) + 10; // 10-40 variation
+    
+    return group.members.map((member: GroupMember, index: number) => {
+      const pointVariation = Math.floor(Math.random() * pointsVariation) - (pointsVariation / 2);
+      const memberPoints = Math.max(0, basePoints - (index * 15) + pointVariation);
+      
+      return {
+        position: index + 1,
+        memberId: member.id,
+        memberName: member.id === currentUser?.id ? 'You' : member.name,
+        name: member.id === currentUser?.id ? 'You' : member.name,
+        played: Math.floor(Math.random() * 8) + 12, // 12-20 games played
+        points: memberPoints,
+        totalPoints: memberPoints, // Same as points for compatibility
+        jokerUsed: Math.floor(Math.random() * 3) + 1, // 1-3 jokers used
+        rank: index + 1,
+        trend: index === 0 ? 'same' as const : 
+               Math.random() > 0.7 ? 'up' as const : 
+               Math.random() > 0.5 ? 'down' as const : 'same' as const,
+      };
+    }).sort((a: any, b: any) => b.points - a.points) // Sort by points descending
+      .map((entry: any, index: number) => ({ 
+        ...entry, 
+        position: index + 1, 
+        rank: index + 1 
+      })); // Update positions after sorting
   }
 
-  // Get all groups where the current user is a member (for standings page)
+  // Centralized conversion function to maintain consistency
+  convertToStandings(entries: GroupLeaderboardEntry[]): Standing[] {
+    return entries.map(entry => ({
+      position: entry.position,
+      previousPosition: entry.position, // Use same as position for now
+      userId: entry.memberId,
+      name: entry.name,
+      played: entry.played,
+      points: entry.points,
+      correctScores: Math.floor(entry.points * 0.12) + Math.floor(Math.random() * 3), // More realistic calculation
+      correctResults: Math.floor(entry.points * 0.25) + Math.floor(Math.random() * 2), // More realistic calculation
+      jokerUsed: entry.jokerUsed
+    }));
+  }
+
+  // Get all groups where the current user is a member (optimized for standings page)
+  getUserGroupsWithStandings(): GroupWithStandings[] {
+    const userGroups = this.getUserGroups();
+    const currentUser = this.authService.getCurrentUser();
+    
+    return userGroups.map(group => {
+      const leaderboard = this.getGroupLeaderboard(group.id);
+      const standings = this.convertToStandings(leaderboard);
+      const userPosition = currentUser 
+        ? standings.findIndex(entry => entry.userId === currentUser.id) + 1
+        : null;
+      
+      return {
+        group: {
+          id: group.id,
+          name: group.name,
+          code: group.code,
+          memberCount: group.memberCount,
+          type: group.type
+        },
+        leaderboard: standings,
+        userPosition: userPosition || null
+      };
+    });
+  }
+
+  // Get specific group with standings (optimized for group-standings page)
+  getGroupWithStandings(groupId: string): GroupWithStandings | null {
+    const group = this.getAllGroups().find(g => g.id === groupId);
+    if (!group) return null;
+
+    const leaderboard = this.getGroupLeaderboard(groupId);
+    const standings = this.convertToStandings(leaderboard);
+    const currentUser = this.authService.getCurrentUser();
+    const userPosition = currentUser 
+      ? standings.findIndex(entry => entry.userId === currentUser.id) + 1
+      : null;
+
+    return {
+      group: {
+        id: group.id,
+        name: group.name,
+        code: group.code,
+        memberCount: group.memberCount,
+        type: group.type
+      },
+      leaderboard: standings,
+      userPosition: userPosition || null
+    };
+  }
+
+  // Legacy method for backward compatibility - now optimized
   getUserGroupsWithLeaderboards(): { group: Group; leaderboard: GroupLeaderboardEntry[]; userPosition: number | null }[] {
     const userGroups = this.getUserGroups();
     const currentUser = this.authService.getCurrentUser();
@@ -368,6 +479,13 @@ export class GroupService {
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    
+    // Ensure code is unique
+    const existingCodes = this.getAllGroups().map(g => g.code);
+    if (existingCodes.includes(code)) {
+      return this.generateGroupCode(); // Recursively generate until unique
+    }
+    
     return code;
   }
 
@@ -451,6 +569,4 @@ export class GroupService {
     console.log('Created joinable test group with code:', testGroup.code);
     return testGroup;
   }
-
-
 }

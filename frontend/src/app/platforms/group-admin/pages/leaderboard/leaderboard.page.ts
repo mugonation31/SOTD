@@ -23,20 +23,9 @@ import {
   chevronForwardOutline,
   addOutline,
 } from 'ionicons/icons';
-import { GroupService } from '@core/services/group.service';
+import { GroupService, Standing } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { Subscription } from 'rxjs';
-
-interface Standing {
-  position: number;
-  userId: string;
-  name: string;
-  played: number;
-  points: number;
-  correctScores: number;
-  correctResults: number;
-  jokerUsed: number;
-}
 
 interface GroupStanding {
   group: {
@@ -201,38 +190,20 @@ interface GroupStanding {
         margin: 0 0 24px 0;
         color: var(--ion-color-medium);
         font-size: 16px;
+        line-height: 1.5;
       }
-      
-      ion-button {
-        --border-radius: 8px;
-        --padding-start: 20px;
-        --padding-end: 20px;
-        --padding-top: 12px;
-        --padding-bottom: 12px;
-          font-weight: 500;
-        }
     }
 
-    // Groups list
-    ion-list {
-      background: transparent;
-      padding: 0;
-    }
-
+    // Group item styles
     .group-item {
-      --background: white;
       --border-radius: 12px;
-      --padding-start: 0;
-      --padding-end: 0;
-      --inner-padding-start: 16px;
-      --inner-padding-end: 16px;
-      --inner-padding-top: 16px;
-      --inner-padding-bottom: 16px;
-      --min-height: auto;
-      
+      --background: white;
+      --padding-start: 20px;
+      --padding-end: 20px;
+      --padding-top: 16px;
+      --padding-bottom: 16px;
       margin-bottom: 12px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       transition: all 0.2s ease;
       
       &:hover {
@@ -385,7 +356,8 @@ export class LeaderboardPage implements OnInit, OnDestroy {
     const groupsWithLeaderboards = this.groupService.getAdminGroupsWithLeaderboards();
     
     this.groupStandings = groupsWithLeaderboards.map(item => {
-      const convertedLeaderboard = this.convertToStandings(item.leaderboard);
+      // Use the centralized conversion function from the service
+      const convertedLeaderboard = this.groupService.convertToStandings(item.leaderboard);
       
       return {
         group: {
@@ -399,20 +371,6 @@ export class LeaderboardPage implements OnInit, OnDestroy {
         adminPosition: item.adminPosition
       };
     });
-  }
-
-  // Convert GroupLeaderboardEntry to Standing format
-  private convertToStandings(entries: any[]): Standing[] {
-    return entries.map(entry => ({
-      position: entry.position,
-      userId: entry.memberId,
-      name: entry.name,
-      played: entry.played,
-      points: entry.points,
-      correctScores: Math.floor(entry.points * 0.1), // Mock calculation
-      correctResults: Math.floor(entry.points * 0.2), // Mock calculation
-      jokerUsed: entry.jokerUsed
-    }));
   }
 
   // Track by function for better performance when rendering groups
