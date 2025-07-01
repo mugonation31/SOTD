@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -54,6 +54,8 @@ import {
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
 import { GroupService } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface Member {
   id: string;
@@ -578,56 +580,23 @@ interface Member {
     FormsModule,
   ],
 })
-export class MembersPage implements OnInit {
+export class MembersPage implements OnInit, OnDestroy {
   selectedFilter = 'all';
   searchTerm = '';
   currentAdminId = '1';
   isLoading = false;
 
-  // Mock data for members
-  members: Member[] = [
-    {
-      id: '1',
-      name: 'John Admin',
-      email: 'john@example.com',
-      joinedAt: new Date('2024-01-01'),
-      groupName: 'Premier League Predictions',
-      role: 'admin',
-      status: 'active',
-    },
-    {
-      id: '2',
-      name: 'Sarah Player',
-      email: 'sarah@example.com',
-      joinedAt: new Date('2024-01-02'),
-      groupName: 'Premier League Predictions',
-      role: 'player',
-      status: 'active',
-    },
-    {
-      id: '3',
-      name: 'Mike Admin',
-      email: 'mike@example.com',
-      joinedAt: new Date('2024-01-03'),
-      groupName: 'Premier League Predictions',
-      role: 'admin',
-      status: 'active',
-    },
-    {
-      id: '4',
-      name: 'Emma Player',
-      email: 'emma@example.com',
-      joinedAt: new Date('2024-01-04'),
-      groupName: 'Premier League Predictions',
-      role: 'player',
-      status: 'removed',
-      removedAt: new Date('2024-02-01'),
-    },
-  ];
+  // Initialize empty - will be populated from real group data
+  members: Member[] = [];
 
   filteredMembers: Member[] = [];
 
-  constructor(private groupService: GroupService) {
+  private subscription?: Subscription;
+
+  constructor(
+    private groupService: GroupService,
+    private authService: AuthService
+  ) {
     addIcons({
       personOutline,
       peopleOutline,
@@ -648,16 +617,36 @@ export class MembersPage implements OnInit {
   }
 
   ngOnInit() {
+    console.log('🚀 Members page: Initializing...');
+    
+    // Set current admin ID from logged-in user
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      this.currentAdminId = currentUser.id;
+    }
+    
     this.loadMembersFromGroups();
     this.applyFilters();
+    this.subscribeToGroupUpdates();
+  }
+
+  ngOnDestroy() {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
   }
 
   private loadMembersFromGroups() {
-    // Get all groups and extract members
+    // Get all groups where current user is admin and extract members
     const groups = this.groupService.getAdminGroups();
     const allMembers: Member[] = [];
 
+    console.log('🔄 Members page: Loading members from admin groups:', groups.length);
+
     groups.forEach(group => {
+      console.log(`📋 Group "${group.name}": ${group.members.length} members`, 
+        group.members.map(m => ({ name: m.name, role: m.role, email: m.email })));
+      
       group.members.forEach(member => {
         allMembers.push({
           id: member.id,
@@ -673,6 +662,13 @@ export class MembersPage implements OnInit {
     });
 
     this.members = allMembers;
+    console.log('✅ Members page: Total members loaded:', allMembers.length);
+    console.log('📊 Members breakdown:', {
+      total: allMembers.length,
+      admins: allMembers.filter(m => m.role === 'admin').length,
+      players: allMembers.filter(m => m.role === 'player').length,
+      active: allMembers.filter(m => m.status === 'active').length
+    });
   }
 
   getMemberCount(filter: string): number {
@@ -816,5 +812,13 @@ export class MembersPage implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private subscribeToGroupUpdates() {
+    this.subscription = this.groupService.groups$.subscribe(() => {
+      console.log('🔄 Members page: Received group update, reloading members...');
+      this.loadMembersFromGroups();
+      this.applyFilters();
+    });
   }
 }

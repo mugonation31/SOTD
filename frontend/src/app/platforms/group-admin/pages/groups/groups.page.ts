@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -69,6 +69,7 @@ import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface GroupMember {
   id: string;
@@ -172,7 +173,7 @@ interface CurrentAdmin {
     CurrencyPipe,
   ],
 })
-export class GroupsPage implements OnInit {
+export class GroupsPage implements OnInit, OnDestroy {
   groupForm!: FormGroup;
   isLoading = false;
   isCreateModalOpen = false;
@@ -191,6 +192,7 @@ export class GroupsPage implements OnInit {
     email: '',
     members: []
   };
+  private subscription: Subscription | undefined;
 
   constructor(
     private fb: FormBuilder,
@@ -211,9 +213,22 @@ export class GroupsPage implements OnInit {
     this.loadGroups();
     
     // Subscribe to group updates for real-time member changes
-    this.groupService.groups$.subscribe(() => {
+    this.subscription = this.groupService.groups$.subscribe(() => {
       this.loadGroups();
+      
+      // If a group is currently selected, refresh its data
+      if (this.selectedGroup) {
+        const updatedGroup = this.groups.find(g => g.id === this.selectedGroup!.id);
+        if (updatedGroup) {
+          this.selectedGroup = updatedGroup;
+          this.filteredMembers = [...updatedGroup.members];
+        }
+      }
     });
+  }
+
+  ngOnDestroy() {
+    this.subscription?.unsubscribe();
   }
 
   private initCurrentAdmin() {
@@ -257,6 +272,8 @@ export class GroupsPage implements OnInit {
   private loadGroups() {
     // Only load groups where the current user is an admin
     this.groups = this.groupService.getAdminGroups();
+    console.log('🔄 Group-admin: Loaded groups with updated member counts:', 
+      this.groups.map(g => ({ name: g.name, memberCount: g.memberCount, actualMembers: g.members.length })));
   }
 
   onGroupTypeChange() {
@@ -274,8 +291,6 @@ export class GroupsPage implements OnInit {
     this.groupForm.patchValue({ type });
     this.onGroupTypeChange();
   }
-
-
 
   async createGroup() {
     if (this.groupForm.valid) {
@@ -356,12 +371,17 @@ export class GroupsPage implements OnInit {
   }
 
   async showGroupDetails(group: Group) {
-    this.selectedGroup = group;
-    this.filteredMembers = [...group.members];
+    // Get the latest group data from the service to ensure we have current members
+    const latestGroup = this.groupService.getAllGroups().find(g => g.id === group.id);
+    this.selectedGroup = latestGroup || group;
+    this.filteredMembers = [...this.selectedGroup.members];
+    
+    console.log(`🔍 Group modal: "${this.selectedGroup.name}" showing ${this.selectedGroup.members.length} members:`, 
+      this.selectedGroup.members.map(m => ({ name: m.name, role: m.role })));
     
     // Load existing prize breakdown if available
-    if (group.prizeBreakdown?.positions) {
-      this.prizePositions = [...group.prizeBreakdown.positions];
+    if (this.selectedGroup.prizeBreakdown?.positions) {
+      this.prizePositions = [...this.selectedGroup.prizeBreakdown.positions];
     } else {
       // Reset to default if no existing breakdown
       this.prizePositions = [{ percentage: 100 }];
@@ -566,9 +586,14 @@ export class GroupsPage implements OnInit {
   }
 
   viewGroupMembers(group: Group) {
-    this.selectedGroup = group;
+    // Get the latest group data from the service to ensure we have current members
+    const latestGroup = this.groupService.getAllGroups().find(g => g.id === group.id);
+    this.selectedGroup = latestGroup || group;
     this.selectedTab = 'members';
-    this.filteredMembers = [...group.members];
+    this.filteredMembers = [...this.selectedGroup.members];
+    
+    console.log(`👥 Group members tab: "${this.selectedGroup.name}" showing ${this.selectedGroup.members.length} members:`, 
+      this.selectedGroup.members.map(m => ({ name: m.name, role: m.role })));
   }
 
   viewGroupLeaderboard(group: Group) {
@@ -766,6 +791,4 @@ export class GroupsPage implements OnInit {
       this.prizePositions = [...this.selectedGroup.prizeBreakdown.positions];
     }
   }
-
-
 }
