@@ -337,11 +337,13 @@ export class LeaderboardPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    console.log('🚀 Leaderboard: Initializing...');
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
     this.loadGroupStandings();
     
-    // Subscribe to group updates
+    // Subscribe to group updates for real-time member count and standings updates
     this.groupsSubscription = this.groupService.groups$.subscribe(() => {
+      console.log('🔄 Leaderboard: Received group update, reloading standings...');
       this.loadGroupStandings();
     });
   }
@@ -353,24 +355,37 @@ export class LeaderboardPage implements OnInit, OnDestroy {
   }
 
   private loadGroupStandings() {
+    console.log('📊 Leaderboard: Loading group standings...');
     const groupsWithLeaderboards = this.groupService.getAdminGroupsWithLeaderboards();
     
     this.groupStandings = groupsWithLeaderboards.map(item => {
       // Use the centralized conversion function from the service
       const convertedLeaderboard = this.groupService.convertToStandings(item.leaderboard);
       
+      // Ensure member count is synced with actual members
+      const actualMemberCount = item.group.members.length;
+      
+      console.log(`📋 Group "${item.group.name}": memberCount=${item.group.memberCount}, actualMembers=${actualMemberCount}`);
+      
       return {
         group: {
           id: item.group.id,
           name: item.group.name,
           code: item.group.code,
-          memberCount: item.group.memberCount,
+          memberCount: actualMemberCount, // Use actual member count
           type: item.group.type
         },
         leaderboard: convertedLeaderboard,
         adminPosition: item.adminPosition
       };
     });
+    
+    console.log('✅ Leaderboard: Loaded standings for', this.groupStandings.length, 'groups');
+    console.log('📊 Member counts:', this.groupStandings.map(gs => ({ 
+      name: gs.group.name, 
+      memberCount: gs.group.memberCount,
+      leaderboardEntries: gs.leaderboard.length
+    })));
   }
 
   // Track by function for better performance when rendering groups

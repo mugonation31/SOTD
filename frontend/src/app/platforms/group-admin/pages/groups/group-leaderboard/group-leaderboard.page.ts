@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
@@ -30,6 +30,7 @@ import {
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
 import { GroupService } from '@core/services/group.service';
+import { Subscription } from 'rxjs';
 
 interface GroupLeaderboardEntry {
   position: number;
@@ -176,11 +177,12 @@ interface GroupLeaderboardEntry {
     NgClass,
   ],
 })
-export class GroupLeaderboardPage implements OnInit {
+export class GroupLeaderboardPage implements OnInit, OnDestroy {
   groupId: string = '';
   groupName: string = '';
   leaderboard: GroupLeaderboardEntry[] = [];
   sortedLeaderboard: GroupLeaderboardEntry[] = [];
+  private groupsSubscription?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
@@ -204,15 +206,30 @@ export class GroupLeaderboardPage implements OnInit {
       this.groupId = params['id'];
       this.loadGroupData();
     });
+    
+    // Subscribe to group updates for real-time leaderboard updates
+    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
+      console.log('🔄 Group Leaderboard: Received group update, reloading data...');
+      this.loadGroupData();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.groupsSubscription) {
+      this.groupsSubscription.unsubscribe();
+    }
   }
 
   private loadGroupData() {
+    console.log('📊 Group Leaderboard: Loading data for group:', this.groupId);
     // Get the group data from GroupService
     const allGroups = this.groupService.getAllGroups();
     const group = allGroups.find(g => g.id === this.groupId);
     
     if (group) {
       this.groupName = group.name;
+      console.log(`📋 Group "${group.name}": ${group.members.length} members`);
+      
       // Get the leaderboard for this group
       const groupLeaderboard = this.groupService.getGroupLeaderboard(this.groupId);
       
@@ -225,8 +242,10 @@ export class GroupLeaderboardPage implements OnInit {
         totalPoints: entry.totalPoints
       }));
       
+      console.log('📊 Leaderboard entries:', this.leaderboard.length);
       this.sortLeaderboard();
     } else {
+      console.log('❌ Group not found, navigating back');
       // Group not found, navigate back
       this.router.navigate(['/group-admin/groups']);
     }

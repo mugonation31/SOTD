@@ -272,8 +272,20 @@ export class GroupsPage implements OnInit, OnDestroy {
   private loadGroups() {
     // Only load groups where the current user is an admin
     this.groups = this.groupService.getAdminGroups();
+    
+    // Ensure memberCount is synced with actual members array length
+    this.groups = this.groups.map(group => ({
+      ...group,
+      memberCount: group.members.length
+    }));
+    
     console.log('🔄 Group-admin: Loaded groups with updated member counts:', 
-      this.groups.map(g => ({ name: g.name, memberCount: g.memberCount, actualMembers: g.members.length })));
+      this.groups.map(g => ({ 
+        name: g.name, 
+        memberCount: g.memberCount, 
+        actualMembers: g.members.length,
+        memberNames: g.members.map(m => m.name)
+      })));
   }
 
   onGroupTypeChange() {
