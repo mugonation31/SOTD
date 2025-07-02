@@ -324,6 +324,7 @@ export class AuthService {
   }
 
   logout(): void {
+    console.log('🚪 AuthService: Logout called, performing cleanup and triggering reactive updates...');
     this.performLogout();
     // Note: Don't redirect here - let the calling component handle navigation
     // This prevents issues with returnUrl and ensures clean navigation flow
@@ -331,22 +332,33 @@ export class AuthService {
 
   // Logout without redirect (for use in signup flow)
   logoutSilent() {
+    console.log('🔇 AuthService: Silent logout called, performing cleanup without logging...');
     this.performLogout();
   }
 
   private performLogout() {
+    console.log('🧹 AuthService: Starting logout cleanup process...');
+    
     // Store user email to track that they have completed first login
     const user = this.getUserFromStorage();
     if (user?.firstLogin && user.email) {
+      console.log(`📝 AuthService: Marking first login complete for user: ${user.email}`);
       // Mark this user as having completed first login
       localStorage.setItem(`firstLoginComplete_${user.email}`, 'true');
     }
     
+    console.log('🗑️ AuthService: Clearing user storage...');
     this.clearUserStorage();
+    
+    console.log('📡 AuthService: Triggering BehaviorSubject.next(null) for reactive guard updates...');
     this.currentUserSubject.next(null);
+    
     if (this.sessionTimer) {
+      console.log('⏰ AuthService: Clearing session timer...');
       clearInterval(this.sessionTimer);
     }
+    
+    console.log('✅ AuthService: Logout cleanup completed - guards should now react to auth state change');
   }
 
   // Method to mark first login as complete (called from first-time pages)
