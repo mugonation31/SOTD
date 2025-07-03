@@ -14,7 +14,7 @@ export type UserRole = 'super-admin' | 'group-admin' | 'player';
 // Storage Keys - Centralized for easy management
 const STORAGE_KEYS = {
   USER: 'user',
-  CURRENT_USER: 'currentUser', // Legacy - will be migrated
+  CURRENT_USER: 'user',
   LAST_ACTIVITY: 'lastActivity',
   PENDING_USER_DATA: 'pendingUserData',
   IS_FIRST_LOGIN: 'isFirstLogin', // Legacy - will be migrated

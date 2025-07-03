@@ -85,24 +85,136 @@ export interface GroupWithStandings {
   providedIn: 'root',
 })
 export class GroupService {
-  private readonly STORAGE_KEY = 'sotd_groups';
-  private readonly USER_GROUPS_KEY = 'sotd_user_groups';
+  private readonly STORAGE_KEY_PREFIX = 'sotd_groups';
+  private readonly USER_GROUPS_KEY_PREFIX = 'sotd_user_groups'; // Legacy - for future use
+  private readonly LEGACY_STORAGE_KEY = 'sotd_groups'; // For migration
   
   // Observable for real-time group updates
   private groupsSubject = new BehaviorSubject<Group[]>([]);
   public groups$ = this.groupsSubject.asObservable();
 
   constructor(private authService: AuthService) {
-    // Initialize storage if empty
-    if (!localStorage.getItem(this.STORAGE_KEY)) {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
+    // Subscribe to auth state changes to handle user switching
+    this.authService.currentUser.subscribe((authResponse) => {
+      const currentUser = authResponse?.user || null;
+      console.log('🔄 GroupService: Auth state changed, user:', currentUser?.id || 'null');
+      
+      // Reinitialize storage when user changes
+      this.handleUserChange(currentUser);
+    });
+  }
+
+  /**
+   * Handle user authentication state changes
+   */
+  private handleUserChange(user: any): void {
+    if (user?.id) {
+      console.log(`👤 GroupService: User logged in: ${user.id}`);
+      // Migrate legacy data and initialize user-specific storage
+      this.initializeUserSpecificStorage();
+      // Load groups for the new user
+      this.loadGroups();
+    } else {
+      console.log('👤 GroupService: User logged out, clearing group data');
+      // Clear the observable when user logs out
+      this.groupsSubject.next([]);
     }
-    if (!localStorage.getItem(this.USER_GROUPS_KEY)) {
-      localStorage.setItem(this.USER_GROUPS_KEY, JSON.stringify([]));
+  }
+
+  /**
+   * Reinitialize storage for current user (useful when user logs in)
+   */
+  public reinitializeForCurrentUser(): void {
+    console.log('🔄 GroupService: Manually reinitializing for current user');
+    this.initializeUserSpecificStorage();
+    this.loadGroups();
+  }
+
+  /**
+   * Generate user-specific storage key
+   * Falls back to legacy key if no user is authenticated
+   */
+  private getUserSpecificStorageKey(): string {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.id) {
+      console.log('⚠️ GroupService: No authenticated user, using legacy storage key');
+      return this.LEGACY_STORAGE_KEY;
     }
     
-    // Load initial groups
-    this.loadGroups();
+    const userSpecificKey = `${this.STORAGE_KEY_PREFIX}_${currentUser.id}`;
+    console.log(`🔑 GroupService: Using user-specific storage key: ${userSpecificKey}`);
+    return userSpecificKey;
+  }
+
+  /**
+   * Initialize user-specific storage and handle migration from legacy storage
+   */
+  private initializeUserSpecificStorage(): void {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.id) {
+      console.log('⚠️ GroupService: No authenticated user for storage initialization');
+      return;
+    }
+
+    const userStorageKey = this.getUserSpecificStorageKey();
+    const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
+    const userSpecificData = localStorage.getItem(userStorageKey);
+
+    console.log(`🔄 GroupService: Initializing storage for user ${currentUser.id}`);
+    console.log(`📂 Legacy data exists: ${!!legacyData}`);
+    console.log(`📂 User-specific data exists: ${!!userSpecificData}`);
+
+    // If user doesn't have specific data but legacy data exists, migrate it
+    if (!userSpecificData && legacyData) {
+      console.log('📦 GroupService: Migrating legacy group data to user-specific storage');
+      
+      try {
+        const legacyGroups = JSON.parse(legacyData);
+        
+        // Filter legacy groups to only include groups where current user is a member
+        const userRelevantGroups = legacyGroups.filter((group: any) => 
+          group.members && group.members.some((member: any) => 
+            member.email === currentUser.email || member.id === currentUser.id
+          )
+        );
+
+        console.log(`📊 GroupService: Migrated ${userRelevantGroups.length} relevant groups from ${legacyGroups.length} total`);
+        localStorage.setItem(userStorageKey, JSON.stringify(userRelevantGroups));
+        
+        // Optionally clear legacy data after migration
+        // localStorage.removeItem(this.LEGACY_STORAGE_KEY);
+        
+      } catch (error) {
+        console.error('❌ GroupService: Error migrating legacy data:', error);
+        localStorage.setItem(userStorageKey, JSON.stringify([]));
+      }
+    } else if (!userSpecificData) {
+      // Initialize empty array for new user
+      console.log('🆕 GroupService: Initializing empty group storage for new user');
+      localStorage.setItem(userStorageKey, JSON.stringify([]));
+    }
+  }
+
+  /**
+   * Clear group data for current user (useful for logout cleanup)
+   */
+  public clearUserGroupData(): void {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.id) {
+      console.log('⚠️ GroupService: Cannot clear user data - no authenticated user');
+      return;
+    }
+
+    const userStorageKey = this.getUserSpecificStorageKey();
+    console.log(`🗑️ GroupService: Clearing group data for user ${currentUser.id}`);
+    
+    localStorage.removeItem(userStorageKey);
+    
+    // Clear the observable
+    this.groupsSubject.next([]);
   }
 
   private loadGroups(): void {
@@ -111,27 +223,47 @@ export class GroupService {
   }
 
   getAllGroups(): Group[] {
-    const groupsJson = localStorage.getItem(this.STORAGE_KEY);
-    const groups = JSON.parse(groupsJson || '[]');
-    return groups.map((group: any) => ({
-      ...group,
-      createdAt: new Date(group.createdAt),
-      members: group.members.map((member: any) => ({
-        ...member,
-        joinedAt: new Date(member.joinedAt),
-      })),
-    }));
+    const storageKey = this.getUserSpecificStorageKey();
+    const groupsJson = localStorage.getItem(storageKey);
+    
+    if (!groupsJson) {
+      console.log(`📂 GroupService: No group data found for storage key: ${storageKey}`);
+      return [];
+    }
+
+    try {
+      const groups = JSON.parse(groupsJson);
+      console.log(`📂 GroupService: Loaded ${groups.length} groups from ${storageKey}`);
+      
+      return groups.map((group: any) => ({
+        ...group,
+        createdAt: new Date(group.createdAt),
+        members: group.members.map((member: any) => ({
+          ...member,
+          joinedAt: new Date(member.joinedAt),
+        })),
+      }));
+    } catch (error) {
+      console.error('❌ GroupService: Error parsing group data:', error);
+      return [];
+    }
   }
 
   // Get groups that the current user is a member of
   getUserGroups(): Group[] {
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser?.email) return [];
+    if (!currentUser?.email) {
+      console.log('⚠️ GroupService: No authenticated user for getUserGroups');
+      return [];
+    }
 
     const allGroups = this.getAllGroups();
-    return allGroups.filter(group => 
+    const userGroups = allGroups.filter(group => 
       group.members.some((member: GroupMember) => member.email === currentUser.email)
     );
+
+    console.log(`👤 GroupService: Found ${userGroups.length} groups for user ${currentUser.email}`);
+    return userGroups;
   }
 
   // Get groups created by the current user (group admin)
@@ -139,28 +271,43 @@ export class GroupService {
     const currentUser = this.authService.getCurrentUser();
     
     if (!currentUser?.email) {
+      console.log('⚠️ GroupService: No authenticated user for getAdminGroups');
       return [];
     }
 
     const allGroups = this.getAllGroups();
-    return allGroups.filter(group => 
+    const adminGroups = allGroups.filter(group => 
       group.members.some((member: GroupMember) => 
         member.email === currentUser.email && member.role === 'admin'
       )
     );
+
+    console.log(`👑 GroupService: Found ${adminGroups.length} admin groups for user ${currentUser.email}`);
+    return adminGroups;
   }
 
   saveGroup(group: any): void {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser?.id) {
+      console.error('❌ GroupService: Cannot save group - no authenticated user');
+      throw new Error('User not authenticated');
+    }
+
     const groups = this.getAllGroups();
     const existingIndex = groups.findIndex((g) => g.id === group.id);
 
     if (existingIndex >= 0) {
+      console.log(`🔄 GroupService: Updating existing group ${group.id}`);
       groups[existingIndex] = group;
     } else {
+      console.log(`➕ GroupService: Adding new group ${group.id}`);
       groups.push(group);
     }
 
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    const storageKey = this.getUserSpecificStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(groups));
+    console.log(`💾 GroupService: Saved ${groups.length} groups to ${storageKey}`);
     
     // Trigger real-time updates
     this.loadGroups();
@@ -253,7 +400,7 @@ export class GroupService {
 
     // Update storage and trigger updates
     groups[groupIndex] = group;
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    localStorage.setItem(this.getUserSpecificStorageKey(), JSON.stringify(groups));
     this.loadGroups();
 
     console.log('✅ Successfully joined group, returning updated group');
@@ -262,7 +409,7 @@ export class GroupService {
 
   deleteGroup(groupId: string): void {
     const groups = this.getAllGroups().filter((g) => g.id !== groupId);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+    localStorage.setItem(this.getUserSpecificStorageKey(), JSON.stringify(groups));
     this.loadGroups();
   }
 
@@ -568,5 +715,29 @@ export class GroupService {
     this.saveGroup(testGroup);
     console.log('Created joinable test group with code:', testGroup.code);
     return testGroup;
+  }
+
+  /**
+   * Debug method to show current storage state (useful for testing)
+   */
+  public debugStorageState(): void {
+    const currentUser = this.authService.getCurrentUser();
+    console.log('🔍 GroupService Debug Storage State:');
+    console.log(`👤 Current User: ${currentUser?.id || 'None'} (${currentUser?.email || 'No email'})`);
+    
+    if (currentUser?.id) {
+      const userStorageKey = this.getUserSpecificStorageKey();
+      const userGroups = localStorage.getItem(userStorageKey);
+      console.log(`🔑 User Storage Key: ${userStorageKey}`);
+      console.log(`📂 User Groups Count: ${userGroups ? JSON.parse(userGroups).length : 0}`);
+    }
+    
+    // Show legacy storage for comparison
+    const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
+    console.log(`📂 Legacy Groups Count: ${legacyData ? JSON.parse(legacyData).length : 0}`);
+    
+    // Show all sotd_groups keys in localStorage
+    const allKeys = Object.keys(localStorage).filter(key => key.startsWith('sotd_groups'));
+    console.log(`🗝️ All Group Storage Keys:`, allKeys);
   }
 }
