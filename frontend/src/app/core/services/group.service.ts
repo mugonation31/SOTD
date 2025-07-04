@@ -88,35 +88,32 @@ export class GroupService {
   private readonly STORAGE_KEY_PREFIX = 'sotd_groups';
   private readonly USER_GROUPS_KEY_PREFIX = 'sotd_user_groups'; // Legacy - for future use
   private readonly LEGACY_STORAGE_KEY = 'sotd_groups'; // For migration
+  // Add global storage key for all groups
+  private readonly GLOBAL_GROUPS_KEY = 'sotd_all_groups';
   
-  // Observable for real-time group updates
   private groupsSubject = new BehaviorSubject<Group[]>([]);
   public groups$ = this.groupsSubject.asObservable();
 
   constructor(private authService: AuthService) {
-    // Subscribe to auth state changes to handle user switching
-    this.authService.currentUser.subscribe((authResponse) => {
-      const currentUser = authResponse?.user || null;
-      console.log('🔄 GroupService: Auth state changed, user:', currentUser?.id || 'null');
-      
-      // Reinitialize storage when user changes
-      this.handleUserChange(currentUser);
+    console.log('🏗️ GroupService: Initializing service');
+    
+    // Initialize global storage
+    this.initializeGlobalStorage();
+    
+    // Subscribe to auth changes
+    this.authService.currentUser.subscribe((authResponse: any) => {
+      console.log('👤 GroupService: User changed, reinitializing storage');
+      this.handleUserChange(authResponse?.user || null);
     });
   }
 
-  /**
-   * Handle user authentication state changes
-   */
-  private handleUserChange(user: any): void {
-    if (user?.id) {
-      console.log(`👤 GroupService: User logged in: ${user.id}`);
-      // Migrate legacy data and initialize user-specific storage
-      this.initializeUserSpecificStorage();
-      // Load groups for the new user
+  private handleUserChange(user: any | null): void {
+    console.log('🔄 GroupService: Handling user change');
+    if (user) {
+      console.log('👤 GroupService: User authenticated, loading groups');
       this.loadGroups();
     } else {
-      console.log('👤 GroupService: User logged out, clearing group data');
-      // Clear the observable when user logs out
+      console.log('👤 GroupService: User logged out, clearing groups');
       this.groupsSubject.next([]);
     }
   }
@@ -126,12 +123,42 @@ export class GroupService {
    */
   public reinitializeForCurrentUser(): void {
     console.log('🔄 GroupService: Manually reinitializing for current user');
-    this.initializeUserSpecificStorage();
+    this.initializeGlobalStorage();
     this.loadGroups();
   }
 
   /**
-   * Generate user-specific storage key
+   * Initialize global storage for all groups
+   */
+  private initializeGlobalStorage(): void {
+    const globalData = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
+    const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
+
+    console.log(`🔄 GroupService: Initializing global storage`);
+    console.log(`📂 Global data exists: ${!!globalData}`);
+    console.log(`📂 Legacy data exists: ${!!legacyData}`);
+
+    // If no global data but legacy data exists, migrate it
+    if (!globalData && legacyData) {
+      console.log('📦 GroupService: Migrating legacy group data to global storage');
+      
+      try {
+        const legacyGroups = JSON.parse(legacyData);
+        console.log(`📊 GroupService: Migrated ${legacyGroups.length} groups to global storage`);
+        localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(legacyGroups));
+      } catch (error) {
+        console.error('❌ GroupService: Error migrating legacy data:', error);
+        localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify([]));
+      }
+    } else if (!globalData) {
+      // Initialize empty array for new installation
+      console.log('🆕 GroupService: Initializing empty global group storage');
+      localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify([]));
+    }
+  }
+
+  /**
+   * Generate user-specific storage key (kept for future user preferences)
    * Falls back to legacy key if no user is authenticated
    */
   private getUserSpecificStorageKey(): string {
@@ -148,56 +175,6 @@ export class GroupService {
   }
 
   /**
-   * Initialize user-specific storage and handle migration from legacy storage
-   */
-  private initializeUserSpecificStorage(): void {
-    const currentUser = this.authService.getCurrentUser();
-    
-    if (!currentUser?.id) {
-      console.log('⚠️ GroupService: No authenticated user for storage initialization');
-      return;
-    }
-
-    const userStorageKey = this.getUserSpecificStorageKey();
-    const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
-    const userSpecificData = localStorage.getItem(userStorageKey);
-
-    console.log(`🔄 GroupService: Initializing storage for user ${currentUser.id}`);
-    console.log(`📂 Legacy data exists: ${!!legacyData}`);
-    console.log(`📂 User-specific data exists: ${!!userSpecificData}`);
-
-    // If user doesn't have specific data but legacy data exists, migrate it
-    if (!userSpecificData && legacyData) {
-      console.log('📦 GroupService: Migrating legacy group data to user-specific storage');
-      
-      try {
-        const legacyGroups = JSON.parse(legacyData);
-        
-        // Filter legacy groups to only include groups where current user is a member
-        const userRelevantGroups = legacyGroups.filter((group: any) => 
-          group.members && group.members.some((member: any) => 
-            member.email === currentUser.email || member.id === currentUser.id
-          )
-        );
-
-        console.log(`📊 GroupService: Migrated ${userRelevantGroups.length} relevant groups from ${legacyGroups.length} total`);
-        localStorage.setItem(userStorageKey, JSON.stringify(userRelevantGroups));
-        
-        // Optionally clear legacy data after migration
-        // localStorage.removeItem(this.LEGACY_STORAGE_KEY);
-        
-      } catch (error) {
-        console.error('❌ GroupService: Error migrating legacy data:', error);
-        localStorage.setItem(userStorageKey, JSON.stringify([]));
-      }
-    } else if (!userSpecificData) {
-      // Initialize empty array for new user
-      console.log('🆕 GroupService: Initializing empty group storage for new user');
-      localStorage.setItem(userStorageKey, JSON.stringify([]));
-    }
-  }
-
-  /**
    * Clear group data for current user (useful for logout cleanup)
    */
   public clearUserGroupData(): void {
@@ -208,10 +185,8 @@ export class GroupService {
       return;
     }
 
-    const userStorageKey = this.getUserSpecificStorageKey();
-    console.log(`🗑️ GroupService: Clearing group data for user ${currentUser.id}`);
-    
-    localStorage.removeItem(userStorageKey);
+    // Note: We don't clear global groups on logout, only user-specific data
+    console.log(`🗑️ GroupService: User logged out, clearing observable but keeping global groups`);
     
     // Clear the observable
     this.groupsSubject.next([]);
@@ -223,17 +198,16 @@ export class GroupService {
   }
 
   getAllGroups(): Group[] {
-    const storageKey = this.getUserSpecificStorageKey();
-    const groupsJson = localStorage.getItem(storageKey);
+    const groupsJson = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
     
     if (!groupsJson) {
-      console.log(`📂 GroupService: No group data found for storage key: ${storageKey}`);
+      console.log(`📂 GroupService: No group data found in global storage`);
       return [];
     }
 
     try {
       const groups = JSON.parse(groupsJson);
-      console.log(`📂 GroupService: Loaded ${groups.length} groups from ${storageKey}`);
+      console.log(`📂 GroupService: Loaded ${groups.length} groups from global storage`);
       
       return groups.map((group: any) => ({
         ...group,
@@ -305,9 +279,9 @@ export class GroupService {
       groups.push(group);
     }
 
-    const storageKey = this.getUserSpecificStorageKey();
-    localStorage.setItem(storageKey, JSON.stringify(groups));
-    console.log(`💾 GroupService: Saved ${groups.length} groups to ${storageKey}`);
+    // Save to global storage instead of user-specific
+    localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(groups));
+    console.log(`💾 GroupService: Saved ${groups.length} groups to global storage`);
     
     // Trigger real-time updates
     this.loadGroups();
@@ -400,7 +374,7 @@ export class GroupService {
 
     // Update storage and trigger updates
     groups[groupIndex] = group;
-    localStorage.setItem(this.getUserSpecificStorageKey(), JSON.stringify(groups));
+    localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(groups));
     this.loadGroups();
 
     console.log('✅ Successfully joined group, returning updated group');
@@ -409,7 +383,7 @@ export class GroupService {
 
   deleteGroup(groupId: string): void {
     const groups = this.getAllGroups().filter((g) => g.id !== groupId);
-    localStorage.setItem(this.getUserSpecificStorageKey(), JSON.stringify(groups));
+    localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(groups));
     this.loadGroups();
   }
 
@@ -725,19 +699,24 @@ export class GroupService {
     console.log('🔍 GroupService Debug Storage State:');
     console.log(`👤 Current User: ${currentUser?.id || 'None'} (${currentUser?.email || 'No email'})`);
     
-    if (currentUser?.id) {
-      const userStorageKey = this.getUserSpecificStorageKey();
-      const userGroups = localStorage.getItem(userStorageKey);
-      console.log(`🔑 User Storage Key: ${userStorageKey}`);
-      console.log(`📂 User Groups Count: ${userGroups ? JSON.parse(userGroups).length : 0}`);
-    }
+    // Show global storage (new approach)
+    const globalData = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
+    console.log(`🌍 Global Groups Count: ${globalData ? JSON.parse(globalData).length : 0}`);
     
     // Show legacy storage for comparison
     const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
     console.log(`📂 Legacy Groups Count: ${legacyData ? JSON.parse(legacyData).length : 0}`);
     
     // Show all sotd_groups keys in localStorage
-    const allKeys = Object.keys(localStorage).filter(key => key.startsWith('sotd_groups'));
-    console.log(`🗝️ All Group Storage Keys:`, allKeys);
+    const allKeys = Object.keys(localStorage).filter(key => key.startsWith('sotd_'));
+    console.log(`🗝️ All SOTD Storage Keys:`, allKeys);
+    
+    // Show user-specific group filtering results
+    if (currentUser) {
+      const userGroups = this.getUserGroups();
+      const adminGroups = this.getAdminGroups();
+      console.log(`👤 User Groups (filtered): ${userGroups.length}`);
+      console.log(`👑 Admin Groups (filtered): ${adminGroups.length}`);
+    }
   }
 }

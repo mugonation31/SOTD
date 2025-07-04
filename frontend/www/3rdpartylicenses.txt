@@ -171,6 +171,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 @stencil/core/internal/app-data
 
+@stencil/core/internal/app-globals
+
 @stencil/core/internal/client
 
 chart.js
