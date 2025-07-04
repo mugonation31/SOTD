@@ -307,6 +307,12 @@ export class GroupService {
     console.log('👤 Current user ID:', currentUser?.id);
     console.log('👤 Current user email:', currentUser?.email);
     
+    // Debug: Show detailed user information
+    console.log('🔍 DETAILED USER DEBUG:');
+    console.log('  - Full user object:', JSON.stringify(currentUser, null, 2));
+    console.log('  - User ID type:', typeof currentUser?.id);
+    console.log('  - User email type:', typeof currentUser?.email);
+    
     if (!currentUser) {
       console.log('❌ User not authenticated');
       throw new Error('User not authenticated');
@@ -328,6 +334,17 @@ export class GroupService {
     console.log('👑 Group admin member:', group.members.find(m => m.role === 'admin'));
     console.log('👥 All group members:', group.members.map(m => ({ id: m.id, email: m.email, role: m.role })));
 
+    // Enhanced debugging for member matching
+    console.log('🔍 MEMBER MATCHING DEBUG:');
+    group.members.forEach((member, index) => {
+      console.log(`  Member ${index + 1}:`);
+      console.log(`    - ID: "${member.id}" (type: ${typeof member.id})`);
+      console.log(`    - Email: "${member.email}" (type: ${typeof member.email})`);
+      console.log(`    - Role: "${member.role}"`);
+      console.log(`    - ID Match: ${member.id === currentUser.id}`);
+      console.log(`    - Email Match: ${member.email === currentUser.email}`);
+    });
+
     // Check if user already exists in this group
     // Use both ID and email for comprehensive checking, but prioritize ID for accuracy
     const existingMemberById = group.members.find((m: GroupMember) => m.id === currentUser.id);
@@ -340,6 +357,13 @@ export class GroupService {
     
     if (existingMember) {
       console.log('⚠️ User already exists in group with role:', existingMember.role);
+      console.log('🔍 CONFLICT DETAILS:');
+      console.log('  - Existing member ID:', existingMember.id);
+      console.log('  - Current user ID:', currentUser.id);
+      console.log('  - Existing member email:', existingMember.email);
+      console.log('  - Current user email:', currentUser.email);
+      console.log('  - Match type:', existingMemberById ? 'ID' : 'EMAIL');
+      
       // If user is already an admin, they can't join as a player
       if (existingMember.role === 'admin') {
         throw new Error('You are the admin of this group and cannot join as a player');

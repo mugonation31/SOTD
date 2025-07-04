@@ -464,4 +464,33 @@ export class AuthService {
   getCurrentUser(): User | null {
     return this.getUserFromStorage();
   }
+
+  /**
+   * Complete user data cleanup - ensures proper user switching
+   */
+  public clearAllUserData(): void {
+    console.log('🧹 AuthService: Performing complete user data cleanup...');
+    
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    
+    // Remove all user-related keys
+    allKeys.forEach(key => {
+      if (key.startsWith('user') || 
+          key.startsWith('pending') || 
+          key.startsWith('firstLogin') || 
+          key.includes('admin') ||
+          key === 'lastActivity' ||
+          key === 'isFirstLogin' ||
+          key === 'pendingUserData') {
+        console.log(`🗑️ Removing key: ${key}`);
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Clear the current user subject
+    this.currentUserSubject.next(null);
+    
+    console.log('✅ Complete user data cleanup finished');
+  }
 }
