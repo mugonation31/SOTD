@@ -28,6 +28,7 @@ import {
   logInOutline,
 } from 'ionicons/icons';
 import { AuthService } from '@core/services/auth.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-welcome',
@@ -86,7 +87,8 @@ export class WelcomePage {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private supabaseService: SupabaseService
   ) {
     addIcons({
       peopleOutline,
@@ -97,6 +99,10 @@ export class WelcomePage {
       cashOutline,
       logInOutline,
     });
+
+    // Test Supabase connection
+    console.log('🔗 Supabase connected:', this.supabaseService.client);
+    console.log('🔗 Supabase client type:', typeof this.supabaseService.client);
   }
 
   createGroup() {

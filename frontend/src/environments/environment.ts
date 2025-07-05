@@ -4,8 +4,12 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api', // or your API base URL
-  encryptionKey: 'your-development-encryption-key',
+  supabase: {
+    url: 'https://lmybyfrhzarxmantttki.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NjcwODQsImV4cCI6MjA2NzI0MzA4NH0.8DZ6ZG6AGRtb7Lry8eyjD-3TGA9DWVGQPbjpJ3yAEjo'
+  },
+  apiUrl: 'http://localhost:3000', // Local development API
+  encryptionKey: 'dev-encryption-key' // Development encryption key
 };
 
 /*
