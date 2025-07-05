@@ -10,7 +10,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "build:cloudflare": "npm install -g @ionic/cli && ionic build --prod"
+    "build:cloudflare": "npm install -g @ionic/cli && ionic build --prod",
+    "build:prod": "node replace-env.js && ng build --configuration=production"
   },
   "private": true,
   "dependencies": {
