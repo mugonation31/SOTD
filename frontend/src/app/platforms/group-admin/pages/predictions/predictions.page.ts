@@ -201,45 +201,59 @@ interface PredictionWithResult extends Match {
         <!-- Rest of the predictions content -->
         <div class="matches-container">
           <div class="predictions-list">
-            <div
+            <ion-grid
               class="match-row"
               *ngFor="let match of currentGameWeek.matches; let i = index"
             >
-              <div class="match-info">
-                <div class="venue">{{ match.venue }}</div>
-                <div class="kickoff">
-                  {{ match.kickoff | date : 'EEEE d MMM HH:mm' }}
-                </div>
-              </div>
+              <!-- Match Info Row -->
+              <ion-row class="match-info-row">
+                <ion-col size="7" size-md="8" class="venue-col">
+                  <div class="venue">{{ match.venue }}</div>
+                </ion-col>
+                <ion-col size="5" size-md="4" class="kickoff-col">
+                  <div class="kickoff">
+                    {{ match.kickoff | date : 'EEEE d MMM HH:mm' }}
+                  </div>
+                </ion-col>
+              </ion-row>
 
-              <div class="match-prediction">
-                <span class="team home">{{ match.homeTeam }}</span>
-                <div class="score-container">
-                  <ion-input
-                    type="number"
-                    class="score-input"
-                    maxlength="2"
-                    min="0"
-                    max="99"
-                    [(ngModel)]="match.homeScore"
-                    [name]="'home' + i"
-                    (ionInput)="onScoreChange(match)"
-                  ></ion-input>
-                  <span class="separator">-</span>
-                  <ion-input
-                    type="number"
-                    class="score-input"
-                    maxlength="2"
-                    min="0"
-                    max="99"
-                    [(ngModel)]="match.awayScore"
-                    [name]="'away' + i"
-                    (ionInput)="onScoreChange(match)"
-                  ></ion-input>
-                </div>
-                <span class="team away">{{ match.awayTeam }}</span>
-              </div>
-            </div>
+              <!-- Match Prediction Row -->
+              <ion-row class="match-prediction-row">
+                <ion-col size="4" size-md="4" class="team-col">
+                  <span class="team home">{{ match.homeTeam }}</span>
+                </ion-col>
+                <ion-col size="4" size-md="4" class="score-col">
+                  <div class="score-container">
+                    <ion-input
+                      type="number"
+                      class="score-input"
+                      maxlength="2"
+                      min="0"
+                      max="99"
+                      [(ngModel)]="match.homeScore"
+                      [name]="'home' + i"
+                      (ionInput)="onScoreChange(match)"
+                      placeholder="0"
+                    ></ion-input>
+                    <span class="separator">-</span>
+                    <ion-input
+                      type="number"
+                      class="score-input"
+                      maxlength="2"
+                      min="0"
+                      max="99"
+                      [(ngModel)]="match.awayScore"
+                      [name]="'away' + i"
+                      (ionInput)="onScoreChange(match)"
+                      placeholder="0"
+                    ></ion-input>
+                  </div>
+                </ion-col>
+                <ion-col size="4" size-md="4" class="team-col">
+                  <span class="team away">{{ match.awayTeam }}</span>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
           </div>
 
           <div class="button-container">
@@ -1060,6 +1074,9 @@ interface PredictionWithResult extends Match {
     IonToolbar,
     IonTitle,
     IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
     IonButton,
     IonCardTitle,
     IonInput,
@@ -1087,6 +1104,7 @@ interface PredictionWithResult extends Match {
 })
 export class PredictionsPage implements OnInit {
   selectedTab = 'my';
+  selectedSegment = 'current';
   searchTerm = '';
   filterStatus = 'all';
   currentGameweekIndex = 0;
