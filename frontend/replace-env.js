@@ -16,12 +16,12 @@ console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Found' : 'U
 console.log('- API_URL:', process.env.API_URL ? 'Found' : 'Using default');
 console.log('- ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? 'Found' : 'Using default');
 
-// Path to the production environment file
-const envProdPath = path.join(process.cwd(), 'src', 'environments', 'environment.prod.ts');
+// Path to the environment file
+const envPath = path.join(process.cwd(), 'src', 'environments', 'environment.ts');
 
 try {
-  // Read the production environment file
-  let content = fs.readFileSync(envProdPath, 'utf8');
+  // Read the environment file
+  let content = fs.readFileSync(envPath, 'utf8');
   
   // Replace placeholders with actual values
   content = content.replace('__SUPABASE_URL__', supabaseUrl);
@@ -30,9 +30,9 @@ try {
   content = content.replace('__ENCRYPTION_KEY__', encryptionKey);
   
   // Write the updated content back
-  fs.writeFileSync(envProdPath, content);
+  fs.writeFileSync(envPath, content);
   
-  console.log('✅ Successfully updated environment.prod.ts');
+  console.log('✅ Successfully updated environment.ts');
   
 } catch (error) {
   console.error('❌ Error updating environment file:', error.message);
@@ -40,5 +40,5 @@ try {
 }
 
 console.log('🔍 Final verification:');
-console.log('environment.prod.ts exists:', fs.existsSync(envProdPath));
+console.log('environment.ts exists:', fs.existsSync(envPath));
 console.log('✅ Environment replacement complete');

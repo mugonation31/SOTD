@@ -1,4 +1,20 @@
-export const environment = {
+// This will be set to true by Angular's production build
+declare const ngDevMode: boolean;
+const isProduction = typeof ngDevMode !== 'undefined' ? !ngDevMode : false;
+
+// Production configuration
+const productionConfig = {
+  production: true,
+  supabase: {
+    url: '__SUPABASE_URL__',
+    key: '__SUPABASE_ANON_KEY__'
+  },
+  apiUrl: '__API_URL__',
+  encryptionKey: '__ENCRYPTION_KEY__'
+};
+
+// Development configuration
+const developmentConfig = {
   production: false,
   supabase: {
     url: 'https://lmybyfrhzarxmantttki.supabase.co',
@@ -7,3 +23,5 @@ export const environment = {
   apiUrl: 'http://localhost:3000',
   encryptionKey: 'dev-encryption-key'
 };
+
+export const environment = isProduction ? productionConfig : developmentConfig;
