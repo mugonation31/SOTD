@@ -7,6 +7,8 @@ console.log('🔍 __dirname:', __dirname);
 console.log('🔍 Debugging environment variables:');
 console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Found' : 'Not found');
 console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Found' : 'Not found');
+console.log('API_URL:', process.env.API_URL ? 'Found' : 'Not found');
+console.log('ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? 'Found' : 'Not found');
 
 // Use absolute paths and ensure directory exists
 const envDir = path.resolve(__dirname, 'src/environments');
@@ -30,6 +32,11 @@ console.log('🔍 Checking environment.prod.ts:', fs.existsSync(envProdPath) ? '
 // Get environment variables from Cloudflare
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const apiUrl = process.env.API_URL;
+const encryptionKey = process.env.ENCRYPTION_KEY;
+
+console.log('API_URL:', apiUrl ? 'Found' : 'Not found');
+console.log('ENCRYPTION_KEY:', encryptionKey ? 'Found' : 'Not found');
 
 // Always ensure environment.ts exists with default content
 const baseEnvContent = `export const environment = {
@@ -37,7 +44,9 @@ const baseEnvContent = `export const environment = {
   supabase: {
     url: 'https://lmybyfrhzarxmantttki.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NDk1MzAsImV4cCI6MjA2NzMyNTUzMH0.SkXjmFSBHQZp8Y74dnnNbwOwotJH3pX1OV6fIN4TFWQ'
-  }
+  },
+  apiUrl: 'http://localhost:3000',
+  encryptionKey: 'dev-encryption-key'
 };`;
 
 try {
@@ -56,7 +65,9 @@ if (supabaseUrl && supabaseKey) {
   supabase: {
     url: '${supabaseUrl}',
     key: '${supabaseKey}'
-  }
+  },
+  apiUrl: '${apiUrl || 'https://api.example.com'}',
+  encryptionKey: '${encryptionKey || 'your-encryption-key-here'}'
 };`;
   console.log('✅ Using environment variables from Cloudflare Pages');
 } else {
@@ -65,7 +76,9 @@ if (supabaseUrl && supabaseKey) {
   supabase: {
     url: 'https://lmybyfrhzarxmantttki.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NDk1MzAsImV4cCI6MjA2NzMyNTUzMH0.SkXjmFSBHQZp8Y74dnnNbwOwotJH3pX1OV6fIN4TFWQ'
-  }
+  },
+  apiUrl: '${apiUrl || 'https://api.example.com'}',
+  encryptionKey: '${encryptionKey || 'your-encryption-key-here'}'
 };`;
   console.log('⚠️  Using default environment values - missing Cloudflare environment variables');
 }
