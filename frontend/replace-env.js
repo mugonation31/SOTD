@@ -1,104 +1,44 @@
 const fs = require('fs');
 const path = require('path');
 
-// Debug: Log working directory and file paths
-console.log('🔍 Current working directory:', process.cwd());
-console.log('🔍 __dirname:', __dirname);
-console.log('🔍 Debugging environment variables:');
-console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Found' : 'Not found');
-console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Found' : 'Not found');
-console.log('API_URL:', process.env.API_URL ? 'Found' : 'Not found');
-console.log('ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? 'Found' : 'Not found');
+console.log('🔍 Starting environment replacement...');
+console.log('Working directory:', process.cwd());
 
-// Use absolute paths and ensure directory exists
-const envDir = path.resolve(__dirname, 'src/environments');
-const envPath = path.join(envDir, 'environment.ts');
-const envProdPath = path.join(envDir, 'environment.prod.ts');
+// Get environment variables with defaults
+const supabaseUrl = process.env.SUPABASE_URL || 'https://lmybyfrhzarxmantttki.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NDk1MzAsImV4cCI6MjA2NzMyNTUzMH0.SkXjmFSBHQZp8Y74dnnNbwOwotJH3pX1OV6fIN4TFWQ';
+const apiUrl = process.env.API_URL || 'https://api.example.com';
+const encryptionKey = process.env.ENCRYPTION_KEY || 'your-encryption-key-here';
 
-console.log('🔍 Environment directory:', envDir);
-console.log('🔍 Environment.ts path:', envPath);
-console.log('🔍 Environment.prod.ts path:', envProdPath);
+console.log('Environment variables:');
+console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Found' : 'Using default');
+console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Found' : 'Using default');
+console.log('- API_URL:', process.env.API_URL ? 'Found' : 'Using default');
+console.log('- ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? 'Found' : 'Using default');
 
-// Ensure the environments directory exists
-if (!fs.existsSync(envDir)) {
-  fs.mkdirSync(envDir, { recursive: true });
-  console.log('✅ Created environments directory');
-}
-
-// Check if environment files exist
-console.log('🔍 Checking environment.ts:', fs.existsSync(envPath) ? 'EXISTS' : 'MISSING');
-console.log('🔍 Checking environment.prod.ts:', fs.existsSync(envProdPath) ? 'EXISTS' : 'MISSING');
-
-// Get environment variables from Cloudflare
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const apiUrl = process.env.API_URL;
-const encryptionKey = process.env.ENCRYPTION_KEY;
-
-console.log('API_URL:', apiUrl ? 'Found' : 'Not found');
-console.log('ENCRYPTION_KEY:', encryptionKey ? 'Found' : 'Not found');
-
-// Always ensure environment.ts exists with default content
-const baseEnvContent = `export const environment = {
-  production: false,
-  supabase: {
-    url: 'https://lmybyfrhzarxmantttki.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NDk1MzAsImV4cCI6MjA2NzMyNTUzMH0.SkXjmFSBHQZp8Y74dnnNbwOwotJH3pX1OV6fIN4TFWQ'
-  },
-  apiUrl: 'http://localhost:3000',
-  encryptionKey: 'dev-encryption-key'
-};`;
+// Path to the production environment file
+const envProdPath = path.join(process.cwd(), 'src', 'environments', 'environment.prod.ts');
 
 try {
-  fs.writeFileSync(envPath, baseEnvContent);
-  console.log('✅ Created/updated environment.ts file');
+  // Read the production environment file
+  let content = fs.readFileSync(envProdPath, 'utf8');
+  
+  // Replace placeholders with actual values
+  content = content.replace('__SUPABASE_URL__', supabaseUrl);
+  content = content.replace('__SUPABASE_ANON_KEY__', supabaseKey);
+  content = content.replace('__API_URL__', apiUrl);
+  content = content.replace('__ENCRYPTION_KEY__', encryptionKey);
+  
+  // Write the updated content back
+  fs.writeFileSync(envProdPath, content);
+  
+  console.log('✅ Successfully updated environment.prod.ts');
+  
 } catch (error) {
-  console.error('❌ Error writing environment.ts:', error.message);
+  console.error('❌ Error updating environment file:', error.message);
   process.exit(1);
 }
 
-// Update environment.prod.ts
-let prodEnvContent;
-if (supabaseUrl && supabaseKey) {
-  prodEnvContent = `export const environment = {
-  production: true,
-  supabase: {
-    url: '${supabaseUrl}',
-    key: '${supabaseKey}'
-  },
-  apiUrl: '${apiUrl || 'https://api.example.com'}',
-  encryptionKey: '${encryptionKey || 'your-encryption-key-here'}'
-};`;
-  console.log('✅ Using environment variables from Cloudflare Pages');
-} else {
-  prodEnvContent = `export const environment = {
-  production: true,
-  supabase: {
-    url: 'https://lmybyfrhzarxmantttki.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxteWJ5ZnJoemFyeG1hbnR0dGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NDk1MzAsImV4cCI6MjA2NzMyNTUzMH0.SkXjmFSBHQZp8Y74dnnNbwOwotJH3pX1OV6fIN4TFWQ'
-  },
-  apiUrl: '${apiUrl || 'https://api.example.com'}',
-  encryptionKey: '${encryptionKey || 'your-encryption-key-here'}'
-};`;
-  console.log('⚠️  Using default environment values - missing Cloudflare environment variables');
-}
-
-try {
-  fs.writeFileSync(envProdPath, prodEnvContent);
-  console.log('✅ Updated environment.prod.ts file');
-} catch (error) {
-  console.error('❌ Error writing environment.prod.ts:', error.message);
-  process.exit(1);
-}
-
-// Final verification
 console.log('🔍 Final verification:');
-console.log('environment.ts exists:', fs.existsSync(envPath));
 console.log('environment.prod.ts exists:', fs.existsSync(envProdPath));
-
-if (fs.existsSync(envPath) && fs.existsSync(envProdPath)) {
-  console.log('✅ All environment files are ready for build');
-} else {
-  console.error('❌ Environment files are missing after script execution');
-  process.exit(1);
-}
+console.log('✅ Environment replacement complete');

@@ -1,9 +1,9 @@
 export const environment = {
   production: true,
   supabase: {
-    url: 'PLACEHOLDER_WILL_BE_REPLACED',
-    key: 'PLACEHOLDER_WILL_BE_REPLACED'
-  },  
-  apiUrl: 'https://api.example.com', // Placeholder for API URL
-  encryptionKey: 'your-encryption-key-here' // Placeholder for encryption key
+    url: '__SUPABASE_URL__',
+    key: '__SUPABASE_ANON_KEY__'
+  },
+  apiUrl: '__API_URL__',
+  encryptionKey: '__ENCRYPTION_KEY__'
 };
