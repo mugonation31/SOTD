@@ -1,0 +1,65 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Bulk Invite Group Admins</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="upload-section">
+    <ion-button expand="block" (click)="triggerFileInput()">
+      <ion-icon name="cloud-upload-outline" slot="start"></ion-icon>
+      Upload CSV File
+    </ion-button>
+    <input
+      type="file"
+      #fileInput
+      accept=".csv"
+      (change)="handleFileUpload($event)"
+      style="display: none"
+    />
+    <ion-note>or</ion-note>
+  </div>
+
+  <ion-item>
+    <ion-label position="stacked">
+      Paste Email Addresses (one per line)
+    </ion-label>
+    <ion-textarea
+      [(ngModel)]="emailList"
+      rows="6"
+      placeholder="john@example.com&#10;jane@example.com"
+      class="email-textarea"
+    ></ion-textarea>
+  </ion-item>
+
+  <div class="validation-summary" *ngIf="validationResults.length > 0">
+    <h4>Validation Results:</h4>
+    <ul>
+      <li
+        *ngFor="let result of validationResults"
+        [class.valid]="result.isValid"
+        [class.invalid]="!result.isValid"
+      >
+        {{ result.email }} - {{ result.message }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="action-buttons">
+    <ion-button
+      expand="block"
+      (click)="processInvitations()"
+      [disabled]="!hasValidEmails()"
+    >
+      Send {{ getValidEmailCount() }} Invitations
+    </ion-button>
+    <ion-button expand="block" fill="outline" (click)="dismiss()">
+      Cancel
+    </ion-button>
+  </div>
+</ion-content> 

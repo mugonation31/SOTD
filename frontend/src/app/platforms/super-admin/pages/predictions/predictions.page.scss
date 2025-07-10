@@ -1,1 +1,71 @@
-// Super Admin Predictions styles
+.filters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-bar {
+  --background: var(--ion-color-light);
+  --border-radius: 8px;
+}
+
+.select-filters {
+  display: flex;
+  gap: 16px;
+}
+
+.filter-select {
+  flex: 1;
+  max-width: 200px;
+  --background: var(--ion-color-light);
+  --border-radius: 8px;
+  padding: 8px;
+}
+
+@media (max-width: 576px) {
+  .select-filters {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    max-width: 100%;
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.stat-item {
+  padding: 1rem;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.predictions-grid {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.match-prediction {
+  font-size: 0.9em;
+  color: var(--ion-color-medium);
+}
+
+.actual-score {
+  font-size: 0.8em;
+  color: var(--ion-color-medium);
+  margin-top: 0.2rem;
+}
+
+.joker-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  text-align: center;
+}

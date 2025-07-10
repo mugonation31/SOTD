@@ -1,4 +1,31 @@
-// Initial styles for dashboard
-:host {
-  display: block;
+.stat-card {
+  height: 100%;
+}
+
+.stat-card ion-card-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background: var(--ion-color-light);
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.stat-info p {
+  margin: 0.25rem 0;
+  color: var(--ion-color-medium);
 }

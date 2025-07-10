@@ -1,9 +1,225 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>All Predictions</ion-title>
+    <ion-title>Predictions Overview</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="activeTab">
+      <ion-segment-button value="current">
+        <ion-label>Current Gameweek</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="history">
+        <ion-label>History</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="stats">
+        <ion-label>Statistics</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h1>System-wide Predictions</h1>
+  <!-- Filters -->
+  <ion-card>
+    <ion-card-content>
+      <div class="filters-container">
+        <ion-searchbar
+          [(ngModel)]="searchTerm"
+          placeholder="Search users or groups..."
+          (ionInput)="applyFilters()"
+          class="search-bar"
+        ></ion-searchbar>
+
+        <div class="select-filters">
+          <ion-select
+            [(ngModel)]="selectedGroup"
+            placeholder="Filter by Group"
+            (ionChange)="applyFilters()"
+            class="filter-select"
+          >
+            <ion-select-option value="all">All Groups</ion-select-option>
+            <ion-select-option
+              *ngFor="let group of groups"
+              [value]="group.id"
+            >
+              {{ group.name }}
+            </ion-select-option>
+          </ion-select>
+
+          <ion-select
+            [(ngModel)]="selectedGameweek"
+            placeholder="Gameweek"
+            (ionChange)="applyFilters()"
+            class="filter-select"
+          >
+            <ion-select-option value="all">All Gameweeks</ion-select-option>
+            <ion-select-option *ngFor="let gw of gameweeks" [value]="gw">
+              Gameweek {{ gw }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Current Gameweek View -->
+  <div *ngIf="activeTab === 'current'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          Gameweek {{ currentGameweek }} Overview
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <ion-icon name="people-outline"></ion-icon>
+            <div class="stat-details">
+              <h3>Total Players</h3>
+              <p>{{ stats.totalPlayers }}</p>
+            </div>
+          </div>
+          <div class="stat-item">
+            <ion-icon name="checkmark-circle-outline"></ion-icon>
+            <div class="stat-details">
+              <h3>Predictions Submitted</h3>
+              <p>
+                {{ stats.submittedPredictions }}/{{ stats.totalPlayers }}
+              </p>
+            </div>
+          </div>
+          <div class="stat-item">
+            <ion-icon name="star-outline"></ion-icon>
+            <div class="stat-details">
+              <h3>Jokers Used</h3>
+              <p>{{ stats.jokersUsed }}</p>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Latest Predictions</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let prediction of filteredPredictions">
+            <ion-label>
+              <h2>{{ prediction.userName }}</h2>
+              <p>Group: {{ prediction.groupName }}</p>
+              <div class="predictions-grid">
+                <div
+                  *ngFor="let match of prediction.matches"
+                  class="match-prediction"
+                >
+                  {{ match.homeTeam }} {{ match.prediction.home }} -
+                  {{ match.prediction.away }} {{ match.awayTeam }}
+                  <ion-icon
+                    *ngIf="match.isJoker"
+                    name="star"
+                    color="warning"
+                    title="Joker Used"
+                  ></ion-icon>
+                </div>
+              </div>
+            </ion-label>
+            <ion-badge
+              [color]="getPredictionStatusColor(prediction.status)"
+            >
+              {{ prediction.status }}
+            </ion-badge>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Historical View -->
+  <div *ngIf="activeTab === 'history'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Historical Predictions</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let prediction of historicalPredictions">
+            <ion-label>
+              <h2>{{ prediction.userName }}</h2>
+              <p>Gameweek {{ prediction.gameweek }}</p>
+              <p>Group: {{ prediction.groupName }}</p>
+              <div class="predictions-grid">
+                <div
+                  *ngFor="let match of prediction.matches"
+                  class="match-prediction"
+                >
+                  {{ match.homeTeam }} {{ match.prediction.home }} -
+                  {{ match.prediction.away }} {{ match.awayTeam }}
+                  <div class="actual-score" *ngIf="match.actual">
+                    (Actual: {{ match.actual.home }} -
+                    {{ match.actual.away }})
+                    <ion-badge color="success" *ngIf="match.points">
+                      +{{ match.points }} pts
+                    </ion-badge>
+                  </div>
+                </div>
+              </div>
+            </ion-label>
+            <ion-badge color="primary">
+              Total: {{ prediction.totalPoints }} pts
+            </ion-badge>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Statistics View -->
+  <div *ngIf="activeTab === 'stats'">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>System Statistics</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <h3>Perfect Scores</h3>
+            <p>{{ stats.perfectScores }}</p>
+          </div>
+          <div class="stat-item">
+            <h3>Correct Results</h3>
+            <p>{{ stats.correctResults }}</p>
+          </div>
+          <div class="stat-item">
+            <h3>Average Points</h3>
+            <p>{{ stats.averagePoints }}</p>
+          </div>
+          <div class="stat-item">
+            <h3>Highest Score</h3>
+            <p>{{ stats.highestScore }}</p>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Joker Usage</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="joker-stats">
+          <div class="joker-item">
+            <h3>First Joker</h3>
+            <p>Used: {{ stats.firstJokerUsed }}/{{ stats.totalPlayers }}</p>
+          </div>
+          <div class="joker-item">
+            <h3>Second Joker</h3>
+            <p>
+              Used: {{ stats.secondJokerUsed }}/{{ stats.totalPlayers }}
+            </p>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>
