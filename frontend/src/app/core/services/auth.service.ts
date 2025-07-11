@@ -482,15 +482,42 @@ export class AuthService {
           key.includes('admin') ||
           key === 'lastActivity' ||
           key === 'isFirstLogin' ||
-          key === 'pendingUserData') {
+          key === 'pendingUserData' ||
+          key.startsWith('sb-') ||  // Supabase keys
+          key.includes('supabase')) {
         console.log(`🗑️ Removing key: ${key}`);
         localStorage.removeItem(key);
       }
     });
     
+    // Clear session storage as well
+    sessionStorage.clear();
+    
     // Clear the current user subject
     this.currentUserSubject.next(null);
     
     console.log('✅ Complete user data cleanup finished');
+  }
+
+  /**
+   * Emergency auth reset - resolves Supabase lock conflicts
+   */
+  public emergencyAuthReset(): void {
+    console.log('🚨 AuthService: Emergency auth reset initiated...');
+    
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Reset current user
+    this.currentUserSubject.next(null);
+    
+    // Clear session timer
+    if (this.sessionTimer) {
+      clearInterval(this.sessionTimer);
+      this.sessionTimer = null;
+    }
+    
+    console.log('✅ Emergency auth reset completed - all state cleared');
   }
 }

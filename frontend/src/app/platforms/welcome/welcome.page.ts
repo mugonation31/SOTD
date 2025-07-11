@@ -99,10 +99,6 @@ export class WelcomePage {
       cashOutline,
       logInOutline,
     });
-
-    // Test Supabase connection
-    console.log('🔗 Supabase connected:', this.supabaseService.client);
-    console.log('🔗 Supabase client type:', typeof this.supabaseService.client);
   }
 
   createGroup() {
