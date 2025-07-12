@@ -152,6 +152,102 @@
     </ion-row>
   </ion-grid>
 
+  <!-- System Health Monitoring -->
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>System Health & Performance</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-grid>
+              <ion-row>
+                <!-- Platform Status -->
+                <ion-col size="12" sizeMd="6" sizeLg="3">
+                  <div class="health-card">
+                    <div class="health-icon">
+                      <ion-icon name="server-outline" [color]="getSystemHealthStatusColor(systemHealth.platform.status)"></ion-icon>
+                    </div>
+                    <div class="health-info">
+                      <h3>Platform Status</h3>
+                      <p>{{ systemHealth.platform.uptime }}% Uptime</p>
+                      <ion-badge [color]="getSystemHealthStatusColor(systemHealth.platform.status)">
+                        {{ systemHealth.platform.status | titlecase }}
+                      </ion-badge>
+                      <p class="health-detail" *ngIf="systemHealth.platform.lastOutage">
+                        Last outage: {{ getTimeAgo(systemHealth.platform.lastOutage) }}
+                      </p>
+                    </div>
+                  </div>
+                </ion-col>
+
+                <!-- Performance Metrics -->
+                <ion-col size="12" sizeMd="6" sizeLg="3">
+                  <div class="health-card">
+                    <div class="health-icon">
+                      <ion-icon name="speedometer-outline" color="primary"></ion-icon>
+                    </div>
+                    <div class="health-info">
+                      <h3>Performance</h3>
+                      <p>{{ systemHealth.performance.avgResponseTime }}ms avg</p>
+                      <p>{{ systemHealth.performance.errorRate }}% error rate</p>
+                      <ion-badge color="secondary">
+                        {{ systemHealth.performance.activeConnections }} active
+                      </ion-badge>
+                    </div>
+                  </div>
+                </ion-col>
+
+                <!-- Data Sync Status -->
+                <ion-col size="12" sizeMd="6" sizeLg="3">
+                  <div class="health-card">
+                    <div class="health-icon">
+                      <ion-icon name="sync-outline" [color]="getApiSyncStatusColor(systemHealth.dataSync.footballApiStatus)"></ion-icon>
+                    </div>
+                    <div class="health-info">
+                      <h3>Data Sync</h3>
+                      <p>Football API</p>
+                      <ion-badge [color]="getApiSyncStatusColor(systemHealth.dataSync.footballApiStatus)">
+                        {{ systemHealth.dataSync.footballApiStatus | titlecase }}
+                      </ion-badge>
+                      <p class="health-detail">
+                        Last sync: {{ getTimeAgo(systemHealth.dataSync.lastSync) }}
+                      </p>
+                      <p class="health-detail">
+                        Next sync: {{ getTimeUntil(systemHealth.dataSync.nextSync) }}
+                      </p>
+                    </div>
+                  </div>
+                </ion-col>
+
+                <!-- Security Status -->
+                <ion-col size="12" sizeMd="6" sizeLg="3">
+                  <div class="health-card">
+                    <div class="health-icon">
+                      <ion-icon name="shield-outline" [color]="systemHealth.security.vulnerabilities > 0 ? 'danger' : 'success'"></ion-icon>
+                    </div>
+                    <div class="health-info">
+                      <h3>Security</h3>
+                      <p>{{ systemHealth.security.failedLogins }} failed logins</p>
+                      <p>{{ systemHealth.security.suspiciousActivity }} suspicious activities</p>
+                      <ion-badge [color]="systemHealth.security.vulnerabilities > 0 ? 'danger' : 'success'">
+                        {{ systemHealth.security.vulnerabilities }} vulnerabilities
+                      </ion-badge>
+                      <p class="health-detail">
+                        Last scan: {{ getTimeAgo(systemHealth.security.lastSecurityScan) }}
+                      </p>
+                    </div>
+                  </div>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
   <!-- System Status & Actions -->
   <ion-grid>
     <ion-row>
