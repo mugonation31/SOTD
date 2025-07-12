@@ -12,6 +12,15 @@ export class AuthGuard {
     private authService: AuthService
   ) {}
 
+  private getLoginRoute(expectedRole?: string): string {
+    switch (expectedRole) {
+      case 'super-admin':
+        return '/super-admin/login';
+      default:
+        return '/auth/login';
+    }
+  }
+
   canActivate(route: ActivatedRouteSnapshot): boolean | Promise<boolean> | Observable<boolean> {
     return this.authService.currentUser.pipe(
       take(1),
@@ -20,15 +29,16 @@ export class AuthGuard {
           // Get user from AuthService reactive state
           const user = this.authService.getCurrentUser();
           
-          // Check if user exists and has a role
-          if (!user || !user.role) {
-            console.log('🚫 AuthGuard: No authenticated user, redirecting to login');
-            this.router.navigate(['/auth/login']);
-            return false;
-          }
-
           // Get expected role from route data
           const expectedRole = route.data?.['expectedRole'];
+          
+          // Check if user exists and has a role
+          if (!user || !user.role) {
+            const loginRoute = this.getLoginRoute(expectedRole);
+            console.log(`🚫 AuthGuard: No authenticated user, redirecting to ${loginRoute}`);
+            this.router.navigate([loginRoute]);
+            return false;
+          }
           
           // If no expected role is specified, just check if user is authenticated
           if (!expectedRole) {
@@ -42,14 +52,16 @@ export class AuthGuard {
             return true;
           }
 
-          // Role mismatch - redirect to login
-          console.log(`🚫 AuthGuard: Role mismatch. User role: "${user.role}", Expected: "${expectedRole}"`);
-          this.router.navigate(['/auth/login']);
+          // Role mismatch - redirect to appropriate login
+          const loginRoute = this.getLoginRoute(expectedRole);
+          console.log(`🚫 AuthGuard: Role mismatch. User role: "${user.role}", Expected: "${expectedRole}". Redirecting to ${loginRoute}`);
+          this.router.navigate([loginRoute]);
           return false;
         } catch (error) {
-          // Error parsing user data - redirect to login
-          console.error('❌ AuthGuard: Error getting user data:', error);
-          this.router.navigate(['/auth/login']);
+          // Error parsing user data - redirect to default login
+          const loginRoute = this.getLoginRoute(route.data?.['expectedRole']);
+          console.error(`❌ AuthGuard: Error getting user data, redirecting to ${loginRoute}:`, error);
+          this.router.navigate([loginRoute]);
           return false;
         }
       })

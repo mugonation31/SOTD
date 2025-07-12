@@ -30,10 +30,9 @@ export const routes: Routes = [
         (m) => m.routes
       ),
   },
+  // Super-admin routes - split into public and protected
   {
     path: 'super-admin',
-    canActivate: [AuthGuard],
-    data: { expectedRole: 'super-admin' },
     loadChildren: () =>
       import('./platforms/super-admin/super-admin.routes').then(
         (m) => m.routes

@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, timer } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { map, catchError, tap, take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   encryptSensitiveData,
   hashSecurityAnswer,
 } from '../utils/encryption.utils';
 import { User } from '../interfaces/user.interface';
+import { SupabaseService } from '../../services/supabase.service';
 
 export type UserRole = 'super-admin' | 'group-admin' | 'player';
 
@@ -18,6 +19,7 @@ const STORAGE_KEYS = {
   LAST_ACTIVITY: 'lastActivity',
   PENDING_USER_DATA: 'pendingUserData',
   IS_FIRST_LOGIN: 'isFirstLogin', // Legacy - will be migrated
+  USE_SUPABASE: 'useSupabase', // Toggle between mock and Supabase
 } as const;
 
 export interface SignupData {
@@ -63,13 +65,75 @@ export class AuthService {
     string,
     { count: number; lockoutUntil?: number }
   >();
+  private useSupabase = false; // Toggle between mock and Supabase
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private supabaseService: SupabaseService
+  ) {
     this.currentUserSubject = new BehaviorSubject<AuthResponse | null>(
       this.getStoredUser()
     );
     this.currentUser = this.currentUserSubject.asObservable();
-    this.initializeSessionTimer();
+    this.initializeAuth();
+  }
+
+  private async initializeAuth() {
+    // Check if we should use Supabase
+    this.useSupabase = localStorage.getItem(STORAGE_KEYS.USE_SUPABASE) === 'true';
+    
+    if (this.useSupabase) {
+      console.log('🔧 AuthService: Using Supabase authentication');
+      // Subscribe to Supabase auth state changes
+      this.supabaseService.user$.subscribe(user => {
+        if (user) {
+          this.supabaseService.profile$.pipe(take(1)).subscribe(profile => {
+            if (profile) {
+              // Convert Supabase profile to AuthResponse format
+              const authResponse: AuthResponse = {
+                token: 'supabase-session-token',
+                user: {
+                  id: profile.id,
+                  email: profile.email,
+                  role: profile.role,
+                  firstName: profile.first_name,
+                  lastName: profile.last_name,
+                }
+              };
+              
+              // Store in localStorage for consistency
+              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
+              
+              // Update reactive state
+              this.currentUserSubject.next(authResponse);
+              
+              console.log('✅ AuthService: Supabase user authenticated:', authResponse);
+            }
+          });
+        } else {
+          // User logged out
+          this.currentUserSubject.next(null);
+          localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+        }
+      });
+    } else {
+      console.log('🔧 AuthService: Using mock authentication for development');
+      this.initializeSessionTimer();
+    }
+  }
+
+  // Enable Supabase authentication
+  enableSupabaseAuth(): void {
+    this.useSupabase = true;
+    localStorage.setItem(STORAGE_KEYS.USE_SUPABASE, 'true');
+    console.log('🔄 AuthService: Switched to Supabase authentication');
+  }
+
+  // Disable Supabase authentication (for development)
+  disableSupabaseAuth(): void {
+    this.useSupabase = false;
+    localStorage.removeItem(STORAGE_KEYS.USE_SUPABASE);
+    console.log('🔄 AuthService: Switched to mock authentication');
   }
 
   // Centralized storage methods
@@ -110,15 +174,40 @@ export class AuthService {
     const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (!storedUser) return null;
 
-    const user = JSON.parse(storedUser);
-    const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
+    try {
+      const user = JSON.parse(storedUser);
+      const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
 
-    if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
+      if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
+        this.clearUserStorage();
+        return null;
+      }
+
+      // Ensure the stored user has the correct AuthResponse structure
+      if (user && user.user && user.token) {
+        return user;
+      }
+      
+      // If it's in the old User format, convert it to AuthResponse format
+      if (user && user.role && !user.user) {
+        return {
+          token: 'mock-jwt-token',
+          user: {
+            id: user.id || 'mock-id',
+            email: user.email || 'mock@example.com',
+            role: user.role,
+            firstName: user.firstName || 'Unknown',
+            lastName: user.lastName || 'User'
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error parsing stored user data:', error);
       this.clearUserStorage();
       return null;
     }
-
-    return user;
   }
 
   private initializeSessionTimer() {
@@ -168,8 +257,40 @@ export class AuthService {
   }
 
   login(loginData: LoginData): Observable<AuthResponse> {
+    if (this.useSupabase) {
+      return this.loginWithSupabase(loginData);
+    } else {
+      return this.loginWithMock(loginData);
+    }
+  }
+
+  private loginWithSupabase(loginData: LoginData): Observable<AuthResponse> {
+    return new Observable(subscriber => {
+      this.supabaseService.signIn(loginData.email, loginData.password)
+        .then(result => {
+          console.log('✅ Supabase login successful:', result);
+          
+          // The auth state change will be handled by the subscription in initializeAuth
+          // For now, we'll wait for the profile to be loaded
+          setTimeout(() => {
+            const currentUser = this.currentUserValue;
+            if (currentUser) {
+              subscriber.next(currentUser);
+            } else {
+              subscriber.error(new Error('Authentication failed'));
+            }
+            subscriber.complete();
+          }, 1000);
+        })
+        .catch(error => {
+          console.error('❌ Supabase login failed:', error);
+          subscriber.error(error);
+        });
+    });
+  }
+
+  private loginWithMock(loginData: LoginData): Observable<AuthResponse> {
     // For mock purposes, try to determine user data from stored signup data or use defaults
-    // In a real app, this would come from the backend
     let userRole: UserRole = 'player';
     let username = 'User';
     let firstName = 'John';
@@ -198,7 +319,7 @@ export class AuthService {
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
       user: {
-        id: `user_${loginData.email.replace(/[^a-zA-Z0-9]/g, '_')}`, // Generate unique ID based on email
+        id: `user_${loginData.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: loginData.email,
         firstName: firstName,
         lastName: lastName,
@@ -214,12 +335,11 @@ export class AuthService {
         localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
         
         // Store in new format for AuthGuard
-        // Check if this user has completed first login before
         const hasCompletedFirstLogin = localStorage.getItem(`firstLoginComplete_${mockResponse.user.email}`) === 'true';
         const isFirstLogin = !hasCompletedFirstLogin;
         
         const user: User = {
-          id: mockResponse.user.id, // This now uses the unique ID we generated above
+          id: mockResponse.user.id,
           role: mockResponse.user.role,
           firstLogin: isFirstLogin,
           username: username,
@@ -240,47 +360,50 @@ export class AuthService {
         subscriber.complete();
       }, 500); // Simulate network delay
     });
-
-    // TODO: Uncomment this when backend is ready
-    /*
-    try {
-      this.checkLoginAttempts(loginData.email);
-    } catch (error) {
-      return throwError(() => error);
-    }
-
-    const secureData = {
-      ...loginData,
-      password: encryptSensitiveData(loginData, ['password']).password,
-      securityAnswer: hashSecurityAnswer(loginData.securityAnswer),
-    };
-
-    return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/login`, secureData)
-      .pipe(
-        tap(() => {
-          this.loginAttempts.delete(loginData.email);
-          this.updateLastActivity();
-        }),
-        map((response) => {
-          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response));
-          this.currentUserSubject.next(response);
-          return response;
-        }),
-        catchError((error: HttpErrorResponse) => {
-          const attempts = this.loginAttempts.get(loginData.email) || {
-            count: 0,
-          };
-          this.loginAttempts.set(loginData.email, {
-            count: attempts.count + 1,
-          });
-          return throwError(() => error);
-        })
-      );
-    */
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    if (this.useSupabase) {
+      return this.signupWithSupabase(userData);
+    } else {
+      return this.signupWithMock(userData);
+    }
+  }
+
+  private signupWithSupabase(userData: SignupData): Observable<AuthResponse> {
+    return new Observable(subscriber => {
+      this.supabaseService.signUp(userData.email, userData.password, {
+        username: userData.username || '',
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        role: userData.role
+      })
+      .then(result => {
+        console.log('✅ Supabase signup successful:', result);
+        
+        // Create mock AuthResponse for consistency
+        const authResponse: AuthResponse = {
+          token: 'supabase-signup-token',
+          user: {
+            id: result.user?.id || 'temp-id',
+            email: userData.email,
+            role: userData.role,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+          }
+        };
+        
+        subscriber.next(authResponse);
+        subscriber.complete();
+      })
+      .catch(error => {
+        console.error('❌ Supabase signup failed:', error);
+        subscriber.error(error);
+      });
+    });
+  }
+
+  private signupWithMock(userData: SignupData): Observable<AuthResponse> {
     // Store the role and username temporarily for login (mock behavior)
     localStorage.setItem(`pendingRole_${userData.email}`, userData.role);
     localStorage.setItem(`pendingUsername_${userData.email}`, userData.username || '');
@@ -291,7 +414,7 @@ export class AuthService {
     const mockResponse: AuthResponse = {
       token: 'mock-jwt-token',
       user: {
-        id: `user_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}`, // Generate unique ID based on email
+        id: `user_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -306,28 +429,22 @@ export class AuthService {
         subscriber.complete();
       }, 500); // Simulate network delay
     });
-
-    // TODO: Uncomment this when backend is ready
-    /*
-    const signupData = { ...userData, role: 'player' as UserRole };
-    return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/signup`, signupData)
-      .pipe(
-        map((response) => {
-          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response));
-          localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, Date.now().toString());
-          this.currentUserSubject.next(response);
-          return response;
-        })
-      );
-    */
   }
 
   logout(): void {
     console.log('🚪 AuthService: Logout called, performing cleanup and triggering reactive updates...');
-    this.performLogout();
-    // Note: Don't redirect here - let the calling component handle navigation
-    // This prevents issues with returnUrl and ensures clean navigation flow
+    
+    if (this.useSupabase) {
+      this.supabaseService.signOut().then(() => {
+        console.log('✅ Supabase logout successful');
+        this.performLogout();
+      }).catch(error => {
+        console.error('❌ Supabase logout failed:', error);
+        this.performLogout(); // Still perform local cleanup
+      });
+    } else {
+      this.performLogout();
+    }
   }
 
   // Logout without redirect (for use in signup flow)
@@ -497,6 +614,26 @@ export class AuthService {
     this.currentUserSubject.next(null);
     
     console.log('✅ Complete user data cleanup finished');
+  }
+
+  /**
+   * Debug method to check current authentication state
+   */
+  public debugAuthState(): void {
+    console.log('🔍 Auth Debug State:');
+    console.log('useSupabase:', this.useSupabase);
+    console.log('currentUserSubject value:', this.currentUserSubject.value);
+    console.log('getCurrentUser():', this.getCurrentUser());
+    console.log('getUserFromStorage():', this.getUserFromStorage());
+    console.log('isAuthenticated():', this.isAuthenticated());
+    console.log('isSuperAdmin():', this.isSuperAdmin());
+    console.log('localStorage user:', localStorage.getItem('user'));
+    console.log('localStorage currentUser:', localStorage.getItem('currentUser'));
+    
+    if (this.useSupabase) {
+      console.log('Supabase currentUser:', this.supabaseService.currentUser);
+      console.log('Supabase currentProfile:', this.supabaseService.currentProfile);
+    }
   }
 
   /**

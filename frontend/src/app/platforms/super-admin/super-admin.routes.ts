@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
 import { SuperAdminLayoutPage } from './layout/super-admin-layout.page';
+import { AuthGuard } from '../../core/guards/auth.guard';
 
 export const routes: Routes = [
+  // Public routes - no authentication required
   {
     path: 'register',
     loadComponent: () =>
@@ -14,9 +16,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/login/login.page').then((m) => m.SuperAdminLoginPage),
   },
+  
+  // Protected routes - require super-admin authentication
   {
     path: '',
     component: SuperAdminLayoutPage,
+    canActivate: [AuthGuard],
+    data: { expectedRole: 'super-admin' },
     children: [
       {
         path: 'dashboard',
@@ -48,9 +54,31 @@ export const routes: Routes = [
       {
         path: 'group-admins',
         loadComponent: () =>
+          import('./pages/group-admin-list/group-admin-list.page').then(
+            (m) => m.GroupAdminListPage
+          ),
+        data: { preload: true },
+      },
+      {
+        path: 'group-admin-invites',
+        loadComponent: () =>
           import('./pages/group-admin-invites/group-admin-invites.page').then(
             (m) => m.GroupAdminInvitesPage
           ),
+        data: { preload: true },
+      },
+      {
+        path: 'invitation-management',
+        loadComponent: () =>
+          import('./pages/invitation-management/invitation-management.page').then(
+            (m) => m.InvitationManagementPage
+          ),
+        data: { preload: true },
+      },
+      {
+        path: 'members',
+        loadComponent: () =>
+          import('./pages/members/members.page').then((m) => m.MembersPage),
         data: { preload: true },
       },
       {

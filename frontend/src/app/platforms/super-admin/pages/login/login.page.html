@@ -50,6 +50,11 @@
           <ion-button expand="block" type="submit" [disabled]="loginForm.invalid || isLoading">
             {{ isLoading ? 'Logging in...' : 'Login' }}
           </ion-button>
+          
+          <!-- Debug button to check auth state -->
+          <ion-button expand="block" fill="outline" color="warning" (click)="debugAuthState()">
+            Debug Auth State
+          </ion-button>
         </div>
 
         <div class="auth-footer">

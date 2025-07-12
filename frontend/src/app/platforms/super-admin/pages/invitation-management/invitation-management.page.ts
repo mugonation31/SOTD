@@ -8,6 +8,7 @@ import {
   IonCardHeader,
   IonCardContent,
   IonButton,
+  IonButtons,
   IonIcon,
   IonBadge,
   IonItem,
@@ -21,8 +22,11 @@ import {
   IonDatetime,
   IonToggle,
   IonChip,
+  IonSegment,
+  IonSegmentButton,
+  IonInput,
 } from '@ionic/angular/standalone';
-import { NgFor, NgIf, DatePipe } from '@angular/common';
+import { NgFor, NgIf, DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { addIcons } from 'ionicons';
 import {
@@ -65,6 +69,7 @@ interface GroupAdminInvitation {
     IonCardHeader,
     IonCardContent,
     IonButton,
+    IonButtons,
     IonIcon,
     IonBadge,
     IonItem,
@@ -78,9 +83,13 @@ interface GroupAdminInvitation {
     IonDatetime,
     IonToggle,
     IonChip,
+    IonSegment,
+    IonSegmentButton,
+    IonInput,
     NgFor,
     NgIf,
     DatePipe,
+    TitleCasePipe,
     FormsModule,
   ],
 })

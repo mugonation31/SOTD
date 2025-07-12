@@ -1,111 +1,214 @@
 <ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Super Admin Registration</ion-title>
+  <ion-toolbar>
+    <ion-title>Super Admin Registration - Predict 3</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>System Administrator Setup</ion-card-title>
-      <ion-card-subtitle>Initial system configuration and admin account creation</ion-card-subtitle>
-    </ion-card-header>
+  <!-- Loading indicator while checking existing admin -->
+  <div *ngIf="isCheckingExistingAdmin" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <ion-text>
+      <p>Checking registration status...</p>
+    </ion-text>
+  </div>
 
-    <ion-card-content>
-      <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
-        <!-- Personal Information -->
-        <ion-item-group>
-          <ion-item-divider>
-            <ion-label>Personal Information</ion-label>
-          </ion-item-divider>
+  <!-- Registration form -->
+  <div *ngIf="!isCheckingExistingAdmin && !superAdminExists">
+    <ion-card class="auth-card">
+      <ion-card-header>
+        <ion-card-title>Create Super Admin Account</ion-card-title>
+        <ion-card-subtitle>One-time setup for Predict 3</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div class="auth-header">
+          <ion-text color="medium">
+            <p>Set up the first Super Admin account to manage Predict 3's football prediction platform.</p>
+          </ion-text>
+        </div>
 
-          <ion-item>
-            <ion-input type="text" formControlName="firstName" placeholder="First Name"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="text" formControlName="lastName" placeholder="Last Name"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="email" formControlName="email" placeholder="Email Address"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="tel" formControlName="phoneNumber"
-              placeholder="Phone Number (e.g. +44 7123 456789)"></ion-input>
-          </ion-item>
-        </ion-item-group>
-
-        <!-- Organization Details -->
-        <ion-item-group>
-          <ion-item-divider>
-            <ion-label>Organization Details</ion-label>
-          </ion-item-divider>
-
-          <ion-item>
-            <ion-input type="text" formControlName="organizationName" placeholder="Organization Name"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="text" formControlName="organizationRole"
-              placeholder="Your Role (e.g. Director, Manager)"></ion-input>
-          </ion-item>
-        </ion-item-group>
-
-        <!-- Security -->
-        <ion-item-group>
-          <ion-item-divider>
-            <ion-label>Security</ion-label>
-          </ion-item-divider>
-
-          <ion-item>
-            <ion-input type="password" formControlName="password"
-              placeholder="Password (minimum 8 characters)"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="password" formControlName="confirmPassword" placeholder="Confirm Password"></ion-input>
-          </ion-item>
-
-          <ion-item>
-            <ion-input type="text" formControlName="registrationKey" placeholder="Registration Key"></ion-input>
-            <ion-note>Contact system provider for registration key</ion-note>
-          </ion-item>
-        </ion-item-group>
-
-        <!-- Security Questions -->
-        <ion-item-group formArrayName="securityQuestions">
-          <ion-item-divider>
-            <ion-label>Security Questions</ion-label>
-          </ion-item-divider>
-
-          <div *ngFor="let question of securityQuestions.controls; let i = index" class="security-question-group">
-            <ion-item [formGroupName]="i">
-              <ion-select formControlName="question" placeholder="Select Question {{ i + 1 }}">
-                <ion-select-option *ngFor="let q of securityQuestionsList" [value]="q">
-                  {{ q }}
-                </ion-select-option>
-              </ion-select>
+        <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
+          <!-- Personal Information -->
+          <div class="form-section">
+            <ion-text>
+              <h3>Personal Information</h3>
+            </ion-text>
+            
+            <ion-item>
+              <ion-label position="stacked">First Name</ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="firstName" 
+                placeholder="Enter your first name"
+                [class.ion-invalid]="isFieldInvalid('firstName')">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('firstName')">
+                {{ getFieldError('firstName') }}
+              </ion-note>
             </ion-item>
-            <ion-item [formGroupName]="i">
-              <ion-input type="text" formControlName="answer" placeholder="Your Answer"></ion-input>
+
+            <ion-item>
+              <ion-label position="stacked">Last Name</ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="lastName" 
+                placeholder="Enter your last name"
+                [class.ion-invalid]="isFieldInvalid('lastName')">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('lastName')">
+                {{ getFieldError('lastName') }}
+              </ion-note>
+            </ion-item>
+
+            <ion-item>
+              <ion-label position="stacked">Username</ion-label>
+              <ion-input 
+                type="text" 
+                formControlName="username" 
+                placeholder="Choose a username"
+                [class.ion-invalid]="isFieldInvalid('username')">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('username')">
+                {{ getFieldError('username') }}
+              </ion-note>
             </ion-item>
           </div>
-        </ion-item-group>
 
-        <!-- Terms and Conditions -->
-        <ion-item>
-          <ion-checkbox formControlName="acceptedTerms"></ion-checkbox>
-          <ion-label class="ion-padding-start">
-            I accept the terms and conditions
-          </ion-label>
-        </ion-item>
+          <!-- Account Information -->
+          <div class="form-section">
+            <ion-text>
+              <h3>Account Information</h3>
+            </ion-text>
+            
+            <ion-item>
+              <ion-label position="stacked">Email</ion-label>
+              <ion-input 
+                type="email" 
+                formControlName="email" 
+                placeholder="Enter your email"
+                [class.ion-invalid]="isFieldInvalid('email')">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('email')">
+                {{ getFieldError('email') }}
+              </ion-note>
+            </ion-item>
 
-        <ion-button expand="block" type="submit" [disabled]="!registrationForm.valid" class="ion-margin-top">
-          Complete Registration
-        </ion-button>
-      </form>
-    </ion-card-content>
-  </ion-card>
+            <ion-item>
+              <ion-label position="stacked">Password</ion-label>
+              <ion-input 
+                type="password" 
+                formControlName="password" 
+                placeholder="Create a secure password"
+                [class.ion-invalid]="isFieldInvalid('password')">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('password')">
+                {{ getFieldError('password') }}
+              </ion-note>
+            </ion-item>
+
+            <ion-item>
+              <ion-label position="stacked">Confirm Password</ion-label>
+              <ion-input 
+                type="password" 
+                formControlName="confirmPassword" 
+                placeholder="Confirm your password"
+                [class.ion-invalid]="isFieldInvalid('confirmPassword') || registrationForm.errors?.['passwordMismatch']">
+              </ion-input>
+              <ion-note slot="error" *ngIf="isFieldInvalid('confirmPassword')">
+                {{ getFieldError('confirmPassword') }}
+              </ion-note>
+              <ion-note slot="error" *ngIf="registrationForm.errors?.['passwordMismatch']">
+                Passwords do not match
+              </ion-note>
+            </ion-item>
+          </div>
+
+          <!-- Terms and Conditions -->
+          <div class="form-section">
+            <ion-item>
+              <ion-checkbox formControlName="acceptedTerms" slot="start"></ion-checkbox>
+              <ion-label>
+                I agree to the terms and conditions for managing Predict 3
+              </ion-label>
+            </ion-item>
+          </div>
+
+          <!-- Error Display -->
+          <div *ngIf="error" class="error-container">
+            <ion-text color="danger">
+              <h4>{{ error.title }}</h4>
+              <p>{{ error.message }}</p>
+            </ion-text>
+            <ion-button 
+              *ngIf="error.retry" 
+              fill="outline" 
+              color="danger" 
+              (click)="retryConnection()">
+              Retry
+            </ion-button>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="auth-actions">
+            <ion-button 
+              expand="block" 
+              type="submit" 
+              [disabled]="registrationForm.invalid || isLoading">
+              <ion-spinner *ngIf="isLoading" name="crescent"></ion-spinner>
+              <span *ngIf="!isLoading">Create Super Admin Account</span>
+              <span *ngIf="isLoading">Creating Account...</span>
+            </ion-button>
+          </div>
+
+          <!-- Development Debug Button -->
+          <div class="debug-section" style="margin-top: 20px; padding: 10px; border-top: 1px solid var(--ion-color-light);">
+            <ion-text color="medium">
+              <small>Development Mode - Using Dummy Data</small>
+            </ion-text>
+            <ion-button 
+              fill="outline" 
+              color="warning" 
+              size="small" 
+              (click)="resetRegistrationState()">
+              Reset Registration State
+            </ion-button>
+          </div>
+
+          <!-- Footer -->
+          <div class="auth-footer">
+            <ion-text color="medium">
+              <p>Already have a super admin account? 
+                <a [routerLink]="['/super-admin/login']">Login here</a>
+              </p>
+            </ion-text>
+          </div>
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Super Admin Already Exists -->
+  <div *ngIf="!isCheckingExistingAdmin && superAdminExists" class="already-exists-container">
+    <ion-card class="auth-card">
+      <ion-card-header>
+        <ion-card-title>Super Admin Already Exists</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <ion-text>
+          <p>A Super Admin account has already been created for Predict 3.</p>
+          <p>Please login with your existing credentials instead.</p>
+        </ion-text>
+        
+        <div class="auth-actions">
+          <ion-button 
+            expand="block" 
+            [routerLink]="['/super-admin/login']">
+            Go to Login
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>
