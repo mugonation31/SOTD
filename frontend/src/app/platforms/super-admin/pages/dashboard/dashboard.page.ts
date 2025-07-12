@@ -32,7 +32,7 @@ import {
   checkmarkCircleOutline,
   starOutline,
   calendarOutline,
-  walletOutline, personAddOutline } from 'ionicons/icons';
+  walletOutline } from 'ionicons/icons';
 
 interface SystemOverview {
   totalGroups: number;
@@ -148,7 +148,7 @@ export class DashboardPage {
   ];
 
   constructor() {
-    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,personAddOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,});
+    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,});
   }
 
   getTimeUntilDeadline(): string {
