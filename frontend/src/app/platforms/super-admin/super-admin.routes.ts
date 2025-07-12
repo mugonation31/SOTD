@@ -52,36 +52,6 @@ export const routes: Routes = [
         data: { preload: true },
       },
       {
-        path: 'group-admins',
-        loadComponent: () =>
-          import('./pages/group-admin-list/group-admin-list.page').then(
-            (m) => m.GroupAdminListPage
-          ),
-        data: { preload: true },
-      },
-      {
-        path: 'group-admin-invites',
-        loadComponent: () =>
-          import('./pages/group-admin-invites/group-admin-invites.page').then(
-            (m) => m.GroupAdminInvitesPage
-          ),
-        data: { preload: true },
-      },
-      {
-        path: 'invitation-management',
-        loadComponent: () =>
-          import('./pages/invitation-management/invitation-management.page').then(
-            (m) => m.InvitationManagementPage
-          ),
-        data: { preload: true },
-      },
-      {
-        path: 'members',
-        loadComponent: () =>
-          import('./pages/members/members.page').then((m) => m.MembersPage),
-        data: { preload: true },
-      },
-      {
         path: 'users',
         loadComponent: () =>
           import('./pages/users/users.page').then((m) => m.UsersPage),

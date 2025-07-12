@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkapp=self.webpackChunkapp||[]).push([[396],{396:(l,s,n)=>{n.r(s),n.d(s,{routes:()=>o});const o=[{path:"",loadComponent:()=>Promise.all([n.e(75),n.e(341)]).then(n.bind(n,3341)).then(t=>t.WelcomePage)}]}}]);

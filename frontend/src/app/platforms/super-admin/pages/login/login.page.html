@@ -32,18 +32,7 @@
             </ion-note>
           </ion-item>
 
-          <ion-item>
-            <ion-text>{{ currentSecurityQuestion }}</ion-text>
-          </ion-item>
 
-          <ion-item>
-            <ion-input type="text" formControlName="securityAnswer" placeholder="Your Answer"
-              [class.ion-invalid]="loginForm.get('securityAnswer')?.touched && loginForm.get('securityAnswer')?.errors"></ion-input>
-            <ion-note slot="error"
-              *ngIf="loginForm.get('securityAnswer')?.touched && loginForm.get('securityAnswer')?.errors?.['required']">
-              Security answer is required
-            </ion-note>
-          </ion-item>
         </ion-list>
 
         <div class="auth-actions">

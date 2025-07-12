@@ -55,14 +55,6 @@ import { CommonModule } from '@angular/common';
 export class SuperAdminLoginPage implements OnInit {
   loginForm: FormGroup;
   isLoading = false;
-  currentSecurityQuestion: string = '';
-  private securityQuestionsList: string[] = [
-    "What was your first pet's name?",
-    'In which city were you born?',
-    "What was your mother's maiden name?",
-    'What was the name of your first school?',
-    'What is your favorite book?',
-  ];
 
   constructor(
     private fb: FormBuilder,
@@ -72,17 +64,10 @@ export class SuperAdminLoginPage implements OnInit {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
-      securityAnswer: ['', [Validators.required]],
     });
   }
 
   ngOnInit() {
-    // Randomly select a security question
-    const randomIndex = Math.floor(
-      Math.random() * this.securityQuestionsList.length
-    );
-    this.currentSecurityQuestion = this.securityQuestionsList[randomIndex];
-    
     // Debug: Log current auth state
     console.log('🔍 Super Admin Login Page - Current Auth State:');
     console.log('isAuthenticated:', this.authService.isAuthenticated());
@@ -104,8 +89,8 @@ export class SuperAdminLoginPage implements OnInit {
       const loginData = {
         email: this.loginForm.get('email')?.value,
         password: this.loginForm.get('password')?.value,
-        securityQuestion: this.currentSecurityQuestion,
-        securityAnswer: this.loginForm.get('securityAnswer')?.value,
+        securityQuestion: '', // No longer needed but kept for compatibility
+        securityAnswer: '', // No longer needed but kept for compatibility
       };
 
       // For super-admin login, we need to set up the proper role first
