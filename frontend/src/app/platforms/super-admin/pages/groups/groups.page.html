@@ -1,14 +1,14 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Groups & Users Management</ion-title>
+    <ion-title>Group Health & Performance Monitoring</ion-title>
   </ion-toolbar>
   <ion-toolbar>
     <ion-segment [(ngModel)]="activeTab">
       <ion-segment-button value="groups">
-        <ion-label>Groups</ion-label>
+        <ion-label>Groups Overview</ion-label>
       </ion-segment-button>
       <ion-segment-button value="users">
-        <ion-label>Users</ion-label>
+        <ion-label>User Management</ion-label>
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
@@ -18,38 +18,202 @@
   <div class="ion-padding">
     <!-- Groups Tab -->
     <div *ngIf="activeTab === 'groups'">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>All Groups</ion-card-title>
-          <ion-searchbar
-            [(ngModel)]="groupSearchTerm"
-            (ionInput)="filterGroups()"
-            placeholder="Search groups..."
-          ></ion-searchbar>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            <ion-item *ngFor="let group of filteredGroups">
-              <ion-label>
+      <!-- Platform Health Overview -->
+      <div class="health-overview">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Platform Health Overview</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="overview-metrics">
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="pulse-outline" color="primary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAverageGroupHealth() }}/100</h3>
+                  <p>Average Group Health</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="people-outline" color="secondary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getTotalActiveUsers() }}</h3>
+                  <p>Total Active Users</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="warning-outline" color="warning"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getGroupsNeedingAttention().length }}</h3>
+                  <p>Groups Need Attention</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="sparkles-outline" color="success"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getHighPerformingGroups().length }}</h3>
+                  <p>High Performing Groups</p>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Search and Filters -->
+      <div class="search-filters">
+        <ion-card>
+          <ion-card-content>
+            <ion-searchbar
+              [(ngModel)]="groupSearchTerm"
+              (ionInput)="filterGroups()"
+              placeholder="Search groups..."
+            ></ion-searchbar>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Groups Grid -->
+      <div class="groups-grid">
+        <ion-card *ngFor="let group of filteredGroups" class="group-card" [class]="'health-' + group.health.status">
+          <ion-card-header>
+            <div class="group-header">
+              <div class="group-title">
                 <h2>{{ group.name }}</h2>
-                <p>
-                  Code: <strong>{{ group.code }}</strong>
-                </p>
-                <p>Admin: {{ group.adminName }}</p>
-                <p>
-                  Members:
-                  <ion-badge color="primary">{{
-                    group.memberCount
-                  }}</ion-badge>
-                </p>
-              </ion-label>
-              <ion-button fill="clear" (click)="viewGroupDetails(group)">
+                <ion-badge color="medium">{{ group.code }}</ion-badge>
+              </div>
+              <div class="health-indicator">
+                <ion-icon 
+                  [name]="getHealthIcon(group.health.status)" 
+                  [color]="getHealthStatusColor(group.health.status)"
+                  class="health-icon">
+                </ion-icon>
+                <span class="health-score">{{ group.health.score }}/100</span>
+              </div>
+            </div>
+          </ion-card-header>
+
+          <ion-card-content>
+            <!-- Health Status Bar -->
+            <div class="health-status-bar">
+              <div class="status-info">
+                <ion-badge [color]="getHealthStatusColor(group.health.status)">
+                  {{ group.health.status | titlecase }}
+                </ion-badge>
+                <ion-badge [color]="getActivityLevelColor(group.health.activityLevel)">
+                  {{ group.health.activityLevel | titlecase }} Activity
+                </ion-badge>
+              </div>
+              <div class="engagement-rate">
+                <span>{{ group.health.engagementRate }}% Engagement</span>
+                <ion-progress-bar 
+                  [value]="group.health.engagementRate / 100" 
+                  [color]="getHealthStatusColor(group.health.status)">
+                </ion-progress-bar>
+              </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="key-metrics">
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon name="people-outline" color="primary"></ion-icon>
+                  <span>{{ group.memberCount }} Members</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="stats-chart-outline" color="secondary"></ion-icon>
+                  <span>{{ group.performance.predictionAccuracy }}% Accuracy</span>
+                </div>
+              </div>
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon [name]="getGrowthTrendIcon(group.performance.growthTrend)" 
+                           [color]="getGrowthTrendColor(group.performance.growthTrend)"></ion-icon>
+                  <span>{{ group.performance.growthTrend | titlecase }} Trend</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="time-outline" color="tertiary"></ion-icon>
+                  <span>{{ formatDaysActive(group.lifecycle.daysActive) }} Active</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section" *ngIf="group.health.alerts.length > 0">
+              <h4>
+                <ion-icon name="warning-outline" color="warning"></ion-icon>
+                Alerts
+              </h4>
+              <div class="alert-items">
+                <ion-chip *ngFor="let alert of group.health.alerts" color="warning">
+                  <ion-label>{{ alert }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="risk-factors" *ngIf="group.lifecycle.riskFactors.length > 0">
+              <h4>
+                <ion-icon name="alert-circle-outline" color="danger"></ion-icon>
+                Risk Factors
+              </h4>
+              <div class="risk-items">
+                <ion-chip *ngFor="let risk of group.lifecycle.riskFactors" color="danger">
+                  <ion-label>{{ risk }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Steward Actions -->
+            <div class="steward-actions">
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                (click)="viewGroupDetails(group)"
+                title="View Details">
                 <ion-icon name="eye-outline"></ion-icon>
               </ion-button>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+              
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="warning"
+                (click)="sendGroupAlert(group, 'Performance Check')"
+                title="Send Alert"
+                *ngIf="group.health.status === 'fair' || group.health.status === 'poor'">
+                <ion-icon name="warning-outline"></ion-icon>
+              </ion-button>
+              
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="danger"
+                (click)="scheduleIntervention(group)"
+                title="Schedule Intervention"
+                *ngIf="group.health.status === 'poor' || group.health.status === 'critical'">
+                <ion-icon name="medical-outline"></ion-icon>
+              </ion-button>
+              
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="success"
+                (click)="boostGroup(group)"
+                title="Boost Group"
+                *ngIf="group.health.status === 'excellent' || group.health.status === 'good'">
+                <ion-icon name="flash-outline"></ion-icon>
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
     </div>
 
     <!-- Users Tab -->
@@ -58,12 +222,12 @@
     </div>
   </div>
 
-  <!-- Group Details Modal -->
+  <!-- Enhanced Group Details Modal -->
   <ion-modal [isOpen]="!!selectedGroup" (didDismiss)="selectedGroup = null">
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>{{ selectedGroup?.name }} Management</ion-title>
+          <ion-title>{{ selectedGroup?.name }} - Health Analysis</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="selectedGroup = null">Close</ion-button>
           </ion-buttons>
@@ -71,17 +235,59 @@
       </ion-header>
 
       <ion-content class="ion-padding" *ngIf="selectedGroup">
-        <!-- Group Details -->
+        <!-- Health Summary -->
         <ion-card>
           <ion-card-header>
-            <ion-card-title>Group Details</ion-card-title>
+            <ion-card-title>Health Summary</ion-card-title>
           </ion-card-header>
           <ion-card-content>
-            <p>
-              Code: <strong>{{ selectedGroup.code }}</strong>
-            </p>
-            <p>Created: {{ selectedGroup.createdAt | date }}</p>
-            <p>Admin: {{ selectedGroup.adminName }}</p>
+            <div class="health-details">
+              <div class="health-metric">
+                <span class="label">Health Score:</span>
+                <span class="value">{{ selectedGroup.health.score }}/100</span>
+              </div>
+              <div class="health-metric">
+                <span class="label">Status:</span>
+                <ion-badge [color]="getHealthStatusColor(selectedGroup.health.status)">
+                  {{ selectedGroup.health.status | titlecase }}
+                </ion-badge>
+              </div>
+              <div class="health-metric">
+                <span class="label">Engagement Rate:</span>
+                <span class="value">{{ selectedGroup.health.engagementRate }}%</span>
+              </div>
+              <div class="health-metric">
+                <span class="label">Last Activity:</span>
+                <span class="value">{{ selectedGroup.health.lastActivity | date:'short' }}</span>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <!-- Performance Analytics -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Performance Analytics</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="performance-metrics">
+              <div class="metric-item">
+                <span class="label">Prediction Accuracy:</span>
+                <span class="value">{{ selectedGroup.performance.predictionAccuracy }}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Member Retention:</span>
+                <span class="value">{{ selectedGroup.performance.memberRetentionRate }}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Weekly Active Users:</span>
+                <span class="value">{{ selectedGroup.performance.weeklyActiveUsers }}</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Predictions per Week:</span>
+                <span class="value">{{ selectedGroup.performance.predictionsPerWeek }}</span>
+              </div>
+            </div>
           </ion-card-content>
         </ion-card>
 

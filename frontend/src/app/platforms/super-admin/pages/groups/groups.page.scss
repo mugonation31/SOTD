@@ -1,5 +1,364 @@
+:host {
+  ion-content {
+    --background: var(--ion-color-light);
+  }
+}
+
 .users-container {
   height: 100%;
   width: 100%;
   display: block;
+}
+
+// Platform Health Overview
+.health-overview {
+  margin-bottom: 1rem;
+
+  ion-card {
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .overview-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    .metric-icon {
+      font-size: 2rem;
+      padding: 0.75rem;
+      border-radius: 50%;
+      background: var(--ion-color-primary-tint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3rem;
+      height: 3rem;
+    }
+
+    .metric-info {
+      flex: 1;
+
+      h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        color: var(--ion-color-medium);
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+// Search and Filters
+.search-filters {
+  margin-bottom: 1rem;
+
+  ion-card {
+    margin: 0;
+    border-radius: 12px;
+  }
+}
+
+// Groups Grid
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.group-card {
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  // Health-based styling
+  &.health-excellent {
+    border-left: 4px solid var(--ion-color-success);
+  }
+
+  &.health-good {
+    border-left: 4px solid var(--ion-color-primary);
+  }
+
+  &.health-fair {
+    border-left: 4px solid var(--ion-color-warning);
+  }
+
+  &.health-poor {
+    border-left: 4px solid var(--ion-color-danger);
+  }
+
+  &.health-critical {
+    border-left: 4px solid var(--ion-color-danger);
+    box-shadow: 0 0 0 2px rgba(var(--ion-color-danger-rgb), 0.2);
+  }
+
+  .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+
+    .group-title {
+      flex: 1;
+
+      h2 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+    }
+
+    .health-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 80px;
+      justify-content: flex-end;
+
+      .health-icon {
+        font-size: 1.5rem;
+      }
+
+      .health-score {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--ion-color-medium-shade);
+      }
+    }
+  }
+
+  .health-status-bar {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+
+    .status-info {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .engagement-rate {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      span {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--ion-color-medium-shade);
+        min-width: 120px;
+      }
+
+      ion-progress-bar {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+      }
+    }
+  }
+
+  .key-metrics {
+    margin-bottom: 1rem;
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--ion-color-medium-shade);
+
+        ion-icon {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+
+  .alerts-section,
+  .risk-factors {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+
+    h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alert-items,
+    .risk-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      ion-chip {
+        margin: 0;
+        font-size: 0.8rem;
+        height: 28px;
+      }
+    }
+  }
+
+  .alerts-section {
+    background: rgba(var(--ion-color-warning-rgb), 0.1);
+    border: 1px solid rgba(var(--ion-color-warning-rgb), 0.2);
+  }
+
+  .risk-factors {
+    background: rgba(var(--ion-color-danger-rgb), 0.1);
+    border: 1px solid rgba(var(--ion-color-danger-rgb), 0.2);
+  }
+
+  .steward-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--ion-color-light-shade);
+
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+    }
+  }
+}
+
+// Enhanced Modal Styling
+ion-modal {
+  .health-details,
+  .performance-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .health-metric,
+  .metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    .label {
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .value {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .health-overview {
+    .overview-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-item {
+      padding: 0.75rem;
+
+      .metric-icon {
+        font-size: 1.5rem;
+        min-width: 2.5rem;
+        height: 2.5rem;
+      }
+
+      .metric-info {
+        h3 {
+          font-size: 1.2rem;
+        }
+      }
+    }
+  }
+
+  .groups-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .group-card {
+    .group-header {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start;
+
+      .health-indicator {
+        justify-content: flex-start;
+      }
+    }
+
+    .key-metrics {
+      .metric-row {
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: flex-start;
+      }
+    }
+  }
+
+  ion-modal {
+    .health-details,
+    .performance-metrics {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .group-card {
+    &.health-critical {
+      box-shadow: 0 0 0 2px rgba(var(--ion-color-danger-rgb), 0.4);
+    }
+  }
 }
