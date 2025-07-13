@@ -93,79 +93,100 @@
 
   <!-- Performance Overview -->
   <div class="metrics-grid ion-padding">
-    <ion-card class="metric-card">
+    <ion-card class="metric-card predictions-enhanced">
       <ion-card-header>
         <ion-card-title>
-          <ion-icon name="speedometer-outline"></ion-icon>
-          System Performance
+          <ion-icon name="football-outline"></ion-icon>
+          Football Predictions Analytics
         </ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <div class="metric-item">
-          <span class="label">API Latency</span>
-          <span class="value" [class.warning]="getPerformanceValue('apiLatency') > 200">
-            {{ getPerformanceValue('apiLatency').toFixed(0) }}ms
-          </span>
+        <!-- Primary Metrics -->
+        <div class="predictions-primary">
+          <div class="metric-item">
+            <span class="label">Total Predictions</span>
+            <span class="value">{{ getPredictionsValue('total') }}</span>
+          </div>
+          <div class="metric-item">
+            <span class="label">Today's Predictions</span>
+            <span class="value">{{ getPredictionsValue('today') }}</span>
+          </div>
+          <div class="metric-item">
+            <span class="label">Accuracy Rate</span>
+            <span class="value success">
+              {{ getPredictionsValue('accuracy') }}%
+            </span>
+          </div>
         </div>
-        <div class="metric-item">
-          <span class="label">Error Rate</span>
-          <span class="value" [class.error]="getPerformanceValue('errorRate') > 1">
-            {{ getPerformanceValue('errorRate').toFixed(2) }}%
-          </span>
-        </div>
-        <div class="metric-item">
-          <span class="label">Uptime</span>
-          <span class="value success">
-            {{ getPerformanceValue('uptime').toFixed(2) }}%
-          </span>
-        </div>
-      </ion-card-content>
-    </ion-card>
 
-    <ion-card class="metric-card">
-      <ion-card-header>
-        <ion-card-title>
-          <ion-icon name="people-outline"></ion-icon>
-          User Activity
-        </ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <div class="metric-item">
-          <span class="label">Total Users</span>
-          <span class="value">{{ getActiveUsersValue('total') }}</span>
-        </div>
-        <div class="metric-item">
-          <span class="label">Active Today</span>
-          <span class="value">{{ getActiveUsersValue('today') }}</span>
-        </div>
-        <div class="metric-item">
-          <span class="label">Last Hour</span>
-          <span class="value">{{ getActiveUsersValue('lastHour') }}</span>
-        </div>
-      </ion-card-content>
-    </ion-card>
+        <!-- Football-Specific Metrics -->
+        <div class="predictions-football">
+          <div class="metric-group">
+            <h4>Gameweek Performance</h4>
+            <div class="metric-item">
+              <span class="label">Current Gameweek</span>
+              <span class="value">{{ footballMetrics.currentGameweek }}</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Completion Rate</span>
+              <span class="value" [class.warning]="footballMetrics.completionRate < 70">
+                {{ footballMetrics.completionRate }}%
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Avg per User</span>
+              <span class="value">{{ footballMetrics.avgPredictionsPerUser }}</span>
+            </div>
+          </div>
 
-    <ion-card class="metric-card">
-      <ion-card-header>
-        <ion-card-title>
-          <ion-icon name="stats-chart-outline"></ion-icon>
-          Predictions
-        </ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <div class="metric-item">
-          <span class="label">Total Predictions</span>
-          <span class="value">{{ getPredictionsValue('total') }}</span>
-        </div>
-        <div class="metric-item">
-          <span class="label">Today's Predictions</span>
-          <span class="value">{{ getPredictionsValue('today') }}</span>
-        </div>
-        <div class="metric-item">
-          <span class="label">Accuracy Rate</span>
-          <span class="value success">
-            {{ getPredictionsValue('accuracy') }}%
-          </span>
+          <div class="metric-group">
+            <h4>Engagement Trends</h4>
+            <div class="metric-item">
+              <span class="label">Peak Submission Time</span>
+              <span class="value">{{ footballMetrics.peakSubmissionTime }}</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Last Minute Submissions</span>
+              <span class="value">{{ footballMetrics.lastMinuteSubmissions }}%</span>
+            </div>
+            <div class="metric-item">
+              <span class="label">Early Submissions</span>
+              <span class="value">{{ footballMetrics.earlySubmissions }}%</span>
+            </div>
+          </div>
+
+          <div class="metric-group">
+            <h4>Popular Predictions</h4>
+            <div class="popular-outcomes">
+              <div class="outcome-item" *ngFor="let outcome of footballMetrics.popularOutcomes">
+                <span class="outcome-label">{{ outcome.label }}</span>
+                <div class="outcome-bar">
+                  <div class="outcome-fill" [style.width.%]="outcome.percentage"></div>
+                </div>
+                <span class="outcome-percentage">{{ outcome.percentage }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-group">
+            <h4>Joker Usage</h4>
+            <div class="joker-stats">
+              <div class="metric-item">
+                <span class="label">First Joker Used</span>
+                <span class="value">{{ footballMetrics.jokerUsage.firstJokerUsed }}/{{ footballMetrics.jokerUsage.totalEligible }}</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Second Joker Used</span>
+                <span class="value">{{ footballMetrics.jokerUsage.secondJokerUsed }}/{{ footballMetrics.jokerUsage.totalEligible }}</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Optimal Usage Rate</span>
+                <span class="value" [class.success]="footballMetrics.jokerUsage.optimalUsageRate > 75">
+                  {{ footballMetrics.jokerUsage.optimalUsageRate }}%
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </ion-card-content>
     </ion-card>

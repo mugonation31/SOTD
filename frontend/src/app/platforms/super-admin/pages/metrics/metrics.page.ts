@@ -37,8 +37,7 @@ import {
   timeOutline,
   syncOutline,
   shieldOutline,
-  warningOutline,
-} from 'ionicons/icons';
+  warningOutline, footballOutline } from 'ionicons/icons';
 import { MetricsService } from '../../../../core/services/metrics.service';
 import { SystemMetrics } from '../../../../core/interfaces/system-metrics.interface';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -65,6 +64,25 @@ interface SystemHealth {
     suspiciousActivity: number;
     lastSecurityScan: Date;
     vulnerabilities: number;
+  };
+}
+
+interface FootballMetrics {
+  currentGameweek: number;
+  completionRate: number; // percentage
+  avgPredictionsPerUser: number;
+  peakSubmissionTime: string;
+  lastMinuteSubmissions: number; // percentage
+  earlySubmissions: number; // percentage
+  popularOutcomes: Array<{
+    label: string;
+    percentage: number;
+  }>;
+  jokerUsage: {
+    firstJokerUsed: number;
+    secondJokerUsed: number;
+    totalEligible: number;
+    optimalUsageRate: number; // percentage
   };
 }
 
@@ -131,22 +149,30 @@ export class MetricsPage implements OnInit, OnDestroy {
     },
   };
 
+  footballMetrics: FootballMetrics = {
+    currentGameweek: 28,
+    completionRate: 87.3,
+    avgPredictionsPerUser: 9.2,
+    peakSubmissionTime: '7:30 PM',
+    lastMinuteSubmissions: 23.4,
+    earlySubmissions: 41.2,
+    popularOutcomes: [
+      { label: 'Home Win', percentage: 42.3 },
+      { label: 'Draw', percentage: 28.7 },
+      { label: 'Away Win', percentage: 29.0 },
+      { label: 'Over 2.5 Goals', percentage: 61.8 },
+      { label: 'Under 2.5 Goals', percentage: 38.2 },
+    ],
+    jokerUsage: {
+      firstJokerUsed: 892,
+      secondJokerUsed: 743,
+      totalEligible: 1250,
+      optimalUsageRate: 78.4,
+    },
+  };
+
   constructor(private metricsService: MetricsService) {
-    addIcons({
-      peopleOutline,
-      statsChartOutline,
-      serverOutline,
-      speedometerOutline,
-      cloudUploadOutline,
-      trendingUpOutline,
-      trendingDownOutline,
-      alertCircleOutline,
-      checkmarkCircleOutline,
-      timeOutline,
-      syncOutline,
-      shieldOutline,
-      warningOutline,
-    });
+    addIcons({serverOutline,speedometerOutline,syncOutline,shieldOutline,footballOutline,peopleOutline,statsChartOutline,cloudUploadOutline,trendingUpOutline,trendingDownOutline,alertCircleOutline,checkmarkCircleOutline,timeOutline,warningOutline,});
   }
 
   ngOnInit() {
@@ -205,14 +231,7 @@ export class MetricsPage implements OnInit, OnDestroy {
     }
   }
 
-  getPerformanceValue(metric: keyof SystemMetrics['performance']): number {
-    if (metric === 'lastDeployment') return 0; // Skip string value
-    return this.metrics?.performance?.[metric] || 0;
-  }
 
-  getActiveUsersValue(metric: keyof SystemMetrics['activeUsers']): number {
-    return this.metrics?.activeUsers?.[metric] || 0;
-  }
 
   getPredictionsValue(metric: keyof SystemMetrics['predictions']): number {
     return this.metrics?.predictions?.[metric] || 0;

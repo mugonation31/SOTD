@@ -224,6 +224,129 @@
   }
 }
 
+// Enhanced Predictions Card Styles
+.predictions-enhanced {
+  .predictions-primary {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--ion-color-light-shade);
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  .predictions-football {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .metric-group {
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid var(--ion-color-primary);
+
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .metric-item {
+      margin-bottom: 0.75rem;
+
+      .label {
+        font-size: 0.85rem;
+      }
+
+      .value {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .popular-outcomes {
+    .outcome-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .outcome-label {
+        min-width: 80px;
+        font-size: 0.85rem;
+        color: var(--ion-color-medium-shade);
+      }
+
+      .outcome-bar {
+        flex: 1;
+        height: 8px;
+        background: var(--ion-color-light-shade);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+
+        .outcome-fill {
+          height: 100%;
+          background: linear-gradient(90deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+          transition: width 0.3s ease;
+        }
+      }
+
+      .outcome-percentage {
+        min-width: 40px;
+        text-align: right;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+    }
+  }
+
+  .joker-stats {
+    .metric-item {
+      .value {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .predictions-football {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .metric-group {
+      padding: 0.75rem;
+    }
+
+    .popular-outcomes {
+      .outcome-item {
+        .outcome-label {
+          min-width: 60px;
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+}
+
 // Responsive adjustments
 @media (max-width: 768px) {
   .metrics-grid {
