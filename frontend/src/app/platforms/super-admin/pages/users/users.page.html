@@ -1,9 +1,436 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Manage Users</ion-title>
+    <ion-title>Admin Performance & Support Center</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="activeTab">
+      <ion-segment-button value="admins">
+        <ion-label>Group Admins</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="all">
+        <ion-label>All Users</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <h1>All Users</h1>
+<ion-content>
+  <div class="ion-padding">
+    <!-- Admin Overview Tab -->
+    <div *ngIf="activeTab === 'admins'">
+      <!-- Admin Health Overview -->
+      <div class="admin-overview">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Admin Platform Overview</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="overview-metrics">
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="pulse-outline" color="primary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAverageAdminHealth() }}/100</h3>
+                  <p>Average Admin Health</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="stats-chart-outline" color="secondary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAverageEffectivenessScore() }}/100</h3>
+                  <p>Avg Effectiveness Score</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="warning-outline" color="warning"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAdminsNeedingAttention().length }}</h3>
+                  <p>Admins Need Support</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="star-outline" color="success"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getHighPerformingAdmins().length }}</h3>
+                  <p>High Performers</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="people-outline" color="tertiary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getTotalGroupsManaged() }}</h3>
+                  <p>Total Groups Managed</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="school-outline" color="primary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAdminsInTraining() }}</h3>
+                  <p>In Training/Improvement</p>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Search and Filters -->
+      <div class="search-filters">
+        <ion-card>
+          <ion-card-content>
+            <ion-searchbar
+              [(ngModel)]="searchTerm"
+              (ionInput)="filterUsers()"
+              placeholder="Search admins..."
+            ></ion-searchbar>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Admin Grid -->
+      <div class="admin-grid">
+        <ion-card *ngFor="let admin of getGroupAdmins() | slice:0:20" class="admin-card" [class]="'health-' + admin.health?.status">
+          <ion-card-header>
+            <div class="admin-header">
+              <div class="admin-title">
+                <h2>{{ admin.name }}</h2>
+                <p>{{ admin.email }}</p>
+              </div>
+              <div class="health-indicator">
+                <ion-icon 
+                  [name]="getHealthIcon(admin.health?.status || 'unknown')" 
+                  [color]="getAdminHealthStatusColor(admin.health?.status || 'unknown')"
+                  class="health-icon">
+                </ion-icon>
+                <span class="health-score">{{ admin.health?.score || 0 }}/100</span>
+              </div>
+            </div>
+          </ion-card-header>
+
+          <ion-card-content>
+            <!-- Health Status Bar -->
+            <div class="health-status-bar">
+              <div class="status-info">
+                <ion-badge [color]="getAdminHealthStatusColor(admin.health?.status || 'unknown')">
+                  {{ admin.health?.status | titlecase }}
+                </ion-badge>
+                <ion-badge [color]="getBurnoutRiskColor(admin.health?.burnoutRisk || 'unknown')">
+                  {{ admin.health?.burnoutRisk | titlecase }} Burnout Risk
+                </ion-badge>
+              </div>
+              <div class="effectiveness-rate">
+                <span>{{ admin.performance?.effectivenessScore || 0 }}% Effectiveness</span>
+                <ion-progress-bar 
+                  [value]="(admin.performance?.effectivenessScore || 0) / 100" 
+                  [color]="getAdminHealthStatusColor(admin.health?.status || 'unknown')">
+                </ion-progress-bar>
+              </div>
+            </div>
+
+            <!-- Key Performance Metrics -->
+            <div class="key-metrics">
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon name="people-outline" color="primary"></ion-icon>
+                  <span>{{ admin.performance?.groupsManaged || 0 }} Groups</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="pulse-outline" color="secondary"></ion-icon>
+                  <span>{{ admin.performance?.averageGroupHealth || 0 }}% Group Health</span>
+                </div>
+              </div>
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon name="time-outline" color="tertiary"></ion-icon>
+                  <span>{{ formatResolutionTime(admin.performance?.issueResolutionTime || 0) }} Resolution</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="star-outline" color="warning"></ion-icon>
+                  <span>{{ admin.performance?.memberSatisfactionRate || 0 }}% Satisfaction</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lifecycle & Skills -->
+            <div class="lifecycle-info">
+              <div class="lifecycle-metric">
+                <span class="label">Experience:</span>
+                <span class="value">{{ formatDaysAsAdmin(admin.lifecycle?.daysAsAdmin || 0) }}</span>
+              </div>
+              <div class="lifecycle-metric">
+                <span class="label">Skill Level:</span>
+                <ion-badge [color]="getSkillLevelColor(admin.lifecycle?.skillLevel || 'unknown')">
+                  {{ admin.lifecycle?.skillLevel | titlecase }}
+                </ion-badge>
+              </div>
+              <div class="lifecycle-metric">
+                <span class="label">Training:</span>
+                <span class="value">{{ admin.lifecycle?.trainingCompletionRate || 0 }}% Complete</span>
+              </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section" *ngIf="admin.health?.alerts && (admin.health?.alerts?.length || 0) > 0">
+              <h4>
+                <ion-icon name="warning-outline" color="warning"></ion-icon>
+                Alerts
+              </h4>
+              <div class="alert-items">
+                <ion-chip *ngFor="let alert of admin.health?.alerts" color="warning">
+                  <ion-label>{{ alert }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Support Status -->
+            <div class="support-status" *ngIf="admin.support?.improvementPlanActive || admin.support?.mentoringParticipation">
+              <h4>
+                <ion-icon name="school-outline" color="primary"></ion-icon>
+                Active Support
+              </h4>
+              <div class="support-items">
+                <ion-chip *ngIf="admin.support?.improvementPlanActive" color="primary">
+                  <ion-label>Improvement Plan</ion-label>
+                </ion-chip>
+                <ion-chip *ngIf="admin.support?.mentoringParticipation" color="secondary">
+                  <ion-label>Mentoring Program</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Steward Actions -->
+            <div class="steward-actions">
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                (click)="viewAdminDetails(admin)"
+                title="View Details">
+                <ion-icon name="eye-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Support Actions -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="secondary"
+                (click)="scheduleCoaching(admin)"
+                title="Schedule Coaching"
+                *ngIf="admin.health?.status === 'fair' || admin.health?.status === 'poor'">
+                <ion-icon name="school-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Intervention Actions -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="warning"
+                (click)="startImprovementPlan(admin)"
+                title="Start Improvement Plan"
+                *ngIf="(admin.health?.status === 'poor' || admin.health?.status === 'critical') && !admin.support?.improvementPlanActive">
+                <ion-icon name="medical-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Mentoring -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="tertiary"
+                (click)="assignMentor(admin)"
+                title="Assign Mentor"
+                *ngIf="!admin.support?.mentoringParticipation">
+                <ion-icon name="chatbox-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Recognition -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="success"
+                (click)="recognizeAdmin(admin)"
+                title="Send Recognition"
+                *ngIf="admin.health?.status === 'excellent'">
+                <ion-icon name="sparkles-outline"></ion-icon>
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+    </div>
+
+    <!-- All Users Tab -->
+    <div *ngIf="activeTab === 'all'">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>All System Users</ion-card-title>
+          <ion-searchbar
+            [(ngModel)]="searchTerm"
+            (ionInput)="filterUsers()"
+            placeholder="Search users..."
+          ></ion-searchbar>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-list>
+            <ion-item *ngFor="let user of filteredUsers">
+              <ion-label>
+                <h2>{{ user.name }}</h2>
+                <p>{{ user.email }}</p>
+                <p>
+                  Role: <ion-badge color="primary">{{ user.role }}</ion-badge>
+                </p>
+                <p>
+                  Status:
+                  <ion-badge
+                    [color]="user.status === 'active' ? 'success' : 'warning'"
+                    >{{ user.status }}</ion-badge
+                  >
+                </p>
+              </ion-label>
+              <ion-button
+                fill="clear"
+                [color]="user.status === 'active' ? 'danger' : 'success'"
+                (click)="toggleUserStatus(user)"
+                [title]="
+                  user.status === 'active' ? 'Deactivate User' : 'Activate User'
+                "
+              >
+                <ion-icon
+                  [name]="
+                    user.status === 'active'
+                      ? 'ban-outline'
+                      : 'checkmark-circle-outline'
+                  "
+                ></ion-icon>
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Enhanced Admin Details Modal -->
+  <ion-modal [isOpen]="!!selectedAdmin" (didDismiss)="selectedAdmin = null">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ selectedAdmin?.name }} - Performance Analysis</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="selectedAdmin = null">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="selectedAdmin">
+        <!-- Health Summary -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Health & Wellbeing</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="health-details">
+              <div class="health-metric">
+                <span class="label">Health Score:</span>
+                <span class="value">{{ selectedAdmin.health?.score || 0 }}/100</span>
+              </div>
+              <div class="health-metric">
+                <span class="label">Status:</span>
+                <ion-badge [color]="getAdminHealthStatusColor(selectedAdmin.health?.status || 'unknown')">
+                  {{ selectedAdmin.health?.status | titlecase }}
+                </ion-badge>
+              </div>
+              <div class="health-metric">
+                <span class="label">Burnout Risk:</span>
+                <ion-badge [color]="getBurnoutRiskColor(selectedAdmin.health?.burnoutRisk || 'unknown')">
+                  {{ selectedAdmin.health?.burnoutRisk | titlecase }}
+                </ion-badge>
+              </div>
+              <div class="health-metric">
+                <span class="label">Workload:</span>
+                <span class="value">{{ selectedAdmin.health?.workloadLevel | titlecase }}</span>
+              </div>
+              <div class="health-metric">
+                <span class="label">Last Active:</span>
+                <span class="value">{{ selectedAdmin.health?.lastActiveDate | date:'short' }}</span>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <!-- Performance Analytics -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Performance Metrics</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="performance-metrics">
+              <div class="metric-item">
+                <span class="label">Effectiveness Score:</span>
+                <span class="value">{{ selectedAdmin.performance?.effectivenessScore || 0 }}/100</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Groups Managed:</span>
+                <span class="value">{{ selectedAdmin.performance?.groupsManaged || 0 }}</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Avg Group Health:</span>
+                <span class="value">{{ selectedAdmin.performance?.averageGroupHealth || 0 }}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Member Satisfaction:</span>
+                <span class="value">{{ selectedAdmin.performance?.memberSatisfactionRate || 0 }}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Issue Resolution:</span>
+                <span class="value">{{ formatResolutionTime(selectedAdmin.performance?.issueResolutionTime || 0) }}</span>
+              </div>
+              <div class="metric-item">
+                <span class="label">Leadership Style:</span>
+                <span class="value">{{ selectedAdmin.performance?.leadershipStyle | titlecase }}</span>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <!-- Support & Development -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Support & Development</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="support-metrics">
+              <div class="support-item">
+                <span class="label">Coaching Sessions:</span>
+                <span class="value">{{ selectedAdmin.support?.coachingSessionsCompleted || 0 }}</span>
+              </div>
+              <div class="support-item">
+                <span class="label">Training Progress:</span>
+                <span class="value">{{ selectedAdmin.lifecycle?.trainingCompletionRate || 0 }}%</span>
+              </div>
+              <div class="support-item">
+                <span class="label">Skill Level:</span>
+                <ion-badge [color]="getSkillLevelColor(selectedAdmin.lifecycle?.skillLevel || 'unknown')">
+                  {{ selectedAdmin.lifecycle?.skillLevel | titlecase }}
+                </ion-badge>
+              </div>
+              <div class="support-item">
+                <span class="label">Career Phase:</span>
+                <span class="value">{{ selectedAdmin.lifecycle?.careerPhase | titlecase }}</span>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>
