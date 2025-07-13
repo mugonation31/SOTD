@@ -33,12 +33,6 @@ import {
   starOutline,
   calendarOutline,
   walletOutline,
-  serverOutline,
-  speedometerOutline,
-  syncOutline,
-  shieldOutline,
-  warningOutline,
-  cloudOutline,
   trendingUpOutline,
   cashOutline,
   pulseOutline,
@@ -82,30 +76,7 @@ interface RecentActivity {
   timestamp: Date;
 }
 
-interface SystemHealth {
-  platform: {
-    uptime: number; // percentage
-    lastOutage: Date | null;
-    status: 'healthy' | 'warning' | 'critical';
-  };
-  performance: {
-    avgResponseTime: number; // milliseconds
-    errorRate: number; // percentage
-    activeConnections: number;
-  };
-  dataSync: {
-    footballApiStatus: 'connected' | 'disconnected' | 'error';
-    lastSync: Date;
-    nextSync: Date;
-    failedSyncs: number;
-  };
-  security: {
-    failedLogins: number;
-    suspiciousActivity: number;
-    lastSecurityScan: Date;
-    vulnerabilities: number;
-  };
-}
+
 
 interface BusinessIntelligence {
   growth: {
@@ -206,30 +177,7 @@ export class DashboardPage {
     },
   };
 
-  systemHealth: SystemHealth = {
-    platform: {
-      uptime: 99.8,
-      lastOutage: new Date('2024-03-18T09:15:00'),
-      status: 'healthy',
-    },
-    performance: {
-      avgResponseTime: 245,
-      errorRate: 0.02,
-      activeConnections: 1247,
-    },
-    dataSync: {
-      footballApiStatus: 'connected',
-      lastSync: new Date('2024-03-20T14:30:00'),
-      nextSync: new Date('2024-03-20T18:00:00'),
-      failedSyncs: 0,
-    },
-    security: {
-      failedLogins: 3,
-      suspiciousActivity: 0,
-      lastSecurityScan: new Date('2024-03-20T02:00:00'),
-      vulnerabilities: 0,
-    },
-  };
+
 
   businessIntelligence: BusinessIntelligence = {
     growth: {
@@ -297,7 +245,7 @@ export class DashboardPage {
   ];
 
   constructor() {
-    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,serverOutline,speedometerOutline,syncOutline,shieldOutline,warningOutline,cloudOutline,trendingUpOutline,cashOutline,pulseOutline,statsChartOutline,phonePortraitOutline,desktopOutline,chatbubbleOutline,});
+    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,trendingUpOutline,cashOutline,pulseOutline,statsChartOutline,phonePortraitOutline,desktopOutline,chatbubbleOutline,});
   }
 
   getTimeUntilDeadline(): string {
@@ -362,56 +310,7 @@ export class DashboardPage {
     console.log('Managing payments');
   }
 
-  // System Health Helper Methods
-  getSystemHealthStatusColor(status: string): string {
-    switch (status) {
-      case 'healthy':
-        return 'success';
-      case 'warning':
-        return 'warning';
-      case 'critical':
-        return 'danger';
-      default:
-        return 'medium';
-    }
-  }
 
-  getApiSyncStatusColor(status: string): string {
-    switch (status) {
-      case 'connected':
-        return 'success';
-      case 'disconnected':
-        return 'warning';
-      case 'error':
-        return 'danger';
-      default:
-        return 'medium';
-    }
-  }
-
-  getTimeAgo(date: Date): string {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
-  }
-
-  getTimeUntil(date: Date): string {
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) return `${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `${minutes}m`;
-    return 'Now';
-  }
 
   // Business Intelligence Helper Methods
   getGrowthTrend(percentage: number): string {

@@ -4,6 +4,90 @@
   }
 }
 
+// System Health Monitoring Styles
+.system-health-section {
+  margin-bottom: 1rem;
+
+  ion-card {
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.health-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-left: 4px solid var(--ion-color-primary);
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  height: 100%;
+}
+
+.health-icon {
+  font-size: 2rem;
+  padding: 0.75rem;
+  border-radius: 50%;
+  background: var(--ion-color-step-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  height: 3.5rem;
+}
+
+.health-info {
+  flex: 1;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+
+  p {
+    margin: 0.25rem 0;
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+}
+
+.health-detail {
+  font-size: 0.8rem !important;
+  color: var(--ion-color-medium-shade) !important;
+  margin-top: 0.5rem !important;
+}
+
+// Responsive adjustments for health cards
+@media (max-width: 768px) {
+  .health-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .health-card {
+    padding: 0.75rem;
+  }
+  
+  .health-icon {
+    font-size: 1.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .health-info h3 {
+    font-size: 1rem;
+  }
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

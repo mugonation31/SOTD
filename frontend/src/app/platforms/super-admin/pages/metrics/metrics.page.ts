@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader,
@@ -35,10 +35,38 @@ import {
   alertCircleOutline,
   checkmarkCircleOutline,
   timeOutline,
+  syncOutline,
+  shieldOutline,
+  warningOutline,
 } from 'ionicons/icons';
 import { MetricsService } from '../../../../core/services/metrics.service';
 import { SystemMetrics } from '../../../../core/interfaces/system-metrics.interface';
 import { Subscription, firstValueFrom } from 'rxjs';
+
+interface SystemHealth {
+  platform: {
+    uptime: number; // percentage
+    lastOutage: Date | null;
+    status: 'healthy' | 'warning' | 'critical';
+  };
+  performance: {
+    avgResponseTime: number; // milliseconds
+    errorRate: number; // percentage
+    activeConnections: number;
+  };
+  dataSync: {
+    footballApiStatus: 'connected' | 'disconnected' | 'error';
+    lastSync: Date;
+    nextSync: Date;
+    failedSyncs: number;
+  };
+  security: {
+    failedLogins: number;
+    suspiciousActivity: number;
+    lastSecurityScan: Date;
+    vulnerabilities: number;
+  };
+}
 
 @Component({
   selector: 'app-metrics',
@@ -47,6 +75,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
+    TitleCasePipe,
     FormsModule,
     IonHeader,
     IonToolbar,
@@ -77,6 +106,31 @@ export class MetricsPage implements OnInit, OnDestroy {
   storageUsagePercentage = 0;
   storageUsageColor = 'success';
 
+  systemHealth: SystemHealth = {
+    platform: {
+      uptime: 99.8,
+      lastOutage: new Date('2024-03-18T09:15:00'),
+      status: 'healthy',
+    },
+    performance: {
+      avgResponseTime: 245,
+      errorRate: 0.02,
+      activeConnections: 1247,
+    },
+    dataSync: {
+      footballApiStatus: 'connected',
+      lastSync: new Date('2024-03-20T14:30:00'),
+      nextSync: new Date('2024-03-20T18:00:00'),
+      failedSyncs: 0,
+    },
+    security: {
+      failedLogins: 3,
+      suspiciousActivity: 0,
+      lastSecurityScan: new Date('2024-03-20T02:00:00'),
+      vulnerabilities: 0,
+    },
+  };
+
   constructor(private metricsService: MetricsService) {
     addIcons({
       peopleOutline,
@@ -89,6 +143,9 @@ export class MetricsPage implements OnInit, OnDestroy {
       alertCircleOutline,
       checkmarkCircleOutline,
       timeOutline,
+      syncOutline,
+      shieldOutline,
+      warningOutline,
     });
   }
 
@@ -187,5 +244,56 @@ export class MetricsPage implements OnInit, OnDestroy {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // System Health Helper Methods
+  getSystemHealthStatusColor(status: string): string {
+    switch (status) {
+      case 'healthy':
+        return 'success';
+      case 'warning':
+        return 'warning';
+      case 'critical':
+        return 'danger';
+      default:
+        return 'medium';
+    }
+  }
+
+  getApiSyncStatusColor(status: string): string {
+    switch (status) {
+      case 'connected':
+        return 'success';
+      case 'disconnected':
+        return 'warning';
+      case 'error':
+        return 'danger';
+      default:
+        return 'medium';
+    }
+  }
+
+  getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  }
+
+  getTimeUntil(date: Date): string {
+    const now = new Date();
+    const diff = date.getTime() - now.getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return 'Now';
   }
 }
