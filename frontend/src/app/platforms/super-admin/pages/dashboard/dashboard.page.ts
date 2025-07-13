@@ -19,7 +19,7 @@ import {
   IonLabel,
 } from '@ionic/angular/standalone';
 import { RouterLink } from '@angular/router';
-import { NgFor, NgIf, DatePipe, TitleCasePipe } from '@angular/common';
+import { NgFor, NgIf, DatePipe, TitleCasePipe, DecimalPipe } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
@@ -38,7 +38,14 @@ import {
   syncOutline,
   shieldOutline,
   warningOutline,
-  cloudOutline } from 'ionicons/icons';
+  cloudOutline,
+  trendingUpOutline,
+  cashOutline,
+  pulseOutline,
+  statsChartOutline,
+  phonePortraitOutline,
+  desktopOutline,
+  chatbubbleOutline } from 'ionicons/icons';
 
 interface SystemOverview {
   totalGroups: number;
@@ -100,6 +107,48 @@ interface SystemHealth {
   };
 }
 
+interface BusinessIntelligence {
+  growth: {
+    newUsersThisWeek: number;
+    newUsersThisMonth: number;
+    newGroupsThisWeek: number;
+    newGroupsThisMonth: number;
+    growthRateWeekly: number; // percentage
+    growthRateMonthly: number; // percentage
+  };
+  revenue: {
+    monthlyRecurringRevenue: number; // in currency
+    totalRevenue: number;
+    conversionRate: number; // percentage
+    averageRevenuePerUser: number;
+    churnRate: number; // percentage
+  };
+  engagement: {
+    dailyActiveUsers: number;
+    weeklyActiveUsers: number;
+    averageSessionDuration: number; // minutes
+    predictionsPerUser: number;
+    retentionRate: number; // percentage
+  };
+  adoption: {
+    featuresUsed: {
+      predictions: number; // percentage of users
+      jokers: number;
+      groupChat: number;
+      leaderboards: number;
+    };
+    platformUsage: {
+      mobile: number; // percentage
+      web: number;
+    };
+    topGroups: {
+      name: string;
+      members: number;
+      engagement: number; // percentage
+    }[];
+  };
+}
+
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.page.html',
@@ -128,6 +177,7 @@ interface SystemHealth {
     NgIf,
     DatePipe,
     TitleCasePipe,
+    DecimalPipe,
   ],
 })
 export class DashboardPage {
@@ -181,6 +231,48 @@ export class DashboardPage {
     },
   };
 
+  businessIntelligence: BusinessIntelligence = {
+    growth: {
+      newUsersThisWeek: 47,
+      newUsersThisMonth: 203,
+      newGroupsThisWeek: 5,
+      newGroupsThisMonth: 18,
+      growthRateWeekly: 12.5,
+      growthRateMonthly: 28.7,
+    },
+    revenue: {
+      monthlyRecurringRevenue: 3240,
+      totalRevenue: 18650,
+      conversionRate: 8.3,
+      averageRevenuePerUser: 23.50,
+      churnRate: 3.2,
+    },
+    engagement: {
+      dailyActiveUsers: 89,
+      weeklyActiveUsers: 127,
+      averageSessionDuration: 14.5,
+      predictionsPerUser: 8.7,
+      retentionRate: 76.4,
+    },
+    adoption: {
+      featuresUsed: {
+        predictions: 94.2,
+        jokers: 67.8,
+        groupChat: 43.1,
+        leaderboards: 82.5,
+      },
+      platformUsage: {
+        mobile: 68.3,
+        web: 31.7,
+      },
+      topGroups: [
+        { name: 'Premier League Fanatics', members: 24, engagement: 91.2 },
+        { name: 'Champions League Elite', members: 18, engagement: 87.5 },
+        { name: 'Football Madness', members: 22, engagement: 84.8 },
+      ],
+    },
+  };
+
   recentActivities: RecentActivity[] = [
     {
       type: 'group_created',
@@ -205,7 +297,7 @@ export class DashboardPage {
   ];
 
   constructor() {
-    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,serverOutline,speedometerOutline,syncOutline,shieldOutline,warningOutline,cloudOutline,});
+    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,serverOutline,speedometerOutline,syncOutline,shieldOutline,warningOutline,cloudOutline,trendingUpOutline,cashOutline,pulseOutline,statsChartOutline,phonePortraitOutline,desktopOutline,chatbubbleOutline,});
   }
 
   getTimeUntilDeadline(): string {
@@ -319,5 +411,39 @@ export class DashboardPage {
     if (hours > 0) return `${hours}h ${minutes % 60}m`;
     if (minutes > 0) return `${minutes}m`;
     return 'Now';
+  }
+
+  // Business Intelligence Helper Methods
+  getGrowthTrend(percentage: number): string {
+    if (percentage > 20) return 'Excellent';
+    if (percentage > 10) return 'Good';
+    if (percentage > 0) return 'Positive';
+    return 'Declining';
+  }
+
+  getRetentionStatus(rate: number): string {
+    if (rate > 80) return 'Excellent';
+    if (rate > 60) return 'Good';
+    if (rate > 40) return 'Fair';
+    return 'Needs Improvement';
+  }
+
+  getConversionRateColor(rate: number): string {
+    if (rate > 10) return 'success';
+    if (rate > 5) return 'warning';
+    return 'danger';
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+
+  formatPercentage(value: number, decimals: number = 1): string {
+    return `${value.toFixed(decimals)}%`;
   }
 }

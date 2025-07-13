@@ -94,3 +94,193 @@
     font-size: 1rem;
   }
 }
+
+// Business Intelligence Styles
+.bi-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  height: 100%;
+  background: var(--ion-color-light);
+  border-left: 4px solid var(--ion-color-secondary);
+
+  &.growth {
+    border-left-color: var(--ion-color-success);
+  }
+
+  &.revenue {
+    border-left-color: var(--ion-color-warning);
+  }
+
+  &.engagement {
+    border-left-color: var(--ion-color-tertiary);
+  }
+
+  &.adoption {
+    border-left-color: var(--ion-color-secondary);
+  }
+}
+
+.bi-icon {
+  font-size: 2rem;
+  padding: 0.75rem;
+  border-radius: 50%;
+  background: var(--ion-color-step-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  height: 3.5rem;
+}
+
+.bi-info {
+  flex: 1;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+
+  p {
+    margin: 0.25rem 0;
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+}
+
+// Analytics Details Section
+.analytics-details {
+  background: var(--ion-color-step-50);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+}
+
+.usage-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  text-align: center;
+
+  ion-icon {
+    font-size: 1.5rem;
+  }
+
+  strong {
+    font-size: 1.2rem;
+    color: var(--ion-color-dark);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+  }
+}
+
+// Feature Usage Bars
+.feature-stats {
+  margin-top: 1rem;
+}
+
+.feature-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+
+  span:first-child {
+    width: 100px;
+    font-weight: 500;
+  }
+
+  span:last-child {
+    width: 50px;
+    text-align: right;
+    font-weight: 600;
+  }
+}
+
+.bar {
+  flex: 1;
+  height: 8px;
+  background: var(--ion-color-step-200);
+  border-radius: 4px;
+  overflow: hidden;
+
+  .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+}
+
+// Top Groups Section
+.top-groups {
+  background: var(--ion-color-step-50);
+  padding: 1rem;
+  border-radius: 8px;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+
+  ion-item {
+    --background: var(--ion-color-light);
+    --border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+}
+
+// Responsive adjustments for BI cards
+@media (max-width: 768px) {
+  .bi-card {
+    padding: 0.75rem;
+  }
+  
+  .bi-icon {
+    font-size: 1.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .bi-info h3 {
+    font-size: 1rem;
+  }
+
+  .feature-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+
+    span:first-child,
+    span:last-child {
+      width: auto;
+    }
+  }
+
+  .usage-stat {
+    flex-direction: column;
+    text-align: center;
+  }
+}
