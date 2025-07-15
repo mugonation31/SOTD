@@ -174,13 +174,13 @@ export class SuperAdminRegisterPage implements OnInit {
           error: (error) => {
             console.error('❌ Super Admin Registration failed:', error);
             
-            this.error = {
+          this.error = {
               title: 'Registration Failed',
               message: this.getErrorMessage(error),
               retry: true,
-            };
+          };
             this.isLoading = false;
-          }
+        }
         });
 
       } catch (error: any) {

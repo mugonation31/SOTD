@@ -118,7 +118,7 @@ export class AuthService {
       });
     } else {
       console.log('🔧 AuthService: Using mock authentication for development');
-      this.initializeSessionTimer();
+    this.initializeSessionTimer();
     }
   }
 
@@ -175,17 +175,17 @@ export class AuthService {
     if (!storedUser) return null;
 
     try {
-      const user = JSON.parse(storedUser);
-      const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
+    const user = JSON.parse(storedUser);
+    const lastActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
 
-      if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
-        this.clearUserStorage();
-        return null;
-      }
+    if (lastActivity && Date.now() - Number(lastActivity) > SESSION_TIMEOUT) {
+      this.clearUserStorage();
+      return null;
+    }
 
       // Ensure the stored user has the correct AuthResponse structure
       if (user && user.user && user.token) {
-        return user;
+    return user;
       }
       
       // If it's in the old User format, convert it to AuthResponse format
@@ -443,7 +443,7 @@ export class AuthService {
         this.performLogout(); // Still perform local cleanup
       });
     } else {
-      this.performLogout();
+    this.performLogout();
     }
   }
 

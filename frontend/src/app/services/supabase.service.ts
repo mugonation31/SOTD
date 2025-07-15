@@ -138,7 +138,7 @@ export class SupabaseService {
       console.log('✅ User profile loaded:', profile);
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
-    }
+  }
   }
 
   // Getters for reactive state

@@ -1,71 +1,448 @@
-.filters-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+// Platform Steward Prediction Analytics Styles
+:host {
+  display: block;
+  width: 100%;
+  
+  ion-content {
+    --background: var(--ion-color-light);
+    --overflow: auto;
+    
+    // Ensure all tab content containers can scroll
+    > div {
+      min-height: auto;
+      overflow: visible;
+    }
+  }
 }
 
-.search-bar {
-  --background: var(--ion-color-light);
-  --border-radius: 8px;
+// Platform Health Overview
+.platform-health {
+  margin-bottom: 1.5rem;
+  
+  .health-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    
+    .metric-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: var(--ion-color-light);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      
+      .metric-icon {
+        margin-right: 1rem;
+        
+        ion-icon {
+          font-size: 2rem;
+        }
+      }
+      
+      .metric-info {
+        flex: 1;
+        
+        h3 {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+        
+        p {
+          margin: 0.25rem 0 0 0;
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+  }
 }
 
-.select-filters {
-  display: flex;
-  gap: 16px;
+// Submission Monitoring
+.submission-monitoring {
+  margin-bottom: 1.5rem;
+  
+  .submission-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    
+    .submission-metric {
+      padding: 1rem;
+      background: var(--ion-color-light-tint);
+      border-radius: 8px;
+      
+      .label {
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      
+      .value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      
+      ion-progress-bar {
+        height: 6px;
+        border-radius: 3px;
+      }
+    }
+  }
 }
 
-.filter-select {
-  flex: 1;
-  max-width: 200px;
-  --background: var(--ion-color-light);
-  --border-radius: 8px;
-  padding: 8px;
+// Strategic Insights
+.strategic-insights {
+  margin-bottom: 1.5rem;
+  
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    
+    .insight-card {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      border-left: 4px solid var(--ion-color-primary);
+      
+      h4 {
+        margin: 0 0 1rem 0;
+        color: var(--ion-color-primary);
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      
+      p {
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        
+        strong {
+          color: var(--ion-color-dark);
+        }
+      }
+    }
+  }
+}
+
+// Performance Analytics
+.performance-analytics {
+  margin-bottom: 1.5rem;
+  
+  .performance-tiers {
+    display: grid;
+    gap: 1rem;
+    
+    .tier {
+      padding: 1.5rem;
+      border-radius: 12px;
+      border-left: 6px solid;
+      
+      &.elite {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-left-color: #f39c12;
+      }
+      
+      &.champion {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border-left-color: #17a2b8;
+      }
+      
+      &.contender {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left-color: #28a745;
+      }
+      
+      &.developing {
+        background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+        border-left-color: #dc3545;
+      }
+      
+      h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+      
+      .tier-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        
+        span {
+          padding: 0.25rem 0.75rem;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+// Top Performers
+.top-performers {
+  margin-bottom: 1.5rem;
+  
+  .performers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    
+    .performer-card {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      
+      .performer-stats {
+        .stat-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 0.75rem 0;
+          
+          span:first-child {
+            font-weight: 500;
+            color: var(--ion-color-medium);
+          }
+          
+          span:last-child, ion-badge {
+            font-weight: 600;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Behavior Patterns
+.behavior-patterns {
+  .behavior-insights {
+    .behavior-section {
+      margin-bottom: 2rem;
+      
+      h4 {
+        margin: 0 0 1rem 0;
+        color: var(--ion-color-primary);
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      
+      .timing-stats, .joker-intelligence {
+        .timing-item, .joker-stat {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.75rem;
+          margin: 0.5rem 0;
+          background: var(--ion-color-light-tint);
+          border-radius: 8px;
+          
+          span:first-child {
+            font-weight: 500;
+          }
+          
+          span:last-child {
+            color: var(--ion-color-medium);
+            font-weight: 600;
+          }
+        }
+      }
+      
+      .risk-profiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        
+        .risk-item {
+          padding: 1.5rem;
+          border-radius: 12px;
+          text-align: center;
+          
+          &.conservative {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+          }
+          
+          &.balanced {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+          }
+          
+          &.aggressive {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
+          }
+          
+          h5 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 600;
+            color: var(--ion-color-dark);
+          }
+          
+          p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+            
+            &:first-of-type {
+              font-weight: 600;
+              color: var(--ion-color-primary);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Intervention Center
+.intervention-center {
+  margin-bottom: 1.5rem;
+  
+  .intervention-categories {
+    .intervention-category {
+      margin-bottom: 2rem;
+      
+      h4 {
+        margin: 0 0 1rem 0;
+        padding: 0.75rem 1rem;
+        background: var(--ion-color-primary-tint);
+        color: var(--ion-color-primary-contrast);
+        border-radius: 8px;
+        font-weight: 600;
+      }
+      
+      .intervention-items {
+        .intervention-item {
+          display: grid;
+          grid-template-columns: 1fr 2fr auto;
+          gap: 1rem;
+          padding: 1rem;
+          margin: 0.5rem 0;
+          background: var(--ion-color-light);
+          border-radius: 8px;
+          border-left: 4px solid var(--ion-color-warning);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          
+          .intervention-user {
+            h5 {
+              margin: 0 0 0.25rem 0;
+              font-weight: 600;
+              color: var(--ion-color-dark);
+            }
+            
+            p {
+              margin: 0;
+              font-size: 0.85rem;
+              color: var(--ion-color-medium);
+            }
+          }
+          
+          .intervention-recommendation {
+            p {
+              margin: 0.25rem 0;
+              font-size: 0.9rem;
+              
+              strong {
+                color: var(--ion-color-dark);
+              }
+            }
+          }
+          
+          .intervention-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: flex-end;
+            
+            ion-button {
+              --padding-start: 0.75rem;
+              --padding-end: 0.75rem;
+              font-size: 0.8rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Intervention Impact
+.intervention-impact {
+  .impact-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    
+    .impact-item {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      text-align: center;
+      
+      h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--ion-color-primary);
+        font-weight: 600;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .health-metrics {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .submission-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .insights-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .performers-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .intervention-item {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+    
+    .intervention-actions {
+      flex-direction: row !important;
+      align-items: center;
+    }
+  }
 }
 
 @media (max-width: 576px) {
-  .select-filters {
-    flex-direction: column;
+  .submission-stats {
+    grid-template-columns: 1fr !important;
   }
-
-  .filter-select {
-    max-width: 100%;
+  
+  .tier-stats {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
   }
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.stat-item {
-  padding: 1rem;
-  background: var(--ion-color-light);
-  border-radius: 8px;
-  text-align: center;
-}
-
-.predictions-grid {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.match-prediction {
-  font-size: 0.9em;
-  color: var(--ion-color-medium);
-}
-
-.actual-score {
-  font-size: 0.8em;
-  color: var(--ion-color-medium);
-  margin-top: 0.2rem;
-}
-
-.joker-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  text-align: center;
+  
+  .risk-profiles {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .impact-metrics {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }

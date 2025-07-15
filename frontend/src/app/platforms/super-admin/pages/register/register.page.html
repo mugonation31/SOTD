@@ -16,26 +16,26 @@
   <!-- Registration form -->
   <div *ngIf="!isCheckingExistingAdmin && !superAdminExists">
     <ion-card class="auth-card">
-      <ion-card-header>
+    <ion-card-header>
         <ion-card-title>Create Super Admin Account</ion-card-title>
         <ion-card-subtitle>One-time setup for Predict 3</ion-card-subtitle>
-      </ion-card-header>
-      
-      <ion-card-content>
+    </ion-card-header>
+
+    <ion-card-content>
         <div class="auth-header">
           <ion-text color="medium">
             <p>Set up the first Super Admin account to manage Predict 3's football prediction platform.</p>
           </ion-text>
         </div>
 
-        <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
-          <!-- Personal Information -->
+      <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
+        <!-- Personal Information -->
           <div class="form-section">
             <ion-text>
               <h3>Personal Information</h3>
             </ion-text>
-            
-            <ion-item>
+
+          <ion-item>
               <ion-label position="stacked">First Name</ion-label>
               <ion-input 
                 type="text" 
@@ -46,9 +46,9 @@
               <ion-note slot="error" *ngIf="isFieldInvalid('firstName')">
                 {{ getFieldError('firstName') }}
               </ion-note>
-            </ion-item>
+          </ion-item>
 
-            <ion-item>
+          <ion-item>
               <ion-label position="stacked">Last Name</ion-label>
               <ion-input 
                 type="text" 
@@ -59,9 +59,9 @@
               <ion-note slot="error" *ngIf="isFieldInvalid('lastName')">
                 {{ getFieldError('lastName') }}
               </ion-note>
-            </ion-item>
+          </ion-item>
 
-            <ion-item>
+          <ion-item>
               <ion-label position="stacked">Username</ion-label>
               <ion-input 
                 type="text" 
@@ -72,7 +72,7 @@
               <ion-note slot="error" *ngIf="isFieldInvalid('username')">
                 {{ getFieldError('username') }}
               </ion-note>
-            </ion-item>
+          </ion-item>
           </div>
 
           <!-- Account Information -->
@@ -80,8 +80,8 @@
             <ion-text>
               <h3>Account Information</h3>
             </ion-text>
-            
-            <ion-item>
+
+          <ion-item>
               <ion-label position="stacked">Email</ion-label>
               <ion-input 
                 type="email" 
@@ -92,9 +92,9 @@
               <ion-note slot="error" *ngIf="isFieldInvalid('email')">
                 {{ getFieldError('email') }}
               </ion-note>
-            </ion-item>
+          </ion-item>
 
-            <ion-item>
+          <ion-item>
               <ion-label position="stacked">Password</ion-label>
               <ion-input 
                 type="password" 
@@ -105,9 +105,9 @@
               <ion-note slot="error" *ngIf="isFieldInvalid('password')">
                 {{ getFieldError('password') }}
               </ion-note>
-            </ion-item>
+          </ion-item>
 
-            <ion-item>
+          <ion-item>
               <ion-label position="stacked">Confirm Password</ion-label>
               <ion-input 
                 type="password" 
@@ -124,14 +124,14 @@
             </ion-item>
           </div>
 
-          <!-- Terms and Conditions -->
+        <!-- Terms and Conditions -->
           <div class="form-section">
-            <ion-item>
+        <ion-item>
               <ion-checkbox formControlName="acceptedTerms" slot="start"></ion-checkbox>
               <ion-label>
                 I agree to the terms and conditions for managing Predict 3
-              </ion-label>
-            </ion-item>
+          </ion-label>
+        </ion-item>
           </div>
 
           <!-- Error Display -->
@@ -172,7 +172,7 @@
               size="small" 
               (click)="resetRegistrationState()">
               Reset Registration State
-            </ion-button>
+        </ion-button>
           </div>
 
           <!-- Footer -->
@@ -183,9 +183,9 @@
               </p>
             </ion-text>
           </div>
-        </form>
-      </ion-card-content>
-    </ion-card>
+      </form>
+    </ion-card-content>
+  </ion-card>
   </div>
 
   <!-- Super Admin Already Exists -->
