@@ -3,7 +3,7 @@
     <ion-title>Group Health & Performance Monitoring</ion-title>
   </ion-toolbar>
   <ion-toolbar>
-    <ion-segment [(ngModel)]="activeTab">
+    <ion-segment [(ngModel)]="activeTab" value="groups">
       <ion-segment-button value="groups">
         <ion-label>Groups Overview</ion-label>
       </ion-segment-button>
@@ -218,7 +218,7 @@
 
     <!-- Users Tab -->
     <div *ngIf="activeTab === 'users'" class="users-container">
-      <app-users></app-users>
+      <app-users [embedded]="true"></app-users>
     </div>
   </div>
 

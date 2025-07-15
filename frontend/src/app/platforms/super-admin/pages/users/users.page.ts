@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -169,7 +169,8 @@ interface SystemUser {
     NgClass,
   ],
 })
-export class UsersPage {
+export class UsersPage implements OnInit {
+  @Input() embedded = false; // When true, hides the header for embedded use
   activeTab = 'admins';
   searchTerm = '';
   users: SystemUser[] = [];
@@ -206,6 +207,9 @@ export class UsersPage {
       removeOutline,
       helpOutline,
     });
+  }
+
+  ngOnInit(): void {
     this.loadMockUsers();
   }
 
@@ -787,7 +791,8 @@ export class UsersPage {
 
   // Admin Analytics Methods
   getGroupAdmins(): SystemUser[] {
-    return this.users.filter(user => user.role === 'group-admin');
+    const admins = this.users.filter(user => user.role === 'group-admin');
+    return admins;
   }
 
   getAdminsNeedingAttention(): SystemUser[] {
@@ -915,7 +920,8 @@ export class UsersPage {
 
   // Platform User Analytics Methods
   getPlatformUsers(): SystemUser[] {
-    return this.users.filter(user => user.role === 'player');
+    const users = this.users.filter(user => user.role === 'player');
+    return users;
   }
 
   getUsersNeedingAttention(): SystemUser[] {

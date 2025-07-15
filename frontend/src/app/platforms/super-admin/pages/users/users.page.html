@@ -1,9 +1,9 @@
-<ion-header>
+<ion-header *ngIf="!embedded">
   <ion-toolbar>
-    <ion-title>Admin Performance & Support Center</ion-title>
+    <ion-title>Platform User Management</ion-title>
   </ion-toolbar>
   <ion-toolbar>
-    <ion-segment [(ngModel)]="activeTab">
+    <ion-segment [(ngModel)]="activeTab" value="admins">
       <ion-segment-button value="admins">
         <ion-label>Group Admins</ion-label>
       </ion-segment-button>
@@ -15,6 +15,18 @@
 </ion-header>
 
 <ion-content>
+  <!-- Embedded Segment (shows when embedded) -->
+  <div *ngIf="embedded" class="embedded-segment ion-padding-top">
+    <ion-segment [(ngModel)]="activeTab" value="admins">
+      <ion-segment-button value="admins">
+        <ion-label>Group Admins</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="all">
+        <ion-label>All Users</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+  
   <div class="ion-padding">
     <!-- Admin Overview Tab -->
     <div *ngIf="activeTab === 'admins'">

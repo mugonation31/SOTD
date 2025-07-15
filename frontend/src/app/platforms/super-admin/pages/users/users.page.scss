@@ -6,6 +6,19 @@
   min-height: 100vh;
 }
 
+// Embedded segment styling
+.embedded-segment {
+  background: var(--ion-color-light);
+  border-bottom: 1px solid var(--ion-color-light-shade);
+  margin-bottom: 1rem;
+  
+  ion-segment {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
 :host {
   ion-content {
     --background: var(--ion-color-light);
