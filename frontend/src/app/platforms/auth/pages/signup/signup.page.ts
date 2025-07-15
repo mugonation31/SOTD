@@ -15,20 +15,21 @@ import {
   IonSelect,
   IonSelectOption,
   IonNote,
+  IonCheckbox,
 } from '@ionic/angular/standalone';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
-  logoGoogle,
-  logoFacebook,
-  logoInstagram,
-  logoX,
   eye,
   eyeOff,
   checkmarkCircle,
-  ellipseOutline, footballOutline } from 'ionicons/icons';
+  ellipseOutline,
+  footballOutline,
+  peopleOutline,
+  personAddOutline
+} from 'ionicons/icons';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
 import {
   validateEmail,
@@ -43,6 +44,7 @@ interface ValidationErrors {
   email: string;
   password: string;
   confirmPassword: string;
+  acceptedTerms: string;
 }
 
 interface PasswordCriteria {
@@ -73,6 +75,7 @@ interface PasswordCriteria {
     IonSelect,
     IonSelectOption,
     IonNote,
+    IonCheckbox,
     RouterLink,
     FormsModule,
     NgIf,
@@ -87,6 +90,7 @@ export class SignupPage implements OnInit {
     password: '',
     confirmPassword: '',
     role: 'player' as UserRole,
+    acceptedTerms: false,
   };
 
   validationErrors: ValidationErrors = {
@@ -96,12 +100,13 @@ export class SignupPage implements OnInit {
     email: '',
     password: '',
     confirmPassword: '',
+    acceptedTerms: '',
   };
 
   showPassword = false;
   showConfirmPassword = false;
   private returnUrl: string = '/welcome';
-  private isRoleForced = false; // Track if role selection was forced from welcome page
+  isRoleForced = false; // Track if role selection was forced from welcome page
 
   passwordCriteria: PasswordCriteria = {
     length: false,
@@ -118,30 +123,26 @@ export class SignupPage implements OnInit {
         this.signupData.email &&
         this.signupData.password &&
         this.signupData.confirmPassword &&
+        this.signupData.acceptedTerms &&
         !this.validationErrors.username &&
         !this.validationErrors.firstName &&
         !this.validationErrors.lastName &&
         !this.validationErrors.email &&
         !this.validationErrors.password &&
         !this.validationErrors.confirmPassword &&
+        !this.validationErrors.acceptedTerms &&
         this.isPasswordValid()
     );
   }
 
-  get isGroupAdminSignup(): boolean {
-    return this.signupData.role === 'group-admin';
-  }
 
-  get isPlayerSignup(): boolean {
-    return this.signupData.role === 'player';
-  }
 
   constructor(
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute
   ) {
-    addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,checkmarkCircle,ellipseOutline,});
+    addIcons({footballOutline,eye,eyeOff,checkmarkCircle,ellipseOutline,peopleOutline,personAddOutline});
   }
   
   ngOnInit() {
@@ -257,10 +258,11 @@ export class SignupPage implements OnInit {
     this.validateEmail();
     this.validatePassword();
     this.validateConfirmPassword();
+    this.validateAcceptedTerms();
 
     if (!this.canSubmit) return;
 
-    const { confirmPassword, ...signupPayload } = this.signupData;
+    const { confirmPassword, acceptedTerms, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
       next: () => {
         // After successful signup, redirect to login with role and return URL
@@ -276,6 +278,26 @@ export class SignupPage implements OnInit {
         console.error('Signup error:', error);
       },
     });
+  }
+
+  validateAcceptedTerms() {
+    if (!this.signupData.acceptedTerms) {
+      this.validationErrors.acceptedTerms = 'You must accept the Terms and Conditions to continue';
+    } else {
+      this.validationErrors.acceptedTerms = '';
+    }
+  }
+
+  openTerms(event: Event) {
+    event.preventDefault();
+    // TODO: Open Terms and Conditions modal or page
+    console.log('Opening Terms and Conditions...');
+  }
+
+  openPrivacy(event: Event) {
+    event.preventDefault();
+    // TODO: Open Privacy Policy modal or page
+    console.log('Opening Privacy Policy...');
   }
 
   navigateToWelcome() {

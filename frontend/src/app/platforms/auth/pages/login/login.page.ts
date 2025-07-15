@@ -19,12 +19,10 @@ import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
-  logoGoogle,
-  logoFacebook,
-  logoInstagram,
-  logoX,
   eye,
-  eyeOff, footballOutline } from 'ionicons/icons';
+  eyeOff,
+  footballOutline
+} from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import {
   validateEmail,
@@ -90,13 +88,19 @@ export class LoginPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    addIcons({footballOutline,logoGoogle,logoFacebook,logoInstagram,logoX,eye,eyeOff,});
+    addIcons({footballOutline,eye,eyeOff});
   }
 
   ngOnInit() {
-    // Get return URL from route parameters
+    // Get return URL and role from route parameters
     this.route.queryParams.subscribe(params => {
       this.returnUrl = params['returnUrl'] || '';
+      const expectedRole = params['role'] || '';
+      
+      console.log('🔍 Login page initialized with:', {
+        returnUrl: this.returnUrl,
+        expectedRole
+      });
     });
   }
 
@@ -151,7 +155,7 @@ export class LoginPage implements OnInit {
     
     // Handle specific return URL from external navigation (e.g., guard redirects)
     if (this.returnUrl && this.returnUrl.trim() !== '') {
-      console.log('Redirecting to return URL:', this.returnUrl);
+      console.log('🎯 Redirecting to return URL:', this.returnUrl);
       this.router.navigate([this.returnUrl], { replaceUrl: true });
       return;
     }

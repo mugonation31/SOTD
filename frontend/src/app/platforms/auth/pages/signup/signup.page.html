@@ -15,13 +15,26 @@
     <ion-card-content>
       <div class="auth-header">
         <h1>Create Account</h1>
-        <p *ngIf="isGroupAdminSignup">Create your account to start managing prediction groups</p>
-        <p *ngIf="isPlayerSignup">Create your account to join prediction groups</p>
-        <p *ngIf="!isGroupAdminSignup && !isPlayerSignup">Join us and start predicting matches</p>
+        <p>Join us and start predicting matches</p>
       </div>
 
       <form (ngSubmit)="onSignup()">
         <ion-list class="auth-form">
+          
+          <!-- Role Selection - only show if not forced -->
+          <ion-item *ngIf="!isRoleForced">
+            <ion-select 
+              placeholder="Select Account Type" 
+              [(ngModel)]="signupData.role"
+              name="role" 
+              required>
+              <ion-select-option value="player">Player - Join prediction groups</ion-select-option>
+              <ion-select-option value="group-admin">Group Admin - Create and manage groups</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+
+
           <ion-item>
             <ion-input placeholder="Username" [(ngModel)]="signupData.username"
               (ionInput)="validateRequired('username', signupData.username)"
@@ -107,34 +120,29 @@
           </ion-item>
         </ion-list>
 
+        <!-- Terms and Conditions -->
+        <div class="terms-section">
+          <div class="terms-container">
+            <ion-checkbox 
+              [(ngModel)]="signupData.acceptedTerms" 
+              name="acceptedTerms">
+            </ion-checkbox>
+            <div class="terms-text">
+              <span>I agree to the <a href="#" (click)="openTerms($event)">Terms and Conditions</a> and <a href="#" (click)="openPrivacy($event)">Privacy Policy</a></span>
+            </div>
+          </div>
+          <ion-note *ngIf="validationErrors.acceptedTerms" color="danger" class="terms-error">
+            {{ validationErrors.acceptedTerms }}
+          </ion-note>
+        </div>
+
         <div class="auth-actions">
           <ion-button expand="block" type="submit" [disabled]="!canSubmit">
-            <span *ngIf="isGroupAdminSignup">Create Group Admin Account</span>
-            <span *ngIf="isPlayerSignup">Create Player Account</span>
-            <span *ngIf="!isGroupAdminSignup && !isPlayerSignup">Create Account</span>
+            Create Account
           </ion-button>
         </div>
 
         <div class="auth-footer">
-          <div class="divider">
-            <span>Or sign up with</span>
-          </div>
-
-          <div class="social-buttons">
-            <ion-button fill="clear">
-              <ion-icon name="logo-google"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear">
-              <ion-icon name="logo-facebook"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear">
-              <ion-icon name="logo-instagram"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear">
-              <ion-icon name="logo-x"></ion-icon>
-            </ion-button>
-          </div>
-
           <div class="auth-link">
             <ion-text color="medium">
               Already have an account?
