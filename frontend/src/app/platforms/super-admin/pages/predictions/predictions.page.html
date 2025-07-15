@@ -20,9 +20,10 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <!-- Platform Analytics Tab -->
-  <div *ngIf="activeTab === 'analytics'">
+<ion-content>
+  <div class="ion-padding">
+    <!-- Platform Analytics Tab -->
+    <div *ngIf="activeTab === 'analytics'">
     <!-- Prediction Platform Health Overview -->
     <div class="platform-health">
       <ion-card>
@@ -427,5 +428,6 @@
         </ion-card-content>
       </ion-card>
     </div>
+  </div>
   </div>
 </ion-content>
