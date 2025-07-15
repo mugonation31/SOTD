@@ -20,8 +20,8 @@
     <div *ngIf="activeTab === 'groups'">
       <!-- Platform Health Overview -->
       <div class="health-overview">
-        <ion-card>
-          <ion-card-header>
+      <ion-card>
+        <ion-card-header>
             <ion-card-title>Platform Health Overview</ion-card-title>
           </ion-card-header>
           <ion-card-content>
@@ -71,11 +71,11 @@
       <div class="search-filters">
         <ion-card>
           <ion-card-content>
-            <ion-searchbar
-              [(ngModel)]="groupSearchTerm"
-              (ionInput)="filterGroups()"
-              placeholder="Search groups..."
-            ></ion-searchbar>
+          <ion-searchbar
+            [(ngModel)]="groupSearchTerm"
+            (ionInput)="filterGroups()"
+            placeholder="Search groups..."
+          ></ion-searchbar>
           </ion-card-content>
         </ion-card>
       </div>
@@ -211,8 +211,8 @@
                 <ion-icon name="flash-outline"></ion-icon>
               </ion-button>
             </div>
-          </ion-card-content>
-        </ion-card>
+        </ion-card-content>
+      </ion-card>
       </div>
     </div>
 

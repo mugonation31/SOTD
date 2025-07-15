@@ -1,19 +1,5 @@
 // Platform Steward Prediction Analytics Styles
-:host {
-  display: block;
-  width: 100%;
-  
-  ion-content {
-    --background: var(--ion-color-light);
-    --overflow: auto;
-    
-    // Ensure all tab content containers can scroll
-    > div {
-      min-height: auto;
-      overflow: visible;
-    }
-  }
-}
+// Use default Ionic scrolling behavior like dashboard
 
 // Platform Health Overview
 .platform-health {
@@ -25,13 +11,13 @@
     gap: 1rem;
     
     .metric-item {
-      display: flex;
+  display: flex;
       align-items: center;
       padding: 1rem;
       background: var(--ion-color-light);
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      
+
       .metric-icon {
         margin-right: 1rem;
         
@@ -41,7 +27,7 @@
       }
       
       .metric-info {
-        flex: 1;
+  flex: 1;
         
         h3 {
           margin: 0;
@@ -54,7 +40,7 @@
           margin: 0.25rem 0 0 0;
           font-size: 0.9rem;
           color: var(--ion-color-medium);
-        }
+  }
       }
     }
   }
@@ -65,14 +51,14 @@
   margin-bottom: 1.5rem;
   
   .submission-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
     
     .submission-metric {
-      padding: 1rem;
+  padding: 1rem;
       background: var(--ion-color-light-tint);
-      border-radius: 8px;
+  border-radius: 8px;
       
       .label {
         font-size: 0.9rem;
@@ -102,7 +88,7 @@
   margin-bottom: 1.5rem;
   
   .insights-grid {
-    display: grid;
+  display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
     
@@ -126,7 +112,7 @@
         
         strong {
           color: var(--ion-color-dark);
-        }
+}
       }
     }
   }
@@ -210,9 +196,9 @@
           
           span:first-child {
             font-weight: 500;
-            color: var(--ion-color-medium);
-          }
-          
+  color: var(--ion-color-medium);
+}
+
           span:last-child, ion-badge {
             font-weight: 600;
           }
@@ -249,21 +235,21 @@
           }
           
           span:last-child {
-            color: var(--ion-color-medium);
+  color: var(--ion-color-medium);
             font-weight: 600;
           }
         }
-      }
-      
+}
+
       .risk-profiles {
-        display: grid;
+  display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
+  gap: 1rem;
         
         .risk-item {
           padding: 1.5rem;
           border-radius: 12px;
-          text-align: center;
+  text-align: center;
           
           &.conservative {
             background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);

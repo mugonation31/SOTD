@@ -106,12 +106,12 @@ export class SuperAdminLoginPage implements OnInit {
           console.log('Super admin login successful:', response);
           
           // Navigate to super-admin dashboard
-          this.router.navigate(['/super-admin/dashboard']);
+        this.router.navigate(['/super-admin/dashboard']);
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Super admin login failed:', error);
-          this.isLoading = false;
+      this.isLoading = false;
           // Here you would typically show an error message to the user
         }
       });
