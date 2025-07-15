@@ -455,3 +455,378 @@ ion-modal {
     }
   }
 }
+
+// Platform User Management Center Styles
+.user-overview {
+  margin-bottom: 1rem;
+
+  ion-card {
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .overview-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    .metric-icon {
+      font-size: 2rem;
+      padding: 0.75rem;
+      border-radius: 50%;
+      background: var(--ion-color-primary-tint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3rem;
+      height: 3rem;
+    }
+
+    .metric-info {
+      flex: 1;
+
+      h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        color: var(--ion-color-medium);
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// Platform Users Grid
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.user-card {
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  // Health-based styling for users
+  &.health-excellent {
+    border-left: 4px solid var(--ion-color-success);
+  }
+
+  &.health-good {
+    border-left: 4px solid var(--ion-color-primary);
+  }
+
+  &.health-fair {
+    border-left: 4px solid var(--ion-color-warning);
+  }
+
+  &.health-poor {
+    border-left: 4px solid var(--ion-color-danger);
+  }
+
+  &.health-critical {
+    border-left: 4px solid var(--ion-color-danger);
+    box-shadow: 0 0 0 2px rgba(var(--ion-color-danger-rgb), 0.2);
+  }
+
+  .user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+
+    .user-title {
+      flex: 1;
+
+      h2 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--ion-color-medium);
+      }
+    }
+
+    .user-indicators {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+
+      .health-score {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ion-color-medium-shade);
+      }
+    }
+  }
+
+  .user-status-bar {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+
+    .status-info {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .engagement-trend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ion-color-medium-shade);
+
+      ion-icon {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .user-metrics {
+    margin-bottom: 1rem;
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--ion-color-medium-shade);
+
+        ion-icon {
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+
+  .usage-insights {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ion-color-step-25);
+    border-radius: 6px;
+
+    .usage-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .label {
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+        font-weight: 500;
+      }
+
+      .value {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+
+        &.churn-high {
+          color: var(--ion-color-danger);
+        }
+
+        &.churn-medium {
+          color: var(--ion-color-warning);
+        }
+
+        &.churn-low {
+          color: var(--ion-color-success);
+        }
+      }
+    }
+  }
+
+  .behavior-alerts {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(var(--ion-color-warning-rgb), 0.1);
+    border: 1px solid rgba(var(--ion-color-warning-rgb), 0.2);
+    border-radius: 8px;
+
+    h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alert-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+
+      ion-chip {
+        margin: 0;
+        font-size: 0.75rem;
+        height: 26px;
+      }
+    }
+  }
+
+  .steward-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--ion-color-light-shade);
+
+    ion-button {
+      --padding-start: 6px;
+      --padding-end: 6px;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// User Lifecycle Stage Colors
+.lifecycle-new {
+  background: rgba(var(--ion-color-tertiary-rgb), 0.1);
+  border-color: var(--ion-color-tertiary);
+}
+
+.lifecycle-growing {
+  background: rgba(var(--ion-color-secondary-rgb), 0.1);
+  border-color: var(--ion-color-secondary);
+}
+
+.lifecycle-established {
+  background: rgba(var(--ion-color-success-rgb), 0.1);
+  border-color: var(--ion-color-success);
+}
+
+.lifecycle-at-risk {
+  background: rgba(var(--ion-color-warning-rgb), 0.1);
+  border-color: var(--ion-color-warning);
+}
+
+.lifecycle-churning {
+  background: rgba(var(--ion-color-danger-rgb), 0.1);
+  border-color: var(--ion-color-danger);
+}
+
+.lifecycle-dormant {
+  background: rgba(var(--ion-color-dark-rgb), 0.1);
+  border-color: var(--ion-color-dark);
+}
+
+// Responsive Design for User Management
+@media (max-width: 768px) {
+  .user-overview {
+    .overview-metrics {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .metric-item {
+      padding: 0.75rem;
+
+      .metric-icon {
+        font-size: 1.5rem;
+        min-width: 2.5rem;
+        height: 2.5rem;
+      }
+
+      .metric-info {
+        h3 {
+          font-size: 1.2rem;
+        }
+
+        p {
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-card {
+    .user-header {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start;
+
+      .user-indicators {
+        align-items: flex-start;
+      }
+    }
+
+    .user-metrics {
+      .metric-row {
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: flex-start;
+      }
+    }
+  }
+}
+
+// Special User States
+.user-card.needs-attention {
+  animation: pulse-attention 2s infinite;
+}
+
+.user-card.high-value {
+  background: linear-gradient(135deg, rgba(var(--ion-color-success-rgb), 0.05), rgba(var(--ion-color-primary-rgb), 0.05));
+}
+
+.user-card.at-risk {
+  background: rgba(var(--ion-color-warning-rgb), 0.03);
+}
+
+.user-card.churning {
+  background: rgba(var(--ion-color-danger-rgb), 0.03);
+}

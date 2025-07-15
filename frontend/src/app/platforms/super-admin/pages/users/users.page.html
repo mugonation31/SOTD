@@ -270,52 +270,251 @@
 
     <!-- All Users Tab -->
     <div *ngIf="activeTab === 'all'">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>All System Users</ion-card-title>
-          <ion-searchbar
-            [(ngModel)]="searchTerm"
-            (ionInput)="filterUsers()"
-            placeholder="Search users..."
-          ></ion-searchbar>
-        </ion-card-header>
-        <ion-card-content>
-          <ion-list>
-            <ion-item *ngFor="let user of filteredUsers">
-              <ion-label>
+      <!-- Platform User Intelligence Overview -->
+      <div class="user-overview">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Platform User Intelligence</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="overview-metrics">
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="people-outline" color="primary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getTotalPlatformUsers() }}</h3>
+                  <p>Total Platform Users</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="pulse-outline" color="secondary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAverageUserHealth() }}/100</h3>
+                  <p>Average User Health</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="trending-up-outline" color="success"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getAverageEngagementRate() }}%</h3>
+                  <p>Weekly Engagement Rate</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="shield-outline" color="warning"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getRetentionRate() }}%</h3>
+                  <p>User Retention Rate</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="warning-outline" color="danger"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getUsersNeedingAttention().length }}</h3>
+                  <p>Users Need Attention</p>
+                </div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-icon">
+                  <ion-icon name="star-outline" color="tertiary"></ion-icon>
+                </div>
+                <div class="metric-info">
+                  <h3>{{ getHighValueUsers().length }}</h3>
+                  <p>High-Value Users</p>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Search and Filters -->
+      <div class="search-filters">
+        <ion-card>
+          <ion-card-content>
+            <ion-searchbar
+              [(ngModel)]="searchTerm"
+              (ionInput)="filterUsers()"
+              placeholder="Search platform users..."
+            ></ion-searchbar>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Platform Users Grid -->
+      <div class="users-grid">
+        <ion-card *ngFor="let user of getPlatformUsers() | slice:0:20" class="user-card" [class]="'health-' + user.userHealth?.status">
+          <ion-card-header>
+            <div class="user-header">
+              <div class="user-title">
                 <h2>{{ user.name }}</h2>
                 <p>{{ user.email }}</p>
-                <p>
-                  Role: <ion-badge color="primary">{{ user.role }}</ion-badge>
-                </p>
-                <p>
-                  Status:
-                  <ion-badge
-                    [color]="user.status === 'active' ? 'success' : 'warning'"
-                    >{{ user.status }}</ion-badge
-                  >
-                </p>
-              </ion-label>
+              </div>
+              <div class="user-indicators">
+                <ion-badge [color]="getUserLifecycleStageColor(user.userLifecycle?.stage || 'unknown')">
+                  {{ user.userLifecycle?.stage | titlecase }}
+                </ion-badge>
+                <span class="health-score">{{ user.userHealth?.score || 0 }}/100</span>
+              </div>
+            </div>
+          </ion-card-header>
+
+          <ion-card-content>
+            <!-- User Health & Lifecycle Status -->
+            <div class="user-status-bar">
+              <div class="status-info">
+                <ion-badge [color]="getUserHealthStatusColor(user.userHealth?.status || 'unknown')">
+                  {{ user.userHealth?.status | titlecase }} Health
+                </ion-badge>
+                <ion-badge [color]="getRetentionRiskColor(user.userLifecycle?.retentionRisk || 'unknown')">
+                  {{ user.userLifecycle?.retentionRisk | titlecase }} Risk
+                </ion-badge>
+              </div>
+              <div class="engagement-trend">
+                <ion-icon 
+                  [name]="getEngagementTrendIcon(user.userLifecycle?.engagementTrend || 'stable')" 
+                  [color]="getEngagementTrendColor(user.userLifecycle?.engagementTrend || 'stable')">
+                </ion-icon>
+                <span>{{ user.userLifecycle?.engagementTrend | titlecase }} Trend</span>
+              </div>
+            </div>
+
+            <!-- Key User Metrics -->
+            <div class="user-metrics">
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon name="calendar-outline" color="primary"></ion-icon>
+                  <span>{{ formatDaysOnPlatform(user.userLifecycle?.daysOnPlatform || 0) }}</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="time-outline" color="secondary"></ion-icon>
+                  <span>{{ formatSessionDuration(user.engagement?.sessionDuration || 0) }} avg</span>
+                </div>
+              </div>
+              <div class="metric-row">
+                <div class="metric">
+                  <ion-icon name="stats-chart-outline" color="tertiary"></ion-icon>
+                  <span>{{ user.engagement?.predictionsPerWeek || 0 }}/week predictions</span>
+                </div>
+                <div class="metric">
+                  <ion-icon name="trophy-outline" color="warning"></ion-icon>
+                  <span>{{ formatLifetimeValue(user.userLifecycle?.lifetimeValue || 0) }} LTV</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Platform Usage Insights -->
+            <div class="usage-insights">
+              <div class="usage-metric">
+                <span class="label">Platform Usage:</span>
+                <span class="value">{{ user.behavior?.platformUsage | titlecase }}</span>
+              </div>
+              <div class="usage-metric">
+                <span class="label">Weekly Active:</span>
+                <span class="value">{{ user.engagement?.weeklyActiveRate || 0 }}%</span>
+              </div>
+              <div class="usage-metric">
+                <span class="label">Churn Probability:</span>
+                <span class="value" [ngClass]="getChurnProbabilityClass(user)">
+                  {{ user.userLifecycle?.churnProbability || 0 }}%
+                </span>
+              </div>
+            </div>
+
+            <!-- Flagged Behavior Alerts -->
+            <div class="behavior-alerts" *ngIf="hasFlaggedBehavior(user)">
+              <h4>
+                <ion-icon name="flag-outline" color="warning"></ion-icon>
+                Flagged Behavior
+              </h4>
+              <div class="alert-items">
+                <ion-chip *ngFor="let behavior of user.userHealth?.flaggedBehavior" color="warning">
+                  <ion-label>{{ behavior }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Platform Steward Actions -->
+            <div class="steward-actions">
+              <!-- High-value user actions -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="success"
+                (click)="engageUser(user)"
+                title="Boost Engagement"
+                *ngIf="user.userHealth?.status === 'excellent'">
+                <ion-icon name="rocket-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- At-risk user interventions -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="warning"
+                (click)="sendUserRetentionCampaign(user)"
+                title="Send Retention Campaign"
+                *ngIf="user.userLifecycle?.stage === 'at-risk' || user.userLifecycle?.retentionRisk === 'high'">
+                <ion-icon name="mail-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Critical user support -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="danger"
+                (click)="scheduleUserSupport(user)"
+                title="Schedule Support"
+                *ngIf="user.userHealth?.status === 'poor' || user.userHealth?.status === 'critical'">
+                <ion-icon name="medical-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- General engagement boost -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="primary"
+                (click)="engageUser(user)"
+                title="Engagement Campaign"
+                *ngIf="user.userLifecycle?.engagementTrend === 'declining'">
+                <ion-icon name="megaphone-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Flag for review -->
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                color="dark"
+                (click)="flagUserForReview(user)"
+                title="Flag for Review"
+                *ngIf="hasFlaggedBehavior(user)">
+                <ion-icon name="flag-outline"></ion-icon>
+              </ion-button>
+              
+              <!-- Basic user management -->
               <ion-button
                 fill="clear"
-                [color]="user.status === 'active' ? 'danger' : 'success'"
+                size="small"
+                [color]="user.status === 'active' ? 'medium' : 'success'"
                 (click)="toggleUserStatus(user)"
-                [title]="
-                  user.status === 'active' ? 'Deactivate User' : 'Activate User'
-                "
-              >
+                [title]="user.status === 'active' ? 'Deactivate User' : 'Activate User'">
                 <ion-icon
-                  [name]="
-                    user.status === 'active'
-                      ? 'ban-outline'
-                      : 'checkmark-circle-outline'
-                  "
-                ></ion-icon>
+                  [name]="user.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'">
+                </ion-icon>
               </ion-button>
-            </ion-item>
-          </ion-list>
-        </ion-card-content>
-      </ion-card>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
     </div>
   </div>
 
