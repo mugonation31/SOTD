@@ -7,6 +7,7 @@ import {
   IonCard,
   IonCardHeader,
   IonCardTitle,
+  IonCardSubtitle,
   IonCardContent,
   IonSearchbar,
   IonBadge,
@@ -22,7 +23,7 @@ import {
   IonModal,
   IonButtons,
 } from '@ionic/angular/standalone';
-import { NgFor, NgIf, DatePipe, TitleCasePipe, SlicePipe, NgClass } from '@angular/common';
+import { NgFor, NgIf, DatePipe, TitleCasePipe, SlicePipe, NgClass, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { addIcons } from 'ionicons';
 import { banOutline, checkmarkCircleOutline, 
@@ -146,6 +147,7 @@ interface SystemUser {
     IonCard,
     IonCardHeader,
     IonCardTitle,
+    IonCardSubtitle,
     IonCardContent,
     IonSearchbar,
     IonBadge,
@@ -167,6 +169,7 @@ interface SystemUser {
     SlicePipe,
     FormsModule,
     NgClass,
+    NgTemplateOutlet,
   ],
 })
 export class UsersPage implements OnInit {

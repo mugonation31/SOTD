@@ -6,16 +6,59 @@
   min-height: 100vh;
 }
 
+// Embedded content styling
+.embedded-content {
+  .content-wrapper {
+    height: 100%;
+    width: 100%;
+  }
+}
+
+// Standalone content styling  
+.standalone-content {
+  .content-wrapper {
+    height: 100%;
+    width: 100%;
+  }
+}
+
 // Embedded segment styling
 .embedded-segment {
   background: var(--ion-color-light);
   border-bottom: 1px solid var(--ion-color-light-shade);
   margin-bottom: 1rem;
+  padding: 1rem;
   
   ion-segment {
     width: 100%;
     max-width: 400px;
     margin: 0 auto;
+  }
+}
+
+// Card layouts
+.admin-cards, .user-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.admin-card, .user-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  ion-card-header {
+    padding-bottom: 0.5rem;
+  }
+  
+  ion-card-content {
+    padding-top: 0.5rem;
+    
+    p {
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
   }
 }
 
