@@ -1,14 +1,107 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Group Admin Dashboard</ion-title>
+    <ion-title>Community Leadership Hub</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <!-- User Greeting -->
+  <!-- User Greeting - keeping existing functionality -->
   <app-user-greeting></app-user-greeting>
   
-  <!-- Group Performance Overview -->
+  <!-- Community Health Analytics - NEW SECTION -->
+  <ion-card class="community-health-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="pulse-outline"></ion-icon>
+        Community Health Analytics
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="health-overview">
+        <div class="health-score">
+          <div class="score-circle">
+            <span class="score-value">{{ communityHealth.healthScore }}</span>
+            <span class="score-label">Health Score</span>
+          </div>
+          <div class="health-trend">
+            <ion-icon [name]="getTrendIcon(communityHealth.engagementTrend)" 
+                      [color]="getTrendColor(communityHealth.engagementTrend)"></ion-icon>
+            <span class="trend-label">{{ communityHealth.engagementTrend | titlecase }}</span>
+          </div>
+        </div>
+        
+        <div class="health-metrics">
+          <div class="metric-item">
+            <div class="metric-header">
+              <span class="metric-label">Participation Rate</span>
+              <span class="metric-value">{{ communityHealth.participationRate }}%</span>
+            </div>
+            <ion-progress-bar [value]="communityHealth.participationRate / 100" 
+                              color="primary"></ion-progress-bar>
+          </div>
+          
+          <div class="metric-item">
+            <div class="metric-header">
+              <span class="metric-label">Retention Rate</span>
+              <span class="metric-value">{{ communityHealth.retentionRate }}%</span>
+            </div>
+            <ion-progress-bar [value]="communityHealth.retentionRate / 100" 
+                              color="success"></ion-progress-bar>
+          </div>
+          
+          <div class="metric-item">
+            <div class="metric-header">
+              <span class="metric-label">Social Interaction</span>
+              <span class="metric-value">{{ communityHealth.socialInteractionIndex }}%</span>
+            </div>
+            <ion-progress-bar [value]="communityHealth.socialInteractionIndex / 100" 
+                              color="secondary"></ion-progress-bar>
+          </div>
+          
+          <div class="metric-item">
+            <div class="metric-header">
+              <span class="metric-label">Prediction Quality</span>
+              <span class="metric-value">{{ communityHealth.predictionQualityScore }}%</span>
+            </div>
+            <ion-progress-bar [value]="communityHealth.predictionQualityScore / 100" 
+                              color="tertiary"></ion-progress-bar>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Smart Community Alerts - NEW SECTION -->
+  <ion-card class="alerts-card" *ngIf="communityAlerts.length > 0">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        Smart Community Alerts
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="alerts-list">
+        <div *ngFor="let alert of communityAlerts" class="alert-item" [class]="alert.type">
+          <div class="alert-icon">
+            <ion-icon [name]="alert.type === 'celebration' ? 'sparkles-outline' : 
+                            alert.type === 'member_risk' ? 'warning-outline' : 
+                            'alert-circle-outline'"
+                      [color]="getPriorityColor(alert.priority)"></ion-icon>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">{{ alert.title }}</div>
+            <div class="alert-description">{{ alert.description }}</div>
+            <div class="alert-meta">
+              <span class="timestamp">{{ alert.timestamp | date:'short' }}</span>
+              <ion-badge *ngIf="alert.actionRequired" color="warning" size="small">Action Required</ion-badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Group Performance Overview - ENHANCED existing section -->
   <ion-card class="performance-card">
     <ion-card-header>
       <ion-card-title class="section-title">
@@ -63,7 +156,103 @@
     </ion-card-content>
   </ion-card>
 
-  <!-- Current Gameweek Status -->
+  <!-- Smart Member Insights - NEW SECTION -->
+  <ion-card class="member-insights-card" *ngIf="memberInsights.length > 0">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="people-outline"></ion-icon>
+        Smart Member Insights
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="insights-grid">
+        <div *ngFor="let member of memberInsights.slice(0, 4)" class="insight-card">
+          <div class="member-header">
+            <div class="member-name">{{ member.name }}</div>
+            <ion-badge [color]="getRiskLevelColor(member.riskLevel)" size="small">
+              {{ member.riskLevel | titlecase }} Risk
+            </ion-badge>
+          </div>
+          
+          <div class="member-metrics">
+            <div class="metric-row">
+              <span class="metric-label">Engagement</span>
+              <div class="metric-bar">
+                <ion-progress-bar [value]="member.engagementScore / 100" 
+                                  [color]="member.engagementScore > 80 ? 'success' : 
+                                          member.engagementScore > 60 ? 'warning' : 'danger'">
+                </ion-progress-bar>
+                <span class="metric-score">{{ member.engagementScore }}</span>
+              </div>
+            </div>
+            
+            <div class="member-stats">
+              <div class="stat-item">
+                <span class="stat-label">Predictions</span>
+                <span class="stat-value">{{ member.predictionsSubmitted }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Accuracy</span>
+                <span class="stat-value">{{ member.averageAccuracy }}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Last Active</span>
+                <span class="stat-value">{{ member.lastActivity }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="member-action" *ngIf="member.recommendedAction">
+            <ion-button size="small" fill="outline" color="primary">
+              {{ member.recommendedAction }}
+            </ion-button>
+          </div>
+        </div>
+      </div>
+      
+      <ion-button expand="block" fill="clear" routerLink="/group-admin/members">
+        View All Member Insights
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Engagement Intelligence - NEW SECTION -->
+  <ion-card class="engagement-insights-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="stats-chart-outline"></ion-icon>
+        Engagement Intelligence
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="engagement-grid">
+        <div *ngFor="let insight of engagementInsights" class="engagement-item">
+          <div class="engagement-header">
+            <span class="category">{{ insight.category }}</span>
+            <div class="trend-indicator">
+              <ion-icon [name]="getTrendIcon(insight.trend)" 
+                        [color]="insight.color"></ion-icon>
+              <span class="percentage" [style.color]="'var(--ion-color-' + insight.color + ')'">
+                {{ insight.percentage > 0 ? '+' : '' }}{{ insight.percentage }}%
+              </span>
+            </div>
+          </div>
+          
+          <div class="engagement-value">
+            <span class="current-value">{{ insight.currentValue }}%</span>
+            <span class="previous-value">vs {{ insight.previousValue }}%</span>
+          </div>
+          
+          <div class="engagement-description">{{ insight.description }}</div>
+          
+          <ion-progress-bar [value]="insight.currentValue / 100" 
+                            [color]="insight.color"></ion-progress-bar>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Current Gameweek Status - KEEPING existing section -->
   <ion-card class="gameweek-card">
     <ion-card-header>
       <ion-card-title class="section-title">
@@ -172,7 +361,49 @@
     </ion-row>
   </ion-grid>
 
-  <!-- Quick Actions -->
+  <!-- Community Milestones - NEW SECTION -->
+  <ion-card class="milestones-card">
+    <ion-card-header>
+      <ion-card-title class="section-title">
+        <ion-icon name="medal-outline"></ion-icon>
+        Community Milestones
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="milestones-grid">
+        <div *ngFor="let milestone of communityMilestones" class="milestone-item">
+          <div class="milestone-header">
+            <div class="milestone-title">{{ milestone.title }}</div>
+            <div class="milestone-progress-text">{{ milestone.current }}/{{ milestone.target }}</div>
+          </div>
+          
+          <div class="milestone-description">{{ milestone.description }}</div>
+          
+          <div class="milestone-progress">
+            <ion-progress-bar [value]="milestone.progress / 100" 
+                              [color]="milestone.progress > 80 ? 'success' : 
+                                      milestone.progress > 50 ? 'primary' : 'warning'">
+            </ion-progress-bar>
+            <span class="progress-percentage">{{ milestone.progress }}%</span>
+          </div>
+          
+          <div class="milestone-eta">
+            <ion-icon name="time-outline" color="medium"></ion-icon>
+            <span>Est. completion: {{ milestone.estimatedCompletion | date:'shortDate' }}</span>
+          </div>
+          
+          <div class="milestone-actions" *ngIf="milestone.progress > 90">
+            <ion-badge color="success" class="celebration-badge">
+              <ion-icon name="sparkles-outline"></ion-icon>
+              Almost there!
+            </ion-badge>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Quick Actions - KEEPING existing section -->
   <ion-card class="actions-card">
     <ion-card-header>
       <ion-card-title class="section-title">

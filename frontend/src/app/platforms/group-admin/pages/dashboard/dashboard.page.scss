@@ -337,3 +337,525 @@ ion-card-header {
     background: var(--ion-color-step-100);
   }
 }
+
+// ===== COMMUNITY INTELLIGENCE STYLES =====
+
+// Community Health Analytics Card
+.community-health-card {
+  border-left: 4px solid var(--ion-color-success);
+  margin-bottom: 20px;
+}
+
+.health-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.health-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  
+  .score-circle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ion-color-success) 0%, var(--ion-color-success-shade) 100%);
+    color: white;
+    
+    .score-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    
+    .score-label {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+  }
+  
+  .health-trend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    
+    ion-icon {
+      font-size: 2rem;
+    }
+    
+    .trend-label {
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+  }
+}
+
+.health-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  
+  .metric-item {
+    padding: 16px;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      
+      .metric-label {
+        font-weight: 500;
+        color: var(--ion-color-dark);
+      }
+      
+      .metric-value {
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+    }
+    
+    ion-progress-bar {
+      height: 8px;
+      border-radius: 4px;
+    }
+  }
+}
+
+// Smart Community Alerts Card
+.alerts-card {
+  border-left: 4px solid var(--ion-color-warning);
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  
+  &.celebration {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+  }
+  
+  &.member_risk {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  }
+  
+  &.engagement_drop {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+  }
+  
+  .alert-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    
+    ion-icon {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .alert-content {
+    flex: 1;
+    
+    .alert-title {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      margin-bottom: 4px;
+    }
+    
+    .alert-description {
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    
+    .alert-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .timestamp {
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+// Smart Member Insights Card
+.member-insights-card {
+  border-left: 4px solid var(--ion-color-secondary);
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.insight-card {
+  padding: 16px;
+  background: var(--ion-color-light);
+  border-radius: 12px;
+  border: 1px solid var(--ion-color-light-shade);
+  
+  .member-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    .member-name {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+  }
+  
+  .member-metrics {
+    margin-bottom: 16px;
+    
+    .metric-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      
+      .metric-label {
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        min-width: 80px;
+      }
+      
+      .metric-bar {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        ion-progress-bar {
+          flex: 1;
+          height: 6px;
+          border-radius: 3px;
+        }
+        
+        .metric-score {
+          font-weight: 600;
+          color: var(--ion-color-dark);
+          font-size: 0.9rem;
+          min-width: 30px;
+        }
+      }
+    }
+  }
+  
+  .member-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+    
+    .stat-item {
+      text-align: center;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 6px;
+      
+      .stat-label {
+        font-size: 0.7rem;
+        color: var(--ion-color-medium);
+        display: block;
+        margin-bottom: 2px;
+      }
+      
+      .stat-value {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+    }
+  }
+  
+  .member-action {
+    text-align: center;
+    
+    ion-button {
+      --padding-start: 12px;
+      --padding-end: 12px;
+      height: 32px;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// Engagement Intelligence Card
+.engagement-insights-card {
+  border-left: 4px solid var(--ion-color-tertiary);
+}
+
+.engagement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.engagement-item {
+  padding: 16px;
+  background: var(--ion-color-light);
+  border-radius: 12px;
+  border: 1px solid var(--ion-color-light-shade);
+  
+  .engagement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    
+    .category {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      font-size: 0.9rem;
+    }
+    
+    .trend-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      
+      ion-icon {
+        font-size: 1rem;
+      }
+      
+      .percentage {
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+    }
+  }
+  
+  .engagement-value {
+    margin-bottom: 8px;
+    
+    .current-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ion-color-dark);
+    }
+    
+    .previous-value {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+      margin-left: 8px;
+    }
+  }
+  
+  .engagement-description {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  
+  ion-progress-bar {
+    height: 6px;
+    border-radius: 3px;
+  }
+}
+
+// Community Milestones Card
+.milestones-card {
+  border-left: 4px solid var(--ion-color-warning);
+}
+
+.milestones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.milestone-item {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid var(--ion-color-light-shade);
+  
+  .milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    
+    .milestone-title {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      font-size: 1rem;
+    }
+    
+    .milestone-progress-text {
+      font-size: 0.9rem;
+      color: var(--ion-color-primary);
+      font-weight: 600;
+    }
+  }
+  
+  .milestone-description {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+  
+  .milestone-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    
+    ion-progress-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+    }
+    
+    .progress-percentage {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      min-width: 40px;
+    }
+  }
+  
+  .milestone-eta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ion-color-medium);
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+    
+    ion-icon {
+      font-size: 0.9rem;
+    }
+  }
+  
+  .milestone-actions {
+    text-align: center;
+    
+    .celebration-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      
+      ion-icon {
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Mobile Responsive Adjustments for Community Intelligence
+@media (max-width: 768px) {
+  .health-overview {
+    gap: 16px;
+  }
+  
+  .health-score {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    
+    .score-circle {
+      width: 80px;
+      height: 80px;
+      
+      .score-value {
+        font-size: 1.5rem;
+      }
+    }
+  }
+  
+  .health-metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .engagement-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .milestones-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .member-stats {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  
+  .alert-item {
+    flex-direction: column;
+    text-align: center;
+    
+    .alert-icon {
+      align-self: center;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .milestone-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .engagement-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .health-metrics .metric-item {
+    padding: 12px;
+  }
+  
+  .milestone-progress {
+    flex-direction: column;
+    gap: 8px;
+    
+    .progress-percentage {
+      align-self: flex-end;
+    }
+  }
+}
