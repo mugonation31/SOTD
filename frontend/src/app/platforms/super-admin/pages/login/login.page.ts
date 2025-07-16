@@ -111,8 +111,11 @@ export class SuperAdminLoginPage implements OnInit {
         },
         error: (error) => {
           console.error('Super admin login failed:', error);
-      this.isLoading = false;
-          // Here you would typically show an error message to the user
+          this.isLoading = false;
+          
+          // Provide user feedback instead of just console logging
+          const errorMessage = error?.error?.message || error?.message || 'Login failed. Please check your credentials and try again.';
+          alert(errorMessage);
         }
       });
     }

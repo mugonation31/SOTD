@@ -137,8 +137,9 @@
         </div>
 
         <div class="auth-actions">
-          <ion-button expand="block" type="submit" [disabled]="!canSubmit">
-            Create Account
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit || isLoading">
+            <span *ngIf="!isLoading">Create Account</span>
+            <span *ngIf="isLoading">Creating Account...</span>
           </ion-button>
         </div>
 

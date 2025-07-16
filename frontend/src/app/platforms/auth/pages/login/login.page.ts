@@ -72,6 +72,7 @@ export class LoginPage implements OnInit {
   };
 
   showPassword = false;
+  isLoading = false;
   private returnUrl: string = '';
 
   get canSubmit(): boolean {
@@ -134,7 +135,9 @@ export class LoginPage implements OnInit {
     this.validateEmail();
     this.validatePassword();
 
-    if (!this.canSubmit) return;
+    if (!this.canSubmit || this.isLoading) return;
+
+    this.isLoading = true;
 
     // Set default security question and answer for development
     this.loginData.securityQuestion = 'What is your favorite color?';
@@ -145,12 +148,19 @@ export class LoginPage implements OnInit {
         this.handleSuccessfulLogin();
       },
       error: (error) => {
+        this.isLoading = false;
         console.error('Login error:', error);
+        
+        // TODO: Replace with proper toast service when available
+        // For now, use a simple alert for user feedback
+        const errorMessage = error?.error?.message || error?.message || 'Login failed. Please check your credentials and try again.';
+        alert(errorMessage);
       },
     });
   }
 
   private handleSuccessfulLogin() {
+    this.isLoading = false;
     const userRole = this.authService.getUserRole();
     
     // Handle specific return URL from external navigation (e.g., guard redirects)

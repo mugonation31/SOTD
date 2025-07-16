@@ -54,7 +54,10 @@
         </div>
 
         <div class="auth-actions">
-          <ion-button expand="block" type="submit" [disabled]="!canSubmit">Login</ion-button>
+          <ion-button expand="block" type="submit" [disabled]="!canSubmit || isLoading">
+            <span *ngIf="!isLoading">Login</span>
+            <span *ngIf="isLoading">Logging in...</span>
+          </ion-button>
         </div>
 
 

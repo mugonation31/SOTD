@@ -105,6 +105,7 @@ export class SignupPage implements OnInit {
 
   showPassword = false;
   showConfirmPassword = false;
+  isLoading = false;
   private returnUrl: string = '/welcome';
   isRoleForced = false; // Track if role selection was forced from welcome page
 
@@ -260,11 +261,14 @@ export class SignupPage implements OnInit {
     this.validateConfirmPassword();
     this.validateAcceptedTerms();
 
-    if (!this.canSubmit) return;
+    if (!this.canSubmit || this.isLoading) return;
+
+    this.isLoading = true;
 
     const { confirmPassword, acceptedTerms, ...signupPayload } = this.signupData;
     this.authService.signup(signupPayload).subscribe({
       next: () => {
+        this.isLoading = false;
         // After successful signup, redirect to login with role and return URL
         this.router.navigate(['/auth/login'], {
           queryParams: {
@@ -274,8 +278,12 @@ export class SignupPage implements OnInit {
         });
       },
       error: (error) => {
-        // TODO: Add proper error handling with Toast service
+        this.isLoading = false;
         console.error('Signup error:', error);
+        
+        // Provide user feedback instead of just console logging
+        const errorMessage = error?.error?.message || error?.message || 'Signup failed. Please try again.';
+        alert(errorMessage);
       },
     });
   }
