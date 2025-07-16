@@ -44,6 +44,7 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
 } from 'ionicons/icons';
+import { MockDataService } from '../../../../core/services/mock-data.service';
 
 interface GameWeek {
   number: number;
@@ -1117,14 +1118,14 @@ export class PredictionsPage implements OnInit {
   pastPredictions: Match[] = [];
   canSubmit = false;
   selectedPredictionCount = 0;
-  currentGameweek = 15; // This should come from a service
+  currentGameweek: number;
   currentMatches: Match[] = [];
   historicalMatches: Match[] = [];
   selectedHistoryGameweek = 14;
   historicalGameweeks: number[] = [];
   liveScoreUpdateInterval: any;
 
-  constructor() {
+  constructor(private mockDataService: MockDataService) {
     addIcons({
       chevronBack,
       chevronForward,
@@ -1139,11 +1140,15 @@ export class PredictionsPage implements OnInit {
       chevronBackOutline,
       chevronForwardOutline,
     });
+    
+    // Initialize current gameweek from MockDataService
+    this.currentGameweek = this.mockDataService.getCurrentGameweek();
+    
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
     this.allPredictions = [];
     this.filteredPredictions = [];
-    this.currentGameWeek = this.getSampleCurrentGameWeek();
+    this.currentGameWeek = this.mockDataService.getCurrentGameweekData();
     this.pastPredictions = [];
   }
 
@@ -1444,10 +1449,8 @@ export class PredictionsPage implements OnInit {
   }
 
   private loadGameweekPredictions() {
-    // Only load sample predictions if we don't have any predictions yet
-    if (this.allPredictions.length === 0) {
-      this.allPredictions = this.getSamplePredictions();
-    }
+    // Load group admin predictions from MockDataService
+    this.allPredictions = this.mockDataService.getGroupAdminPredictions(this.selectedGameweek.number);
     this.filterPredictions();
   }
 
@@ -1607,80 +1610,11 @@ export class PredictionsPage implements OnInit {
   }
 
   loadMatches() {
-    // Mock current matches data
-    const mockCurrentMatches: Match[] = [
-      {
-        id: 1,
-        gameweek: 15,
-        homeTeam: 'Manchester United',
-        awayTeam: 'Liverpool',
-        kickoff: '2024-01-20T15:00:00',
-        venue: 'Old Trafford',
-        status: 'scheduled',
-      },
-      // Add more mock matches as needed
-    ];
+    // Load current matches from MockDataService
+    this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);
 
-    this.currentMatches = mockCurrentMatches;
-
-    // Mock historical matches data
-    const mockHistoricalMatches = [
-      {
-        gameweek: 14,
-        matches: [
-          {
-            id: 1,
-            gameweek: 14,
-            homeTeam: 'Arsenal',
-            awayTeam: 'Brighton',
-            kickoff: '2024-01-17T19:45:00',
-            venue: 'Emirates Stadium',
-            finalScore: {
-              home: 2,
-              away: 1,
-            },
-            status: 'finished',
-          },
-          {
-            id: 2,
-            gameweek: 14,
-            homeTeam: 'Brentford',
-            awayTeam: 'Chelsea',
-            kickoff: '2024-01-17T20:00:00',
-            venue: 'Gtech Community Stadium',
-            finalScore: {
-              home: 0,
-              away: 2,
-            },
-            status: 'finished',
-          },
-          {
-            id: 3,
-            gameweek: 14,
-            homeTeam: 'Manchester City',
-            awayTeam: 'Tottenham',
-            kickoff: '2024-01-17T20:15:00',
-            venue: 'Etihad Stadium',
-            finalScore: {
-              home: 3,
-              away: 3,
-            },
-            status: 'finished',
-          },
-        ],
-      },
-    ];
-
-    // Store mock historical data
-    localStorage.setItem(
-      'historicalMatches',
-      JSON.stringify(mockHistoricalMatches)
-    );
-
-    // Get unique gameweeks from history
-    this.historicalGameweeks = Array.from(
-      new Set(mockHistoricalMatches.map((gw) => gw.gameweek))
-    ).sort((a, b) => b - a);
+    // Get available historical gameweeks from MockDataService
+    this.historicalGameweeks = this.mockDataService.getAvailableHistoricalGameweeks();
 
     // If we have historical gameweeks, set the selected one
     if (this.historicalGameweeks.length > 0) {
@@ -1692,16 +1626,8 @@ export class PredictionsPage implements OnInit {
   }
 
   updateHistoricalMatches() {
-    const historicalMatches = JSON.parse(
-      localStorage.getItem('historicalMatches') || '[]'
-    );
-    const selectedGameweekMatches = historicalMatches.find(
-      (gw: any) => gw.gameweek === this.selectedHistoryGameweek
-    );
-
-    this.historicalMatches = selectedGameweekMatches
-      ? selectedGameweekMatches.matches
-      : [];
+    // Get historical matches from MockDataService
+    this.historicalMatches = this.mockDataService.getMatchesForGameweek(this.selectedHistoryGameweek);
   }
 
   startLiveScoreUpdates() {
@@ -1715,112 +1641,33 @@ export class PredictionsPage implements OnInit {
   }
 
   updateLiveScores() {
-    // TODO: Replace with actual API call
-    // For now, using mock data to demonstrate
-    const mockLiveScores = [
-      {
-        homeTeam: 'Manchester United',
-        awayTeam: 'Liverpool',
-        home: 1,
-        away: 0,
-        isLive: true,
-        minute: this.calculateMatchMinute('2024-01-20T15:00:00'),
-        additionalTime: 2,
-      },
-    ];
-
-    // Update current matches with live scores
-    this.currentMatches = this.currentMatches.map((match) => {
-      const liveMatch = mockLiveScores.find(
-        (score) =>
-          score.homeTeam === match.homeTeam && score.awayTeam === match.awayTeam
-      );
-
-      if (liveMatch) {
-        return {
-          ...match,
-          liveScore: {
-            home: liveMatch.home,
-            away: liveMatch.away,
-            isLive: true,
-            minute: liveMatch.minute,
-            additionalTime: liveMatch.additionalTime,
-          },
-          status: this.isMatchFinished(match) ? 'finished' : 'live',
-        };
-      }
-      return match;
-    });
+    // Update live scores using MockDataService
+    this.mockDataService.updateLiveScores();
+    
+    // Reload current matches with updated live scores
+    this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);
   }
 
-  calculateMatchMinute(kickoff: string): number {
-    const kickoffTime = new Date(kickoff);
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - kickoffTime.getTime()) / 60000
-    );
-
-    // Handle half time (45-60 minutes shows as 45+)
-    if (diffInMinutes >= 45 && diffInMinutes < 60) {
-      return 45;
-    }
-
-    // Handle full time (90+ minutes)
-    if (diffInMinutes >= 90) {
-      return 90;
-    }
-
-    // Handle second half (subtract 15 minutes for half time)
-    if (diffInMinutes > 60) {
-      return diffInMinutes - 15;
-    }
-
-    return diffInMinutes;
+  getMatchTime(match: any): string {
+    return this.mockDataService.getMatchTime(match);
   }
 
-  getMatchTime(match: Match): string {
-    if (!match.liveScore?.isLive) return '';
-
-    // Check if match is finished
-    if (this.isMatchFinished(match)) {
-      return 'FT';
-    }
-
-    const minute = match.liveScore.minute;
-    const additionalTime = match.liveScore.additionalTime;
-
-    if (minute === 45 && additionalTime) {
-      return `45+${additionalTime}'`;
-    }
-    if (minute === 90 && additionalTime) {
-      return `90+${additionalTime}'`;
-    }
-    return `${minute}'`;
+  isMatchFinished(match: any): boolean {
+    return this.mockDataService.isMatchFinished(match);
   }
 
-  isMatchFinished(match: Match): boolean {
-    const kickoff = new Date(match.kickoff);
-    const now = new Date();
-    // Match is finished if it's more than 2 hours after kickoff
-    return now > new Date(kickoff.getTime() + 2 * 60 * 60 * 1000);
+  isMatchLive(match: any): boolean {
+    return this.mockDataService.isMatchLive(match);
   }
 
-  isMatchLive(match: Match): boolean {
-    const kickoff = new Date(match.kickoff);
-    const now = new Date();
-    // Match is live if it's within the 2-hour window after kickoff and not finished
-    return (
-      now >= kickoff &&
-      now <= new Date(kickoff.getTime() + 2 * 60 * 60 * 1000) &&
-      !this.isMatchFinished(match)
-    );
-  }
-
-  getScoreClass(match: Match): string {
+  getScoreClass(match: any): string {
     if (this.isMatchFinished(match)) {
       return 'finished';
     }
-    return 'live';
+    if (this.isMatchLive(match)) {
+      return 'live';
+    }
+    return 'scheduled';
   }
 
   navigateHistoryGameweek(delta: number) {

@@ -32,6 +32,7 @@ import {
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MockDataService } from '../../../../core/services/mock-data.service';
 
 interface Prediction {
   id: number;
@@ -94,7 +95,7 @@ interface Prediction {
 })
 export class PredictionsPage {
   selectedSegment = 'current';
-  currentGameweek = 15; // This should come from a service
+  currentGameweek: number;
   currentPredictions: Prediction[] = [];
   historicalPredictions: Prediction[] = [];
   showNewPredictionsToast = false;
@@ -102,7 +103,7 @@ export class PredictionsPage {
   historicalGameweeks: number[] = []; // To track available historical gameweeks
   liveScoreUpdateInterval: any;
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private mockDataService: MockDataService) {
     addIcons({
       footballOutline,
       closeCircleOutline,
@@ -112,6 +113,9 @@ export class PredictionsPage {
       chevronForwardOutline,
       personOutline,
     });
+    
+    // Initialize current gameweek from MockDataService
+    this.currentGameweek = this.mockDataService.getCurrentGameweek();
   }
 
   ionViewWillEnter() {
@@ -128,104 +132,14 @@ export class PredictionsPage {
   }
 
   loadPredictions() {
-    // Load current predictions from localStorage
-    const storedPredictions = JSON.parse(
-      localStorage.getItem('playerPredictions') || '[]'
-    );
+    // Load current predictions from MockDataService
     const previousCurrentCount = this.currentPredictions.length;
 
     // Get current gameweek predictions
-    this.currentPredictions = [];
-    const currentGameweekPredictions = storedPredictions.find(
-      (submission: any) => submission.gameweek === this.currentGameweek
-    );
+    this.currentPredictions = this.mockDataService.getPlayerPredictions(this.currentGameweek);
 
-    if (currentGameweekPredictions) {
-      this.currentPredictions = currentGameweekPredictions.predictions;
-    }
-
-    // Mock historical predictions data
-    const mockHistoricalPredictions = [
-      {
-        gameweek: 14,
-        predictions: [
-          {
-            id: 1,
-            gameweek: 14,
-            match: {
-              homeTeam: 'Arsenal',
-              awayTeam: 'Brighton',
-              kickoff: '2024-01-17T19:45:00',
-              venue: 'Emirates Stadium',
-              finalScore: {
-                home: 2,
-                away: 1,
-              },
-            },
-            prediction: {
-              home: 2,
-              away: 1,
-            },
-            status: 'correct',
-          },
-          {
-            id: 2,
-            gameweek: 14,
-            match: {
-              homeTeam: 'Brentford',
-              awayTeam: 'Chelsea',
-              kickoff: '2024-01-17T20:00:00',
-              venue: 'Gtech Community Stadium',
-              finalScore: {
-                home: 0,
-                away: 2,
-              },
-            },
-            prediction: {
-              home: 1,
-              away: 1,
-            },
-            status: 'incorrect',
-          },
-          {
-            id: 3,
-            gameweek: 14,
-            match: {
-              homeTeam: 'Manchester City',
-              awayTeam: 'Tottenham',
-              kickoff: '2024-01-17T20:15:00',
-              venue: 'Etihad Stadium',
-              finalScore: {
-                home: 3,
-                away: 3,
-              },
-            },
-            prediction: {
-              home: 2,
-              away: 1,
-            },
-            status: 'incorrect',
-          },
-        ],
-      },
-    ];
-
-    // Store mock historical data
-    localStorage.setItem(
-      'historicalPredictions',
-      JSON.stringify(mockHistoricalPredictions)
-    );
-
-    // Load historical predictions
-    const historicalPredictions = JSON.parse(
-      localStorage.getItem('historicalPredictions') || '[]'
-    );
-
-    // Get unique gameweeks from history and cast to number array
-    this.historicalGameweeks = Array.from(
-      new Set(historicalPredictions.map((pred: any) => Number(pred.gameweek)))
-    ) as number[];
-    this.historicalGameweeks.sort((a, b) => b - a); // Sort descending
+    // Get available historical gameweeks from MockDataService
+    this.historicalGameweeks = this.mockDataService.getAvailableHistoricalGameweeks();
 
     // If we have historical gameweeks, set the selected one
     if (this.historicalGameweeks.length > 0) {
@@ -245,33 +159,8 @@ export class PredictionsPage {
   }
 
   updateHistoricalPredictions() {
-    const historicalPredictions = JSON.parse(
-      localStorage.getItem('historicalPredictions') || '[]'
-    );
-    const selectedGameweekPredictions = historicalPredictions.find(
-      (submission: any) => submission.gameweek === this.selectedHistoryGameweek
-    );
-
-    // Get base predictions
-    let predictions = selectedGameweekPredictions
-      ? selectedGameweekPredictions.predictions
-      : [];
-
-    // Add points and status based on prediction vs final score
-    this.historicalPredictions = predictions.map((pred: Prediction) => {
-      if (pred.match.finalScore) {
-        const isCorrect =
-          pred.prediction.home === pred.match.finalScore.home &&
-          pred.prediction.away === pred.match.finalScore.away;
-
-        return {
-          ...pred,
-          points: isCorrect ? 3 : 0,
-          status: isCorrect ? 'correct' : 'incorrect',
-        };
-      }
-      return pred;
-    });
+    // Get historical predictions from MockDataService
+    this.historicalPredictions = this.mockDataService.getHistoricalPredictions(this.selectedHistoryGameweek);
   }
 
   navigateHistoryGameweek(delta: number) {
@@ -328,117 +217,23 @@ export class PredictionsPage {
   }
 
   updateLiveScores() {
-    // TODO: Replace with actual API call
-    // For now, using mock data to demonstrate
-    const mockLiveScores = [
-      {
-        homeTeam: 'Manchester United',
-        awayTeam: 'Liverpool',
-        home: 1,
-        away: 0,
-        isLive: true,
-        minute: this.calculateMatchMinute('2024-01-20T15:00:00'),
-        additionalTime: 2,
-        points: this.isMatchFinished({ kickoff: '2024-01-20T15:00:00' })
-          ? 3
-          : undefined,
-        status: this.isMatchFinished({ kickoff: '2024-01-20T15:00:00' })
-          ? 'correct'
-          : 'pending',
-      },
-      // Add more mock live scores as needed
-    ];
-
-    // Update current predictions with live scores
-    this.currentPredictions = this.currentPredictions.map((pred) => {
-      const liveMatch = mockLiveScores.find(
-        (score) =>
-          score.homeTeam === pred.match.homeTeam &&
-          score.awayTeam === pred.match.awayTeam
-      );
-
-      if (liveMatch) {
-        return {
-          ...pred,
-          match: {
-            ...pred.match,
-            liveScore: {
-              home: liveMatch.home,
-              away: liveMatch.away,
-              isLive: true,
-              minute: liveMatch.minute,
-              additionalTime: liveMatch.additionalTime,
-            },
-          },
-          points: liveMatch.points,
-          status: liveMatch.status as 'pending' | 'correct' | 'incorrect',
-        };
-      }
-      return pred;
-    });
-  }
-
-  calculateMatchMinute(kickoff: string): number {
-    const kickoffTime = new Date(kickoff);
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - kickoffTime.getTime()) / 60000
-    );
-
-    // Handle half time (45-60 minutes shows as 45+)
-    if (diffInMinutes >= 45 && diffInMinutes < 60) {
-      return 45;
-    }
-
-    // Handle full time (90+ minutes)
-    if (diffInMinutes >= 90) {
-      return 90;
-    }
-
-    // Handle second half (subtract 15 minutes for half time)
-    if (diffInMinutes > 60) {
-      return diffInMinutes - 15;
-    }
-
-    return diffInMinutes;
+    // Update live scores using MockDataService
+    this.mockDataService.updateLiveScores();
+    
+    // Reload current predictions with updated live scores
+    this.currentPredictions = this.mockDataService.getPlayerPredictions(this.currentGameweek);
   }
 
   getMatchTime(match: any): string {
-    if (!match.liveScore?.isLive) return '';
-
-    // Check if match is finished
-    if (this.isMatchFinished(match)) {
-      return 'FT';
-    }
-
-    const minute = match.liveScore.minute;
-    const additionalTime = match.liveScore.additionalTime;
-
-    if (minute === 45 && additionalTime) {
-      return `45+${additionalTime}'`;
-    }
-    if (minute === 90 && additionalTime) {
-      return `90+${additionalTime}'`;
-    }
-    return `${minute}'`;
+    return this.mockDataService.getMatchTime(match);
   }
 
   isMatchFinished(match: any): boolean {
-    const kickoff = new Date(match.kickoff);
-    const now = new Date();
-    // Match is finished if it's more than 2 hours after kickoff
-    return now > new Date(kickoff.getTime() + 2 * 60 * 60 * 1000);
+    return this.mockDataService.isMatchFinished(match);
   }
 
   isMatchLive(match: any): boolean {
-    const kickoff = new Date(match.kickoff);
-    const now = new Date();
-    // Match is live if it's within the 2-hour window after kickoff and not finished
-    return (
-      now >= kickoff &&
-      now <= new Date(kickoff.getTime() + 2 * 60 * 60 * 1000) &&
-      !this.isMatchFinished(match)
-    );
+    return this.mockDataService.isMatchLive(match);
   }
 
   getScoreClass(match: any): string {

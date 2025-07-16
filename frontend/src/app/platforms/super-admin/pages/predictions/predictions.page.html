@@ -26,11 +26,11 @@
     <div *ngIf="activeTab === 'analytics'">
     <!-- Prediction Platform Health Overview -->
     <div class="platform-health">
-      <ion-card>
+  <ion-card>
         <ion-card-header>
           <ion-card-title>Prediction Platform Health Overview</ion-card-title>
         </ion-card-header>
-        <ion-card-content>
+    <ion-card-content>
           <div class="health-metrics">
             <div class="metric-item">
               <div class="metric-icon">
@@ -85,19 +85,19 @@
                 <h3>{{ getJokerOptimizationRate() }}%</h3>
                 <p>Joker Optimization Rate</p>
               </div>
-            </div>
-          </div>
-        </ion-card-content>
-      </ion-card>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
     </div>
 
     <!-- Real-time Submission Monitoring -->
     <div class="submission-monitoring">
-      <ion-card>
-        <ion-card-header>
+    <ion-card>
+      <ion-card-header>
           <ion-card-title>Current Gameweek {{ currentGameweek }} - Live Monitoring</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
+      </ion-card-header>
+      <ion-card-content>
           <div class="submission-stats">
             <div class="submission-metric">
               <span class="label">Submissions:</span>
@@ -231,9 +231,9 @@
                 </div>
               </ion-card-content>
             </ion-card>
-          </div>
-        </ion-card-content>
-      </ion-card>
+        </div>
+      </ion-card-content>
+    </ion-card>
     </div>
   </div>
 
@@ -241,11 +241,11 @@
   <div *ngIf="activeTab === 'behavior'">
     <!-- Prediction Behavior Patterns -->
     <div class="behavior-patterns">
-      <ion-card>
-        <ion-card-header>
+    <ion-card>
+      <ion-card-header>
           <ion-card-title>User Prediction Behavior Intelligence</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
+      </ion-card-header>
+      <ion-card-content>
           <div class="behavior-insights">
             <div class="behavior-section">
               <h4>🕐 Submission Timing Patterns</h4>
@@ -304,8 +304,8 @@
               </div>
             </div>
           </div>
-        </ion-card-content>
-      </ion-card>
+      </ion-card-content>
+    </ion-card>
     </div>
   </div>
 
@@ -313,11 +313,11 @@
   <div *ngIf="activeTab === 'interventions'">
     <!-- Automated Intervention Recommendations -->
     <div class="intervention-center">
-      <ion-card>
-        <ion-card-header>
+    <ion-card>
+      <ion-card-header>
           <ion-card-title>AI-Powered Intervention Center</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
+      </ion-card-header>
+      <ion-card-content>
           <div class="intervention-categories">
             
             <!-- Performance Improvement Interventions -->
@@ -396,17 +396,17 @@
             </div>
 
           </div>
-        </ion-card-content>
-      </ion-card>
-    </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 
     <!-- Intervention Impact Tracking -->
     <div class="intervention-impact">
-      <ion-card>
-        <ion-card-header>
+    <ion-card>
+      <ion-card-header>
           <ion-card-title>Intervention Impact Analytics</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
+      </ion-card-header>
+      <ion-card-content>
           <div class="impact-metrics">
             <div class="impact-item">
               <h4>Success Rate</h4>
@@ -415,19 +415,19 @@
             <div class="impact-item">
               <h4>Engagement Boost</h4>
               <p>{{ getEngagementImprovement() }}% average engagement increase</p>
-            </div>
+          </div>
             <div class="impact-item">
               <h4>Accuracy Gains</h4>
               <p>{{ getAccuracyImprovement() }}% average accuracy improvement</p>
-            </div>
+          </div>
             <div class="impact-item">
               <h4>Retention Impact</h4>
               <p>{{ getRetentionImprovement() }}% better retention rate</p>
-            </div>
           </div>
-        </ion-card-content>
-      </ion-card>
-    </div>
-  </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+          </div>
+        </div>
   </div>
 </ion-content>

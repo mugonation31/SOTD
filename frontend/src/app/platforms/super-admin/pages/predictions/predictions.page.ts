@@ -132,7 +132,7 @@ interface PredictionIntervention {
 export class PredictionsPage implements OnInit {
   activeTab = 'analytics';
   currentGameweek = 15;
-  
+
   // Platform Health Data
   platformHealth: PlatformHealthMetrics = {
     healthScore: 87,
@@ -196,7 +196,7 @@ export class PredictionsPage implements OnInit {
     performance: [
       {
         id: 'p1',
-        userName: 'John Smith',
+      userName: 'John Smith',
         groupName: 'Weekend Warriors',
         currentAccuracy: 38,
         issue: 'Consistently overestimating home advantage',
