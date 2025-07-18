@@ -408,6 +408,45 @@ interface PredictionWithResult extends Match {
                     </div>
                     <span class="team away">{{ pred.awayTeam }}</span>
                   </div>
+
+                  <!-- Prediction Result -->
+                  <div
+                    class="prediction-result"
+                    *ngIf="selectedGameweek.status === 'completed'"
+                  >
+                    <div
+                      class="points"
+                      [class.high-points]="(pred.points || 0) >= 9"
+                    >
+                      {{ pred.points }} pts
+                    </div>
+                    <div class="accuracy">
+                      <div class="accuracy-item">
+                        <ion-icon
+                          [name]="
+                            pred.isCorrectScore
+                              ? 'checkmark-circle'
+                              : 'close-circle'
+                          "
+                          [color]="pred.isCorrectScore ? 'success' : 'medium'"
+                        >
+                        </ion-icon>
+                        <span>Score</span>
+                      </div>
+                      <div class="accuracy-item">
+                        <ion-icon
+                          [name]="
+                            pred.isCorrectResult
+                              ? 'checkmark-circle'
+                              : 'close-circle'
+                          "
+                          [color]="pred.isCorrectResult ? 'success' : 'medium'"
+                        >
+                        </ion-icon>
+                        <span>Result</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </ion-card-content>
@@ -808,36 +847,134 @@ interface PredictionWithResult extends Match {
         border-radius: 4px;
         margin-bottom: 16px;
         gap: 16px;
+
+        .player-search {
+          flex: 1;
+          max-width: 500px;
+        }
+
+        ion-select {
+          min-width: 150px;
+        }
       }
 
-      .player-search {
-        width: 500px;
-        margin-right: 16px;
-      }
-
-      .players-list {
+      .special-indicator {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
+        gap: 8px;
+        color: var(--ion-color-warning);
+        font-size: 12px;
+        font-weight: 500;
+
+        ion-icon {
+          font-size: 16px;
+        }
+      }
+
+      .prediction-item {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+
+      .venue-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+
+        .venue-name {
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--ion-color-medium);
+        }
+
+        .kickoff {
+          font-size: 13px;
+          color: var(--ion-color-medium);
+        }
+      }
+
+      .teams-score {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+
+        .team {
+          flex: 1;
+          font-size: 14px;
+          font-weight: 500;
+
+          &.home {
+            text-align: right;
+          }
+
+          &.away {
+            text-align: left;
+          }
+        }
+
+        .score {
+          min-width: 60px;
+          text-align: center;
+          font-size: 16px;
+          font-weight: 600;
+          padding: 4px 8px;
+          background: #f8f9fa;
+          border-radius: 4px;
+
+          &.pending {
+            color: var(--ion-color-medium);
+          }
+        }
+      }
+
+      .prediction-result {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #f0f0f0;
+      }
+
+      .points {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ion-color-medium);
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #f8f9fa;
+
+        &.high-points {
+          color: var(--ion-color-success);
+          background: rgba(var(--ion-color-success-rgb), 0.1);
+        }
+      }
+
+      .accuracy {
+        display: flex;
         gap: 16px;
       }
 
-      .player-card {
-        width: 100%;
-        max-width: 600px;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 16px;
-      }
-
-      .player-header {
+      .accuracy-item {
         display: flex;
-        flex-direction: column;
-        padding: 8px;
-        background: #f8f9fa;
-        border-bottom: 1px solid #e0e0e0;
-        gap: 6px;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--ion-color-medium);
+
+        ion-icon {
+          font-size: 16px;
+        }
+
+        span {
+          margin-top: 2px;
+        }
       }
 
       .name-section {
@@ -857,6 +994,11 @@ interface PredictionWithResult extends Match {
           font-size: 1.125rem;
           font-weight: 600;
         }
+
+        ion-avatar {
+          width: 40px;
+          height: 40px;
+        }
       }
 
       .player-info {
@@ -869,77 +1011,6 @@ interface PredictionWithResult extends Match {
       .total-points {
         padding: 2px 8px;
         font-size: 0.8125rem;
-      }
-
-      .prediction-item {
-        padding: 8px 12px;
-        border-bottom: 1px solid #e0e0e0;
-
-        &:last-child {
-          border-bottom: none;
-        }
-      }
-
-      .match-info {
-        margin-bottom: 6px;
-      }
-
-      .teams-score {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 12px;
-        padding: 4px;
-
-        .team {
-          flex: 1;
-          font-size: 0.875rem;
-          font-weight: 500;
-
-          &.home {
-            text-align: right;
-          }
-
-          &.away {
-            text-align: left;
-          }
-        }
-
-        .score {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #424242;
-          padding: 2px 8px;
-          background: #f8f9fa;
-          border-radius: 4px;
-          min-width: 50px;
-          text-align: center;
-
-          &.pending {
-            color: #9e9e9e;
-          }
-        }
-      }
-
-      .venue-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 4px;
-        width: 100%;
-
-        .venue-name {
-          font-size: 0.8125rem;
-          font-weight: 500;
-          color: #424242;
-        }
-
-        .kickoff {
-          font-size: 0.8125rem;
-          color: #666666;
-          margin-left: auto;
-          white-space: nowrap;
-        }
       }
 
       .button-container {
@@ -1733,3 +1804,4 @@ export class PredictionsPage implements OnInit {
     return firstWord.length <= 10 ? firstWord : teamName.substring(0, 10);
   }
 }
+
