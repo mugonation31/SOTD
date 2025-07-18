@@ -208,22 +208,24 @@ interface PredictionWithResult extends Match {
             >
               <!-- Match Info Row -->
               <ion-row class="match-info-row">
-                <ion-col size="7" size-md="8" class="venue-col">
+                <ion-col size="7" size-sm="7" size-md="8" class="venue-col">
                   <div class="venue">{{ match.venue }}</div>
                 </ion-col>
-                <ion-col size="5" size-md="4" class="kickoff-col">
+                <ion-col size="5" size-sm="5" size-md="4" class="kickoff-col">
                   <div class="kickoff">
-                    {{ match.kickoff | date : 'EEEE d MMM HH:mm' }}
+                    <!-- Mobile: Short format, Desktop: Full format -->
+                    <span class="kickoff-mobile">{{ match.kickoff | date : 'd/M HH:mm' }}</span>
+                    <span class="kickoff-desktop">{{ match.kickoff | date : 'EEEE d MMM HH:mm' }}</span>
                   </div>
                 </ion-col>
               </ion-row>
 
               <!-- Match Prediction Row -->
               <ion-row class="match-prediction-row">
-                <ion-col size="4" size-md="4" class="team-col">
-                  <span class="team home">{{ match.homeTeam }}</span>
+                <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                  <span class="team home">{{ getShortTeamName(match.homeTeam) }}</span>
                 </ion-col>
-                <ion-col size="4" size-md="4" class="score-col">
+                <ion-col size="4" size-sm="4" size-md="4" class="score-col">
                   <div class="score-container">
                     <ion-input
                       type="number"
@@ -250,8 +252,8 @@ interface PredictionWithResult extends Match {
                     ></ion-input>
                   </div>
                 </ion-col>
-                <ion-col size="4" size-md="4" class="team-col">
-                  <span class="team away">{{ match.awayTeam }}</span>
+                <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                  <span class="team away">{{ getShortTeamName(match.awayTeam) }}</span>
                 </ion-col>
               </ion-row>
             </ion-grid>
@@ -1689,5 +1691,45 @@ export class PredictionsPage implements OnInit {
     return direction === 'back'
       ? currentIndex < this.historicalGameweeks.length - 1
       : currentIndex > 0;
+  }
+
+  getShortTeamName(teamName: string): string {
+    // Common team name abbreviations for better mobile display
+    const abbreviations: { [key: string]: string } = {
+      'Manchester United': 'Man Utd',
+      'Manchester City': 'Man City',
+      'Liverpool': 'Liverpool',
+      'Arsenal': 'Arsenal',
+      'Chelsea': 'Chelsea',
+      'Tottenham': 'Spurs',
+      'Newcastle': 'Newcastle',
+      'Brighton': 'Brighton',
+      'West Ham': 'West Ham',
+      'Crystal Palace': 'Palace',
+      'Aston Villa': 'Villa',
+      'Sheffield United': 'Sheffield',
+      'Wolverhampton': 'Wolves',
+      'Leicester City': 'Leicester',
+      'Everton': 'Everton',
+      'Leeds United': 'Leeds',
+      'Burnley': 'Burnley',
+      'Southampton': 'Saints',
+      'Watford': 'Watford',
+      'Norwich City': 'Norwich',
+      'Brentford': 'Brentford',
+      'Fulham': 'Fulham',
+      'Bournemouth': 'Bournemouth',
+      'Nottingham Forest': 'Forest',
+      'Luton Town': 'Luton'
+    };
+
+    // Return abbreviation if available, otherwise use first word or limit to 10 chars
+    if (abbreviations[teamName]) {
+      return abbreviations[teamName];
+    }
+    
+    // If no abbreviation found, take first word or limit length
+    const firstWord = teamName.split(' ')[0];
+    return firstWord.length <= 10 ? firstWord : teamName.substring(0, 10);
   }
 }

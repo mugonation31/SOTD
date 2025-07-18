@@ -44,15 +44,17 @@
                   <!-- Match Header Info -->
                   <ion-grid class="match-header">
                     <ion-row>
-                      <ion-col size="7" size-md="8">
+                      <ion-col size="7" size-sm="7" size-md="8">
                         <div class="venue-info">{{ match.venue }}</div>
                       </ion-col>
-                      <ion-col size="5" size-md="4">
+                      <ion-col size="5" size-sm="5" size-md="4">
                         <div class="match-time">
                           <ion-icon name="time-outline"></ion-icon>
-                          <span class="time-text">{{ match.kickoff | date:'EEE d MMM, HH:mm' }}</span>
+                          <!-- Mobile: Short format, Desktop: Full format -->
+                          <span class="time-text time-mobile">{{ match.kickoff | date:'d/M HH:mm' }}</span>
+                          <span class="time-text time-desktop">{{ match.kickoff | date:'EEE d MMM, HH:mm' }}</span>
                           <ion-badge *ngIf="isMatchLive(match)" color="danger" class="live-badge">
-                            LIVE {{ getMatchTime(match) }}
+                            LIVE{{ getMatchTime(match) ? ' ' + getMatchTime(match) : '' }}
                           </ion-badge>
                         </div>
                       </ion-col>
@@ -62,10 +64,10 @@
                   <!-- Teams and Score -->
                   <ion-grid class="teams-score-grid">
                     <ion-row class="teams-row">
-                      <ion-col size="4" size-md="4" class="team-col">
-                        <div class="team home">{{ match.homeTeam }}</div>
+                      <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                        <div class="team home">{{ getShortTeamName(match.homeTeam) }}</div>
                       </ion-col>
-                      <ion-col size="4" size-md="4" class="score-col">
+                      <ion-col size="4" size-sm="4" size-md="4" class="score-col">
                         <div class="score scheduled" *ngIf="!match.liveScore && !match.finalScore">
                           <div class="score-label">SCHEDULED</div>
                           <div class="score-value">- vs -</div>
@@ -73,11 +75,12 @@
                         <div *ngIf="match.liveScore?.isLive" class="score" [ngClass]="getScoreClass(match)">
                           <div class="score-label">{{ isMatchFinished(match) ? 'FINAL' : 'LIVE' }}</div>
                           <div class="score-value">{{ match.liveScore?.home || 0 }} - {{ match.liveScore?.away || 0 }}</div>
-                          <div class="match-minute">{{ getMatchTime(match) }}</div>
+                          <div class="match-minute" *ngIf="!isMatchFinished(match)">{{ getMatchTime(match) }}</div>
+                          <div class="match-minute" *ngIf="isMatchFinished(match)">FT</div>
                         </div>
                       </ion-col>
-                      <ion-col size="4" size-md="4" class="team-col">
-                        <div class="team away">{{ match.awayTeam }}</div>
+                      <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                        <div class="team away">{{ getShortTeamName(match.awayTeam) }}</div>
                       </ion-col>
                     </ion-row>
                   </ion-grid>
@@ -138,13 +141,15 @@
                   <!-- Match Header Info -->
                   <ion-grid class="match-header">
                     <ion-row>
-                      <ion-col size="7" size-md="8">
+                      <ion-col size="7" size-sm="7" size-md="8">
                         <div class="venue-info">{{ match.venue }}</div>
                       </ion-col>
-                      <ion-col size="5" size-md="4">
+                      <ion-col size="5" size-sm="5" size-md="4">
                         <div class="match-time">
                           <ion-icon name="time-outline"></ion-icon>
-                          <span class="time-text">{{ match.kickoff | date:'EEE d MMM, HH:mm' }}</span>
+                          <!-- Mobile: Short format, Desktop: Full format -->
+                          <span class="time-text time-mobile">{{ match.kickoff | date:'d/M HH:mm' }}</span>
+                          <span class="time-text time-desktop">{{ match.kickoff | date:'EEE d MMM, HH:mm' }}</span>
                         </div>
                       </ion-col>
                     </ion-row>
@@ -153,18 +158,18 @@
                   <!-- Teams and Score -->
                   <ion-grid class="teams-score-grid">
                     <ion-row class="teams-row">
-                      <ion-col size="4" size-md="4" class="team-col">
-                        <div class="team home">{{ match.homeTeam }}</div>
+                      <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                        <div class="team home">{{ getShortTeamName(match.homeTeam) }}</div>
                       </ion-col>
-                      <ion-col size="4" size-md="4" class="score-col">
+                      <ion-col size="4" size-sm="4" size-md="4" class="score-col">
                         <div class="score finished">
                           <div class="score-label">FINAL</div>
                           <div class="score-value">{{ match.finalScore?.home || 0 }} - {{ match.finalScore?.away || 0 }}</div>
                           <div class="match-minute">FT</div>
                         </div>
                       </ion-col>
-                      <ion-col size="4" size-md="4" class="team-col">
-                        <div class="team away">{{ match.awayTeam }}</div>
+                      <ion-col size="4" size-sm="4" size-md="4" class="team-col">
+                        <div class="team away">{{ getShortTeamName(match.awayTeam) }}</div>
                       </ion-col>
                     </ion-row>
                   </ion-grid>
