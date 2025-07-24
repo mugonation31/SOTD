@@ -1,1086 +1,465 @@
-// ========================================
-// RESPONSIVE PREDICTIONS PAGE STYLES
-// Mobile-First Design with Proper Breakpoints
-// ========================================
+// Exact styling to match the screenshot
 
-// Variables
-:root {
-  --predictions-card-radius: 12px;
-  --predictions-spacing-xs: 4px;
-  --predictions-spacing-sm: 8px;
-  --predictions-spacing-md: 12px;
-  --predictions-spacing-lg: 16px;
-  --predictions-spacing-xl: 20px;
-}
+// Header and logo styles
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
 
-// ========================================
-// SEGMENT CONTROL
-// ========================================
+  .football-icon {
+    font-size: 24px;
+    color: var(--ion-color-primary);
+  }
 
-.predictions-segment {
-  margin-bottom: var(--predictions-spacing-md);
-  --background: var(--ion-color-light);
-  min-height: 44px;
-  
-  ion-segment-button {
-    --color: var(--ion-color-medium);
-    --color-checked: var(--ion-color-primary);
-    --background-checked: var(--ion-color-light-shade);
-    --border-radius: 8px;
-    min-height: 44px;
-    
-    ion-label {
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+
+    .logo-sotd {
+      font-size: 16px;
       font-weight: 600;
-      font-size: 0.85rem;
+      color: var(--ion-color-dark);
+    }
+
+    .logo-subtitle {
+      font-size: 12px;
+      color: var(--ion-color-medium);
     }
   }
 }
 
-// ========================================
-// GAMEWEEK NAVIGATION
-// ========================================
+ion-toolbar {
+  ion-buttons {
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      height: 36px;
 
-.gameweek-navigation {
+      ion-icon {
+        font-size: 16px;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+// Gameweek header with navigation
+.gameweek-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--predictions-spacing-md);
-  padding: var(--predictions-spacing-sm);
-  background: var(--ion-color-light);
-  border-radius: var(--predictions-card-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
+  padding: 20px 16px;
+  margin-bottom: 20px;
 
-.nav-button {
-  --padding-start: 8px;
-  --padding-end: 8px;
-  --color: var(--ion-color-medium);
-  height: 40px;
-  width: 40px;
-  min-width: 40px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-
-  &[disabled] {
-    opacity: 0.3;
-  }
-
-  &:not([disabled]):hover {
-    --background: var(--ion-color-light-shade);
-  }
-
-  ion-icon {
-    font-size: 20px;
-  }
-}
-
-.gameweek-title {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--predictions-spacing-xs);
-  flex: 1;
-  text-align: center;
-
-  h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--ion-color-dark);
-    line-height: 1.2;
-  }
-}
-
-// ========================================
-// CARD STYLES
-// ========================================
-
-.no-matches-card,
-.matches-card {
-  margin: 0 0 var(--predictions-spacing-md) 0;
-  border-radius: var(--predictions-card-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-
-.no-matches {
-  text-align: center;
-  padding: var(--predictions-spacing-lg) var(--predictions-spacing-md);
-  color: var(--ion-color-medium);
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-// ========================================
-// MATCHES CONTAINER
-// ========================================
-
-.matches-container {
-  padding: 0;
-}
-
-.match-item {
-  border-bottom: 1px solid var(--ion-color-light-shade);
-  padding: var(--predictions-spacing-sm) var(--predictions-spacing-md);
-  transition: background-color 0.2s ease;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background-color: var(--ion-color-light);
-  }
-}
-
-// ========================================
-// MATCH HEADER (Venue & Time)
-// ========================================
-
-.match-header {
-  margin: 0 0 var(--predictions-spacing-sm) 0;
-  padding: 0;
-  
-  ion-row {
-    margin: 0;
-  }
-  
-  ion-col {
-    padding: 0 var(--predictions-spacing-xs);
-    
-    &:first-child {
-      padding-left: 0;
-    }
-    
-    &:last-child {
-      padding-right: 0;
-    }
-  }
-}
-
-.venue-info {
-  font-size: 0.75rem;
-  color: var(--ion-color-dark);
-  font-weight: 600;
-  line-height: 1.2;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  max-width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.match-time {
-  display: flex;
-  align-items: center;
-  gap: var(--predictions-spacing-xs);
-  font-size: 0.65rem;
-  color: var(--ion-color-medium);
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  line-height: 1.1;
-
-  ion-icon {
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  .time-text {
-    font-weight: 500;
-    text-align: right;
-    line-height: 1.1;
-    word-break: keep-all;
-    white-space: nowrap;
-  }
-
-  .live-badge {
-    font-size: 0.55rem;
-    padding: 1px 4px;
-    margin-left: var(--predictions-spacing-xs);
-    --padding-start: 3px;
-    --padding-end: 3px;
-    border-radius: 4px;
-    font-weight: 600;
-    white-space: nowrap;
-    animation: pulse 2s infinite;
-  }
-}
-
-// Live badge animation
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
-}
-
-// ========================================
-// RESPONSIVE DATE FORMATTING
-// ========================================
-
-// Mobile first - show mobile format by default
-.kickoff-col .kickoff .kickoff-mobile,
-.match-time .time-mobile {
-  display: inline !important;
-}
-
-.kickoff-col .kickoff .kickoff-desktop,
-.match-time .time-desktop {
-  display: none !important;
-}
-
-// Switch to desktop format on larger screens
-@media (min-width: 480px) {
-  .kickoff-col .kickoff .kickoff-mobile,
-  .match-time .time-mobile {
-    display: none !important;
-  }
-  
-  .kickoff-col .kickoff .kickoff-desktop,
-  .match-time .time-desktop {
-    display: inline !important;
-  }
-}
-
-// ========================================
-// TEAMS AND SCORE GRID
-// ========================================
-
-.teams-score-grid {
-  margin: var(--predictions-spacing-xs) 0 0 0;
-  padding: 0;
-  
-  ion-row {
-    margin: 0;
-  }
-  
-  ion-col {
-    padding: var(--predictions-spacing-xs);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-.teams-row {
-  align-items: center;
-  min-height: 48px;
-}
-
-.team-col {
-  display: flex !important;
-  align-items: center;
-  
-  &:first-child {
-    justify-content: flex-end;
-    padding-right: 2px;
-  }
-  
-  &:last-child {
-    justify-content: flex-start;
-    padding-left: 2px;
-  }
-}
-
-.team {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--ion-color-dark);
-  line-height: 1.1;
-  max-width: 100%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  
-  &.home {
-    text-align: right;
-  }
-
-  &.away {
-    text-align: left;
-  }
-}
-
-// ========================================
-// SCORE STYLES
-// ========================================
-
-.score-col {
-  display: flex !important;
-  justify-content: center;
-  align-items: center;
-  padding: 2px !important;
-}
-
-.score {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 6px;
-  min-height: 40px;
-  width: 100%;
-  max-width: 60px;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-
-  &.scheduled {
-    background-color: var(--ion-color-light);
-    color: var(--ion-color-medium);
-    border: 1px solid var(--ion-color-light-shade);
-    
-    .score-value {
-      font-size: 0.7rem;
-      font-weight: 600;
-      margin: 1px 0;
-    }
-  }
-
-  &.live {
-    background: linear-gradient(135deg, rgba(var(--ion-color-danger-rgb), 0.15), rgba(var(--ion-color-danger-rgb), 0.08));
-    color: var(--ion-color-danger);
-    border: 1px solid var(--ion-color-danger);
-    box-shadow: 0 2px 6px rgba(var(--ion-color-danger-rgb), 0.15);
-    
-    .score-value {
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin: 1px 0;
-    }
-
-    .match-minute {
-      font-size: 0.6rem;
-      font-weight: 600;
-      margin-top: 1px;
-    }
-  }
-
-  &.finished {
-    background: linear-gradient(135deg, rgba(var(--ion-color-success-rgb), 0.15), rgba(var(--ion-color-success-rgb), 0.08));
-    color: var(--ion-color-success);
-    border: 1px solid var(--ion-color-success);
-    box-shadow: 0 2px 6px rgba(var(--ion-color-success-rgb), 0.15);
-    
-    .score-value {
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin: 1px 0;
-    }
-
-    .match-minute {
-      font-size: 0.6rem;
-      font-weight: 600;
-      margin-top: 1px;
-    }
-  }
-
-  .score-label {
-    font-size: 0.5rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 1px;
-    color: inherit;
-    opacity: 0.8;
-    line-height: 1;
-  }
-  
-  .score-value {
-    font-weight: 700;
-    line-height: 1;
-    word-break: keep-all;
-    white-space: nowrap;
-  }
-  
-  .match-minute {
-    line-height: 1;
-    font-weight: 600;
-  }
-}
-
-// ========================================
-// RESPONSIVE BREAKPOINTS
-// ========================================
-
-// Small Mobile (360px+)
-@media (min-width: 360px) {
-  .venue-info {
-    font-size: 0.8rem;
-  }
-  
-  .match-time {
-    font-size: 0.7rem;
-  }
-  
-  .team {
-    font-size: 0.8rem;
-  }
-
-  .score {
-    max-width: 70px;
-    min-height: 44px;
-    padding: 6px;
-    
-    .score-label {
-      font-size: 0.55rem;
-    }
-    
-    &.live,
-    &.finished {
-      .score-value {
-        font-size: 0.9rem;
-      }
-      
-      .match-minute {
-        font-size: 0.65rem;
-      }
-    }
-    
-    &.scheduled {
-      .score-value {
-        font-size: 0.75rem;
-      }
-    }
-  }
-}
-
-// Large Mobile (480px+)
-@media (min-width: 480px) {
-  .match-item {
-    padding: var(--predictions-spacing-md);
-  }
-
-  .match-header ion-col {
-    padding: 0 var(--predictions-spacing-sm);
-    
-    &:first-child {
-      padding-left: 0;
-    }
-    
-    &:last-child {
-      padding-right: 0;
-    }
-  }
-  
-  .teams-score-grid ion-col {
-    padding: var(--predictions-spacing-sm);
-  }
-  
-  .team-col {
-    &:first-child {
-      padding-right: var(--predictions-spacing-sm);
-    }
-    
-    &:last-child {
-      padding-left: var(--predictions-spacing-sm);
-    }
-  }
-
-  .venue-info {
-    font-size: 0.9rem;
-  }
-  
-  .match-time {
-    font-size: 0.8rem;
-    
-    .live-badge {
-      font-size: 0.65rem;
-      padding: 2px 6px;
-    }
-  }
-  
-  .team {
-    font-size: 1rem;
-  }
-  
-  .score {
-    max-width: 90px;
-    padding: var(--predictions-spacing-sm);
-    min-height: 52px;
-    
-    .score-label {
-      font-size: 0.6rem;
-      margin-bottom: 2px;
-    }
-    
-    &.live,
-    &.finished {
-      .score-value {
-        font-size: 1.1rem;
-      }
-      
-      .match-minute {
-        font-size: 0.7rem;
-        margin-top: 2px;
-      }
-    }
-    
-    &.scheduled {
-      .score-value {
-        font-size: 0.8rem;
-      }
-    }
-  }
-}
-
-// Tablet (768px+)
-@media (min-width: 768px) {
-  .gameweek-title h2 {
-    font-size: 1.4rem;
-  }
-  
-  .nav-button {
-    height: 52px;
-    width: 52px;
-    min-width: 52px;
+  ion-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    --color: var(--ion-color-medium);
     
     ion-icon {
-      font-size: 28px;
+      font-size: 24px;
     }
-  }
-  
-  .venue-info {
-    font-size: 1.1rem;
-  }
-  
-  .match-time {
-    font-size: 0.95rem;
-  }
-  
-  .team {
-    font-size: 1.3rem;
-  }
-  
-  .match-item {
-    padding: var(--predictions-spacing-lg);
-  }
-  
-  .score {
-    max-width: 120px;
-    min-height: 60px;
-    
-    .score-label {
-      font-size: 0.7rem;
-      margin-bottom: 4px;
-    }
-    
-    &.live,
-    &.finished {
-      .score-value {
-        font-size: 1.4rem;
-      }
-      
-      .match-minute {
-        font-size: 0.8rem;
-        margin-top: 4px;
-      }
-    }
-    
-    &.scheduled {
-      .score-value {
-        font-size: 0.9rem;
-      }
-    }
-  }
-}
 
-// Desktop (1024px+)
-@media (min-width: 1024px) {
-  .match-header,
-  .teams-score-grid {
-    margin: var(--predictions-spacing-md) 0;
-  }
-  
-  .team {
-    font-size: 1.4rem;
-  }
-  
-  .score {
-    max-width: 140px;
-    min-height: 68px;
-    
-    &.live,
-    &.finished {
-      .score-value {
-        font-size: 1.6rem;
-      }
+    &[disabled] {
+      opacity: 0.3;
     }
   }
-}
 
-// Large Desktop (1200px+)
-@media (min-width: 1200px) {
-  .matches-container {
-    padding: var(--predictions-spacing-sm);
-  }
-  
-  .match-item {
-    padding: var(--predictions-spacing-xl);
-    border-radius: var(--predictions-card-radius);
-    margin-bottom: var(--predictions-spacing-sm);
-    background: var(--ion-color-light);
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-}
-
-// ========================================
-// MAKE PREDICTIONS SPECIFIC STYLES
-// ========================================
-
-.content-wrapper {
-  padding: var(--predictions-spacing-sm);
-}
-
-.deadline-card {
-  margin-bottom: var(--predictions-spacing-md);
-  border-radius: var(--predictions-card-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  
-  .deadline-info {
+  .gameweek-info {
     display: flex;
     flex-direction: column;
-    gap: var(--predictions-spacing-sm);
-    
-    .deadline-section {
-      flex: 1;
-      
-      .deadline {
-        display: flex;
-        align-items: center;
-        gap: var(--predictions-spacing-xs);
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--ion-color-dark);
-        margin-bottom: var(--predictions-spacing-xs);
-        
-        ion-icon {
-          font-size: 1rem;
-          color: var(--ion-color-medium);
-        }
-      }
-      
-      .selection-info {
-        font-size: 0.7rem;
-        color: var(--ion-color-medium);
-        margin: 0;
-      }
-      
-      .warning-message {
-        display: flex;
-        align-items: center;
-        gap: var(--predictions-spacing-xs);
-        color: var(--ion-color-danger);
-        font-size: 0.7rem;
-        margin-top: var(--predictions-spacing-xs);
-        
-        ion-icon {
-          font-size: 0.9rem;
-        }
-      }
-    }
-    
-    .reset-button {
-      --color: var(--ion-color-medium);
-      --padding-start: 0;
-      --padding-end: 0;
-      font-size: 0.7rem;
+    align-items: center;
+    gap: 8px;
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
       font-weight: 600;
-      align-self: flex-end;
-      min-height: 32px;
-      
-      ion-icon {
-          font-size: 0.9rem;
-      }
+      color: var(--ion-color-dark);
+    }
+
+    ion-badge {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 8px;
     }
   }
 }
 
-.prediction-badge {
-  font-size: 0.6rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-// ========================================
-// PREDICTIONS LIST STYLES
-// ========================================
-
-.predictions-list {
-  padding: 0;
-}
-
-.match-row {
-  margin: 0 0 var(--predictions-spacing-lg) 0;
-  padding: var(--predictions-spacing-md);
-  background: var(--ion-color-light);
-  border-radius: var(--predictions-card-radius);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease;
-  
-  &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-  }
-}
-
-.match-info-row {
-  margin: 0 0 var(--predictions-spacing-sm) 0;
-  
-  ion-col {
-    padding: 0 var(--predictions-spacing-xs);
-    
-    &:first-child {
-      padding-left: 0;
-    }
-    
-    &:last-child {
-      padding-right: 0;
-    }
-  }
-}
-
-.venue-col {
-  .venue {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--ion-color-dark);
-    line-height: 1.2;
-    max-width: 100%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-}
-
-.kickoff-col {
-  .kickoff {
-    font-size: 0.7rem;
-    color: var(--ion-color-medium);
-    text-align: right;
-    font-weight: 500;
-    line-height: 1.2;
-    word-break: keep-all;
-  }
-}
-
-.match-prediction-row {
+// Deadline info header
+.deadline-info-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  min-height: 44px;
-  margin-top: var(--predictions-spacing-xs);
-  
-  ion-col {
-    padding: var(--predictions-spacing-xs);
+  padding: 12px 16px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  margin-bottom: 12px;
+
+  .deadline-text {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ion-color-dark);
+
+    ion-icon {
+      font-size: 16px;
+      color: var(--ion-color-medium);
+    }
+  }
+
+  ion-button {
+    --color: var(--ion-color-medium);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 }
 
-.team-col {
-  .team {
-    font-size: 0.75rem;
-    font-weight: 600;
+.selection-info-text {
+  text-align: center;
+  color: var(--ion-color-medium);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+// Match cards
+.match-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.match-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border: 1px solid var(--ion-color-light-shade);
+}
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  .venue {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--ion-color-dark);
-    line-height: 1.2;
-    text-align: center;
-    max-width: 100%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+
+    ion-icon {
+      font-size: 14px;
+      color: var(--ion-color-medium);
+    }
+  }
+
+  .kickoff {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--ion-color-medium);
+
+    ion-icon {
+      font-size: 14px;
+    }
+  }
+}
+
+.match-prediction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  .team-name {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ion-color-dark);
     
-    &.home {
+    &:first-child {
       text-align: right;
     }
     
-    &.away {
+    &:last-child {
       text-align: left;
     }
   }
-}
 
-.score-col {
-  display: flex !important;
-  justify-content: center;
-  
-  .score-container {
+  .score-inputs {
     display: flex;
     align-items: center;
-    gap: var(--predictions-spacing-xs);
+    gap: 8px;
     justify-content: center;
-    width: 100%;
-    
-    .score-input {
-      --background: var(--ion-color-light-shade);
-      --border-radius: 8px;
-      --padding-start: 8px;
-      --padding-end: 8px;
-      --padding-top: 8px;
-      --padding-bottom: 8px;
-      --color: var(--ion-color-dark);
-      --placeholder-color: var(--ion-color-medium);
-      text-align: center;
-      font-weight: 600;
-      font-size: 1.1rem;
-      width: 42px;
-      min-width: 42px;
-      max-width: 42px;
-      height: 42px;
-      border: 1px solid var(--ion-color-medium-shade);
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.2s ease;
-      
-      &:focus {
-        --border-color: var(--ion-color-primary);
-        border-color: var(--ion-color-primary);
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.2);
-        transform: scale(1.05);
-      }
-      
-      ion-input {
-        --color: var(--ion-color-dark);
-        --placeholder-color: var(--ion-color-medium);
-        text-align: center;
-        font-weight: 600;
-      }
-    }
-    
-    .separator {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--ion-color-medium);
-      margin: 0 6px;
-      flex-shrink: 0;
-    }
-  }
-}
 
-.button-container {
-  margin-top: var(--predictions-spacing-md);
-  padding: var(--predictions-spacing-sm) 0;
-  
-  .submit-button {
-    --background: var(--ion-color-primary);
-    --color: var(--ion-color-primary-contrast);
-    --border-radius: 6px;
-    --padding-top: 12px;
-    --padding-bottom: 12px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    min-height: 40px;
-    box-shadow: 0 2px 6px rgba(var(--ion-color-primary-rgb), 0.2);
-    transition: all 0.2s ease;
-    
-    &:not([disabled]):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 3px 10px rgba(var(--ion-color-primary-rgb), 0.3);
-    }
-    
-    &[disabled] {
-      --background: var(--ion-color-light-shade);
-      --color: var(--ion-color-medium);
-      opacity: 0.6;
-      box-shadow: none;
-    }
-  }
-}
-
-// ========================================
-// RESPONSIVE BREAKPOINTS FOR PREDICTIONS
-// ========================================
-
-// Small Mobile (360px+)
-@media (min-width: 360px) {
-  .venue-col .venue {
-    font-size: 0.75rem;
-  }
-  
-  .kickoff-col .kickoff {
-    font-size: 0.7rem;
-  }
-  
-  .team-col .team {
-    font-size: 0.75rem;
-  }
-  
-  .score-col .score-container {
-    gap: var(--predictions-spacing-sm);
-    
     .score-input {
       width: 40px;
-      min-width: 40px;
-      max-width: 40px;
       height: 40px;
-      font-size: 1.1rem;
+      text-align: center;
+      border: 1px solid var(--ion-color-light-shade);
+      border-radius: 4px;
+      background: var(--ion-color-light);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ion-color-dark);
+
+      &:focus {
+        outline: none;
+        border-color: var(--ion-color-primary);
+        box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.2);
+      }
+
+      &::placeholder {
+        color: var(--ion-color-medium);
+      }
     }
-    
+
     .separator {
-      font-size: 1.2rem;
-      margin: 0 6px;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ion-color-medium);
     }
   }
 }
 
-// Large Mobile (480px+)
-@media (min-width: 480px) {
-  .deadline-info {
-    flex-direction: row;
-    align-items: center;
+// Submit button
+.submit-button {
+  margin: 20px 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+
+  &[disabled] {
+    opacity: 0.6;
+  }
+}
+
+// All Predictions Tab Styles
+.all-predictions {
+  .gameweek-navigation {
+    display: flex;
     justify-content: space-between;
-    
-    .reset-button {
-      align-self: center;
+    align-items: center;
+    padding: 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .gameweek-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .search-filter {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    gap: 16px;
+
+    .player-search {
+      flex: 1;
+      max-width: 500px;
+    }
+
+    ion-select {
+      min-width: 150px;
     }
   }
-  
-  .match-row {
-    padding: var(--predictions-spacing-md);
-    margin-bottom: var(--predictions-spacing-md);
+
+  .players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
-  
-  .match-info-row ion-col {
-    padding: 0 var(--predictions-spacing-sm);
-    
-    &:first-child {
-      padding-left: 0;
+
+  .player-card {
+    width: 100%;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .player-header {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 6px;
+  }
+
+  .name-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .name-and-avatar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
     }
-    
+
+    ion-avatar {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .total-points {
+    padding: 2px 8px;
+    font-size: 0.8125rem;
+  }
+
+  .prediction-item {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+
     &:last-child {
-      padding-right: 0;
+      border-bottom: none;
     }
   }
-  
-  .match-prediction-row {
-    min-height: 48px;
-    
-    ion-col {
-      padding: var(--predictions-spacing-sm);
-    }
-  }
-  
-  .team-col .team {
-    font-size: 1rem;
-  }
-  
-  .score-col .score-container {
-    gap: var(--predictions-spacing-md);
-    
-    .score-input {
-      width: 44px;
-      min-width: 44px;
-      max-width: 44px;
-      height: 44px;
-      font-size: 1.1rem;
-      --padding-start: 6px;
-      --padding-end: 6px;
-      --padding-top: 6px;
-      --padding-bottom: 6px;
-    }
-    
-    .separator {
-      font-size: 1.2rem;
-      margin: 0 4px;
-    }
-  }
-}
 
-// Tablet (768px+)
-@media (min-width: 768px) {
-  .venue-col .venue {
-    font-size: 1.1rem;
-  }
-  
-  .kickoff-col .kickoff {
-    font-size: 0.95rem;
-  }
-  
-  .team-col .team {
-    font-size: 1.3rem;
-  }
-  
-  .match-row {
-    padding: var(--predictions-spacing-lg);
-  }
-  
-  .score-col .score-container {
-    .score-input {
-      width: 56px;
-      min-width: 56px;
-      max-width: 56px;
-      height: 48px;
-      font-size: 1.3rem;
-      --padding-start: 8px;
-      --padding-end: 8px;
-      --padding-top: 8px;
-      --padding-bottom: 8px;
-    }
-  }
-}
+  .venue-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
 
-// Desktop (1024px+)
-@media (min-width: 1024px) {
-  .content-wrapper {
-    padding: var(--predictions-spacing-lg);
-  }
-  
-  .team-col .team {
-    font-size: 1.4rem;
-  }
-  
-  .score-col .score-container {
-    .score-input {
-      width: 64px;
-      min-width: 64px;
-      max-width: 64px;
-      height: 52px;
-      font-size: 1.4rem;
-      --padding-start: 10px;
-      --padding-end: 10px;
-      --padding-top: 10px;
-      --padding-bottom: 10px;
+    .venue-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ion-color-medium);
     }
-    
-    .separator {
-      font-size: 1.4rem;
-    }
-  }
-}
 
-// Large Desktop (1200px+)
-@media (min-width: 1200px) {
-  .match-row {
-    padding: var(--predictions-spacing-xl);
-    margin-bottom: var(--predictions-spacing-lg);
+    .kickoff {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+    }
   }
-  
-  .score-col .score-container {
-    .score-input {
-      width: 68px;
-      min-width: 68px;
-      max-width: 68px;
-      height: 56px;
+
+  .teams-score {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+
+    .team {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+
+      &.home {
+        text-align: right;
+      }
+
+      &.away {
+        text-align: left;
+      }
+    }
+
+    .score {
+      min-width: 60px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 4px 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+
+      &.pending {
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+
+  .prediction-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .points {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ion-color-medium);
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #f8f9fa;
+
+    &.high-points {
+      color: var(--ion-color-success);
+      background: rgba(var(--ion-color-success-rgb), 0.1);
+    }
+  }
+
+  .accuracy {
+    display: flex;
+    gap: 16px;
+  }
+
+  .accuracy-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--ion-color-medium);
+
+    ion-icon {
+      font-size: 16px;
+    }
+
+    span {
+      margin-top: 2px;
+    }
+  }
+
+  .special-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ion-color-warning);
+    font-size: 12px;
+    font-weight: 500;
+
+    ion-icon {
+      font-size: 16px;
     }
   }
 }
