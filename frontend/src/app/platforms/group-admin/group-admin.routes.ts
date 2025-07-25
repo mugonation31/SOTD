@@ -3,13 +3,6 @@ import { GroupAdminLayoutPage } from './layout/group-admin-layout.page';
 
 export const routes: Routes = [
   {
-    path: 'register',
-    loadComponent: () =>
-      import('./pages/register/register.page').then(
-        (m) => m.GroupAdminRegisterPage
-      ),
-  },
-  {
     path: '',
     component: GroupAdminLayoutPage,
     children: [
