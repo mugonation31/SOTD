@@ -1,0 +1,149 @@
+.scores-segment {
+  margin-bottom: 16px;
+  --background: var(--ion-color-light);
+}
+
+.gameweek-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.nav-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  height: 36px;
+  --color: var(--ion-color-medium);
+
+  &[disabled] {
+    opacity: 0.5;
+  }
+
+  ion-icon {
+    font-size: 24px;
+  }
+}
+
+.gameweek-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+}
+
+.no-matches {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--ion-color-medium);
+  font-size: 16px;
+}
+
+.match-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.match-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.venue-info {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+}
+
+.match-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  .live-badge {
+    font-size: 10px;
+    padding: 4px 6px;
+    margin-left: 6px;
+  }
+}
+
+.teams-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.team {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+
+  &.home {
+    text-align: right;
+  }
+
+  &.away {
+    text-align: left;
+  }
+}
+
+.score {
+  min-width: 120px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-align: center;
+
+  &.scheduled {
+    background: var(--ion-color-light);
+    color: var(--ion-color-medium);
+  }
+
+  &.live {
+    background-color: rgba(var(--ion-color-danger-rgb), 0.08);
+    color: var(--ion-color-danger);
+  }
+
+  &.finished {
+    background-color: rgba(var(--ion-color-success-rgb), 0.08);
+    color: var(--ion-color-success);
+  }
+
+  .score-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .score-value {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 4px 0;
+  }
+
+  .match-minute {
+    font-size: 14px;
+    margin-top: 2px;
+  }
+} 
