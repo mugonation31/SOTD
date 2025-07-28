@@ -52,14 +52,20 @@
     "@ionic/angular-toolkit": "^11.0.1",
     "@ionic/cli": "^7.2.0",
     "@types/crypto-js": "^4.2.2",
+    "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsdoc": "^48.2.1",
     "eslint-plugin-prefer-arrow": "1.2.2",
+    "identity-obj-proxy": "^3.0.0",
     "jasmine-core": "~5.1.0",
     "jasmine-spec-reporter": "~5.0.0",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "jest-preset-angular": "^14.2.4",
+    "jest-transform-stub": "^2.0.0",
     "typescript": "~5.4.0"
   }
 }
