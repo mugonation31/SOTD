@@ -4,7 +4,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   
   // Module name mapping for absolute imports and Ionic/Angular modules
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)': '<rootDir>/src/$1',
     '^@app/(.*)': '<rootDir>/src/app/$1',
     '^@environments/(.*)': '<rootDir>/src/environments/$1',
@@ -19,7 +19,8 @@ module.exports = {
       'jest-preset-angular',
       {
         tsconfig: 'tsconfig.spec.json',
-        stringifyContentPathRegex: '\\.(html|svg)$'
+        stringifyContentPathRegex: '\\.(html|svg)$',
+        useESM: true
       }
     ]
   },
@@ -52,18 +53,10 @@ module.exports = {
     '<rootDir>/e2e/'
   ],
   
-  // Setup for Ionic/Angular testing
+  // Setup for Ionic/Angular testing - include Supabase and other ESM modules
   transformIgnorePatterns: [
-    'node_modules/(?!(.*\\.mjs$|@ionic|@stencil|ionicons|@angular|@ngrx|@supabase))'
+    'node_modules/(?!(.*\\.mjs$|@ionic|@stencil|ionicons|@angular|@ngrx|@supabase|supabase|isows|@supabase/realtime-js|@supabase/gotrue-js|@supabase/postgrest-js|@supabase/storage-js))'
   ],
-  
-  // Global variables for testing
-  globals: {
-    'ts-jest': {
-      useESM: true,
-      stringifyContentPathRegex: '\\.(html|svg)$'
-    }
-  },
   
   // Verbose output for debugging
   verbose: true,
