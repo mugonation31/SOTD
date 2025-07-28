@@ -1,1 +1,149 @@
-// Player Settings styles
+.profile-picture-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.profile-picture-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.profile-picture {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--ion-color-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--ion-color-medium-shade);
+}
+
+.profile-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.default-profile-icon {
+  font-size: 48px;
+  color: var(--ion-color-medium);
+}
+
+.camera-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--ion-color-medium-shade);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.camera-icon ion-icon {
+  font-size: 18px;
+  color: var(--ion-color-dark);
+}
+
+.profile-info-section,
+.form-section {
+  max-width: 100%;
+}
+
+ion-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --background: transparent;
+  margin-bottom: 16px;
+}
+
+ion-card {
+  margin: 0 0 16px 0;
+  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid var(--ion-color-light-shade);
+}
+
+ion-card-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--ion-color-light-shade);
+}
+
+ion-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+ion-card-title ion-icon {
+  font-size: 20px;
+  color: var(--ion-color-primary);
+}
+
+ion-button {
+  margin: 8px 0;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.football-icon {
+  font-size: 24px;
+  color: var(--ion-color-primary);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.logo-sotd {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+}
+
+.logo-subtitle {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+ion-buttons {
+  ion-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    height: 36px;
+  }
+
+  ion-icon {
+    font-size: 18px;
+    color: var(--ion-color-medium);
+  }
+}
+
+@media (max-width: 576px) {
+  ion-card-header {
+    padding: 12px;
+  }
+
+  ion-card-content {
+    padding: 12px;
+  }
+}

@@ -1,0 +1,242 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="navigateTo('/player/dashboard')">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateTo('/player/settings')">
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-segment [(ngModel)]="activeTab" class="ion-margin-bottom">
+    <ion-segment-button value="profile">
+      <ion-icon name="person-circle-outline"></ion-icon>
+      <ion-label>Profile</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="settings">
+      <ion-icon name="settings-outline"></ion-icon>
+      <ion-label>Settings</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Profile Tab -->
+  <div *ngIf="activeTab === 'profile'">
+    <ion-card>
+      <ion-card-content>
+        <!-- Profile Picture -->
+        <div class="profile-picture-section">
+          <div class="profile-picture-container">
+            <div class="profile-picture">
+              <ng-container *ngIf="profilePicture; else defaultProfileIcon">
+                <img [src]="profilePicture" alt="Profile Picture" />
+              </ng-container>
+              <ng-template #defaultProfileIcon>
+                <ion-icon
+                  name="person-outline"
+                  class="default-profile-icon"
+                ></ion-icon>
+              </ng-template>
+            </div>
+            <div class="camera-icon" (click)="fileInput.click()">
+              <ion-icon name="camera-outline"></ion-icon>
+            </div>
+            <input
+              #fileInput
+              type="file"
+              accept="image/*"
+              (change)="onFileSelected($event)"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- Profile Information -->
+        <div class="profile-info-section">
+          <ion-item>
+            <ion-label position="stacked">Name</ion-label>
+            <ion-input
+              [(ngModel)]="profile.name"
+              placeholder="Your name"
+            ></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Email</ion-label>
+            <ion-input
+              [(ngModel)]="profile.email"
+              type="email"
+              readonly
+            ></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Phone</ion-label>
+            <ion-input
+              [(ngModel)]="profile.phone"
+              type="tel"
+              placeholder="Your phone number"
+            ></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Role</ion-label>
+            <ion-input [(ngModel)]="profile.role" readonly></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Joined Date</ion-label>
+            <ion-input
+              [(ngModel)]="profile.joinedDate"
+              readonly
+            ></ion-input>
+          </ion-item>
+
+          <ion-button
+            expand="block"
+            (click)="updateProfile()"
+            class="ion-margin-top"
+          >
+            Update Profile
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="key-outline"></ion-icon>
+          Change Password
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="form-section">
+          <ion-item>
+            <ion-label position="stacked">Current Password</ion-label>
+            <ion-input
+              type="password"
+              [(ngModel)]="passwordForm.current"
+            ></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">New Password</ion-label>
+            <ion-input
+              type="password"
+              [(ngModel)]="passwordForm.new"
+            ></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Confirm New Password</ion-label>
+            <ion-input
+              type="password"
+              [(ngModel)]="passwordForm.confirm"
+            ></ion-input>
+          </ion-item>
+
+          <ion-button
+            expand="block"
+            (click)="changePassword()"
+            class="ion-margin-top"
+          >
+            Change Password
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-button
+      expand="block"
+      color="danger"
+      (click)="logout()"
+      class="ion-margin-top"
+    >
+      <ion-icon name="log-out-outline" slot="start"></ion-icon>
+      Logout
+    </ion-button>
+  </div>
+
+  <!-- Settings Tab -->
+  <div *ngIf="activeTab === 'settings'">
+    <!-- Notification Settings -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="notifications-outline"></ion-icon>
+          Notification Preferences
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Email Notifications</ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.notifications.email"
+          ></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>Prediction Reminders</ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.notifications.predictions"
+          ></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>Result Notifications</ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.notifications.results"
+          ></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>Group Updates</ion-label>
+          <ion-toggle
+            [(ngModel)]="settings.notifications.groupUpdates"
+          ></ion-toggle>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- App Settings -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="settings-outline"></ion-icon>
+          App Settings
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>Dark Mode</ion-label>
+          <ion-toggle [(ngModel)]="settings.darkMode"></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label>Language</ion-label>
+          <ion-select [(ngModel)]="settings.language">
+            <ion-select-option value="en">English</ion-select-option>
+            <ion-select-option value="es">Spanish</ion-select-option>
+            <ion-select-option value="fr">French</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-button
+      expand="block"
+      (click)="saveSettings()"
+      class="ion-margin-top"
+    >
+      Save Settings
+    </ion-button>
+  </div>
+</ion-content> 
