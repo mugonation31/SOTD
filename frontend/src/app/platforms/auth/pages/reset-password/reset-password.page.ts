@@ -140,12 +140,10 @@ export class ResetPasswordPage implements OnInit {
     this.isLoading = true;
 
     try {
-      // TODO: Call AuthService.updatePassword(token, newPassword) when method is available
-      // const result = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+      // Call AuthService.updatePassword with the token and new password
+      const result = await this.authService.updatePassword(this.accessToken, this.resetData.password);
       
-      // For now, simulate the password update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Success - show message and redirect to login
       alert('Password reset successful! You can now log in with your new password.');
       this.router.navigate(['/auth/login']);
     } catch (error) {
