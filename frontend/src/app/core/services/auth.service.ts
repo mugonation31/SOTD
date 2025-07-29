@@ -664,4 +664,45 @@ export class AuthService {
   resetPassword(email: string): Promise<{ error: any }> {
     return this.supabaseService.client.auth.resetPasswordForEmail(email);
   }
+
+  /**
+   * Update password using Supabase reset token
+   */
+  async updatePassword(token: string, newPassword: string): Promise<boolean> {
+    try {
+      console.log('🔄 AuthService: Starting password update process...');
+      
+      // Exchange the reset token for a session
+      const { data: sessionData, error: sessionError } = await this.supabaseService.client.auth.exchangeCodeForSession(token);
+      
+      if (sessionError) {
+        console.error('❌ AuthService: Failed to exchange token for session:', sessionError);
+        throw new Error(`Invalid or expired reset token: ${sessionError.message}`);
+      }
+      
+      if (!sessionData.session) {
+        console.error('❌ AuthService: No session established from token');
+        throw new Error('Failed to establish session from reset token');
+      }
+      
+      console.log('✅ AuthService: Session established successfully');
+      
+      // Update the user's password
+      const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (updateError) {
+        console.error('❌ AuthService: Failed to update password:', updateError);
+        throw new Error(`Password update failed: ${updateError.message}`);
+      }
+      
+      console.log('✅ AuthService: Password updated successfully');
+      
+      return true;
+    } catch (error) {
+      console.error('❌ AuthService: Password update process failed:', error);
+      throw error;
+    }
+  }
 }
