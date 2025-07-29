@@ -76,12 +76,25 @@ export class NoAuthGuard {
     private authService: AuthService
   ) {}
 
-  canActivate(): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(route: ActivatedRouteSnapshot): boolean | Promise<boolean> | Observable<boolean> {
     return this.authService.currentUser.pipe(
       take(1),
       map(authResponse => {
         try {
           const user = this.authService.getCurrentUser();
+          
+          // Special case: Allow access to reset-password page even for authenticated users
+          if (route.routeConfig?.path === 'reset-password') {
+            console.log('✅ NoAuthGuard: Allowing access to reset-password page for all users');
+            return true;
+          }
+          
+          // Also check the full URL path for reset-password
+          const currentUrl = this.router.url;
+          if (currentUrl.includes('reset-password')) {
+            console.log('✅ NoAuthGuard: Allowing access to reset-password page via URL check');
+            return true;
+          }
           
           if (!user || !user.role) {
             console.log('✅ NoAuthGuard: No authenticated user, allowing access to public routes');

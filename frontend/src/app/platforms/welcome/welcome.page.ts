@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -53,7 +53,7 @@ import { SupabaseService } from '../../services/supabase.service';
     NgFor,
   ],
 })
-export class WelcomePage {
+export class WelcomePage implements OnInit {
   howItWorks = [
     {
       icon: 'people-outline',
@@ -99,6 +99,14 @@ export class WelcomePage {
       cashOutline,
       logInOutline,
     });
+  }
+
+  ngOnInit(): void {
+    // Check for hash fragments with access tokens
+    const hash = window.location.hash;
+    if (hash.includes('access_token')) {
+      this.router.navigate(['/auth/reset-password']);
+    }
   }
 
   createGroup() {

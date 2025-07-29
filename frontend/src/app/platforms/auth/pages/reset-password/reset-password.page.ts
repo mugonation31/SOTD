@@ -87,21 +87,58 @@ export class ResetPasswordPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
+    console.log('🏗️ ResetPasswordPage: Component constructed');
     addIcons({ footballOutline, eye, eyeOff });
   }
 
   ngOnInit() {
+    console.log('🔄 ResetPasswordPage: ngOnInit called');
+    
     // Extract access token from URL query parameters
     this.route.queryParams.subscribe(params => {
-      this.accessToken = params['access_token'] || '';
+      console.log('📋 ResetPasswordPage: Received query parameters:', params);
+      
+      // Check for multiple possible parameter names that Supabase might send
+      this.accessToken = params['code'] || 
+                        params['access_token'] || 
+                        params['token'] || 
+                        params['reset_token'] || 
+                        '';
       
       if (!this.accessToken) {
-        console.error('No access token found in URL');
+        console.error('❌ ResetPasswordPage: No access token found in URL');
+        console.log('🔍 Available query parameters:', params);
         this.validationErrors.password = 'Invalid reset link. Please request a new password reset.';
+      } else {
+        console.log('✅ ResetPasswordPage: Access token found:', this.accessToken.substring(0, 10) + '...');
       }
       
       console.log('🔍 Reset password page initialized with access token:', this.accessToken ? 'present' : 'missing');
     });
+    
+    // Also check for token in URL hash fragment (Supabase sometimes sends it there)
+    this.checkHashFragment();
+    
+    // Also log the current route for debugging
+    console.log('📍 ResetPasswordPage: Current route:', this.router.url);
+  }
+
+  private checkHashFragment() {
+    // Check if there's a hash fragment with the access token
+    const hash = window.location.hash;
+    if (hash) {
+      console.log('🔍 ResetPasswordPage: Found hash fragment:', hash);
+      
+      // Parse the hash fragment for access_token
+      const hashParams = new URLSearchParams(hash.substring(1)); // Remove the # and parse
+      const hashToken = hashParams.get('access_token');
+      
+      if (hashToken && !this.accessToken) {
+        console.log('✅ ResetPasswordPage: Found access token in hash fragment');
+        this.accessToken = hashToken;
+        this.validationErrors.password = ''; // Clear any previous error
+      }
+    }
   }
 
   validatePassword() {

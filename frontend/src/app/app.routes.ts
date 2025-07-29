@@ -46,6 +46,6 @@ export const routes: Routes = [
   // Fallback route for any unmatched paths
   { 
     path: '**', 
-    redirectTo: '/auth/login' 
+    redirectTo: 'auth/login' 
   }
 ];
