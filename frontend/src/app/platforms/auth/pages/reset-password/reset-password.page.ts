@@ -151,7 +151,7 @@ export class ResetPasswordPage implements OnInit {
       this.isLoading = false;
       console.error('Password reset error:', error);
       
-      const errorMessage = error?.message || 'Failed to reset password. Please try again.';
+      const errorMessage = (error as any)?.message || 'Failed to reset password. Please try again.';
       this.validationErrors.password = errorMessage;
     }
   }
