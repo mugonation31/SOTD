@@ -69,13 +69,24 @@ export class ForgotPasswordPage {
     }
   }
 
-  onSubmit() {
+  async onSubmit() {
     this.validateEmail();
 
     if (!this.canSubmit) return;
 
-    // TODO: Implement password reset functionality
-    console.log('Password reset requested for:', this.email);
+    try {
+      const { error } = await this.authService.resetPassword(this.email);
+      if (error) {
+        this.validationError = 'Failed to send reset email. Please try again.';
+        console.error('Reset error:', error.message);
+      } else {
+        alert('Check your inbox for a password reset link!');
+        this.router.navigate(['/login']); // Adjust if you want a different redirect
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      this.validationError = 'Something went wrong. Please try again later.';
+    }
   }
 
   navigateToWelcome() {
