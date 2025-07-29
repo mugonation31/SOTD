@@ -120,21 +120,21 @@ export class SettingsPage {
   async onFileSelected(event: Event) {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    
+
     if (file) {
       try {
         // Validate file type
-        if (!file.type.startsWith('image/')) {
-          await this.toastService.showToast('Please select an image file', 'error');
-          return;
-        }
+    if (!file.type.startsWith('image/')) {
+      await this.toastService.showToast('Please select an image file', 'error');
+      return;
+    }
 
         // Validate file size (max 5MB)
         const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
+    if (file.size > maxSize) {
           await this.toastService.showToast('File size must be less than 5MB', 'error');
-          return;
-        }
+      return;
+    }
 
         // Show loading state
         await this.toastService.showToast('Uploading image...', 'success');
@@ -143,14 +143,14 @@ export class SettingsPage {
         await this.simulateUpload();
 
         // Create preview URL
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.profilePicture = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.profilePicture = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
 
         await this.toastService.showToast('Profile picture updated successfully!', 'success');
-      } catch (error) {
+    } catch (error) {
         console.error('Error uploading file:', error);
         await this.toastService.showToast('Error uploading image. Please try again.', 'error');
       }

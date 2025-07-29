@@ -159,12 +159,12 @@ export class MembersPage implements OnInit, OnDestroy {
     
     this.members = adminGroups.flatMap(group => 
       group.members.map(member => ({
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        joinedAt: member.joinedAt,
-        groupName: group.name,
-        role: member.role,
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          joinedAt: member.joinedAt,
+          groupName: group.name,
+          role: member.role,
         status: member.status,
       }))
     );
@@ -200,35 +200,35 @@ export class MembersPage implements OnInit, OnDestroy {
 
   applyFilters() {
     console.log('🔍 Members: Applying filters...');
-    let filtered = [...this.members];
+      let filtered = [...this.members];
 
     // Apply segment filter
-    switch (this.selectedFilter) {
+      switch (this.selectedFilter) {
       case 'all':
         filtered = filtered.filter(m => m.status === 'active');
         break;
-      case 'admins':
+        case 'admins':
         filtered = filtered.filter(m => m.role === 'admin' && m.status === 'active');
-        break;
-      case 'players':
+          break;
+        case 'players':
         filtered = filtered.filter(m => m.role === 'player' && m.status === 'active');
-        break;
-      case 'removed':
+          break;
+        case 'removed':
         filtered = filtered.filter(m => m.status === 'inactive');
-        break;
-    }
+          break;
+      }
 
-    // Apply search filter
+      // Apply search filter
     if (this.searchTerm.trim()) {
       const searchLower = this.searchTerm.toLowerCase();
       filtered = filtered.filter(member =>
         member.name.toLowerCase().includes(searchLower) ||
         member.email.toLowerCase().includes(searchLower) ||
         member.groupName.toLowerCase().includes(searchLower)
-      );
-    }
+        );
+      }
 
-    this.filteredMembers = filtered;
+      this.filteredMembers = filtered;
     console.log('✅ Members: Filtered to', this.filteredMembers.length, 'members');
   }
 

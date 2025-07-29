@@ -167,10 +167,10 @@ export class PredictionsPage implements OnInit {
     private router: Router
   ) {
     addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,});
-
+    
     // Initialize current gameweek from MockDataService
     this.currentGameweek = this.mockDataService.getCurrentGameweek();
-
+    
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
     this.allPredictions = [];
@@ -670,7 +670,7 @@ export class PredictionsPage implements OnInit {
   updateLiveScores() {
     // Update live scores using MockDataService
     this.mockDataService.updateLiveScores();
-
+    
     // Reload current matches with updated live scores
     this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);
   }

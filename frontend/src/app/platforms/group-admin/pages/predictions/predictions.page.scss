@@ -56,29 +56,29 @@ ion-toolbar {
 
   ion-button {
     --padding-start: 8px;
-    --padding-end: 8px;
-    --color: var(--ion-color-medium);
+  --padding-end: 8px;
+  --color: var(--ion-color-medium);
     
     ion-icon {
       font-size: 24px;
     }
 
-    &[disabled] {
-      opacity: 0.3;
-    }
+  &[disabled] {
+    opacity: 0.3;
+  }
   }
 
   .gameweek-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
     gap: 8px;
 
-    h2 {
-      margin: 0;
+  h2 {
+    margin: 0;
       font-size: 24px;
-      font-weight: 600;
-      color: var(--ion-color-dark);
+    font-weight: 600;
+    color: var(--ion-color-dark);
     }
 
     ion-badge {
@@ -105,11 +105,11 @@ ion-toolbar {
     gap: 8px;
     font-size: 14px;
     font-weight: 500;
-    color: var(--ion-color-dark);
+  color: var(--ion-color-dark);
 
     ion-icon {
       font-size: 16px;
-      color: var(--ion-color-medium);
+    color: var(--ion-color-medium);
     }
   }
 
@@ -316,8 +316,8 @@ ion-toolbar {
   }
 
   .name-and-avatar {
-    display: flex;
-    align-items: center;
+        display: flex;
+        align-items: center;
     gap: 12px;
 
     h3 {
@@ -347,7 +347,7 @@ ion-toolbar {
   .prediction-item {
     padding: 12px;
     border-bottom: 1px solid #f0f0f0;
-
+    
     &:last-child {
       border-bottom: none;
     }
@@ -365,9 +365,9 @@ ion-toolbar {
       color: var(--ion-color-medium);
     }
 
-    .kickoff {
+  .kickoff {
       font-size: 13px;
-      color: var(--ion-color-medium);
+    color: var(--ion-color-medium);
     }
   }
 
@@ -377,19 +377,19 @@ ion-toolbar {
     align-items: center;
     gap: 16px;
 
-    .team {
+  .team {
       flex: 1;
       font-size: 14px;
       font-weight: 500;
-
-      &.home {
-        text-align: right;
-      }
-
-      &.away {
-        text-align: left;
-      }
+    
+    &.home {
+      text-align: right;
     }
+    
+    &.away {
+      text-align: left;
+    }
+  }
 
     .score {
       min-width: 60px;
