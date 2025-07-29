@@ -697,46 +697,65 @@ export class AuthService {
     try {
       console.log('🔄 AuthService: Starting password update process...');
       
-      // Only clear auth state if this is NOT a JWT token (to avoid clearing the session we're about to set)
-      if (!token.startsWith('eyJ')) {
-        // Clear any existing auth state to prevent lock conflicts
-        await this.supabaseService.client.auth.signOut();
-        
-        // Add a small delay to ensure clean state
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Check if there's already an active session (common with recovery links)
+      // Add timeout to prevent hanging
+      const sessionPromise = this.supabaseService.client.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session check timeout')), 5000)
+      );
+      
+      let currentSession;
+      try {
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        currentSession = data;
+      } catch (error) {
+        console.log('⚠️ AuthService: Session check failed or timed out, proceeding without session check');
+        currentSession = { session: null };
       }
       
-      // Check if this is a JWT access token (from hash fragment) or a recovery token
-      let sessionData, sessionError;
-      
-      if (token.startsWith('eyJ')) {
-        // This is a JWT access token from hash fragment - set the session directly
-        console.log('🔍 AuthService: Detected JWT access token, setting session...');
-        const { data, error } = await this.supabaseService.client.auth.setSession({
-          access_token: token,
-          refresh_token: refreshToken || ''
-        });
-        sessionData = data;
-        sessionError = error;
+      if (currentSession.session && token.startsWith('eyJ')) {
+        // Session already exists from recovery link, just update password
+        console.log('✅ AuthService: Session already established from recovery link, proceeding with password update...');
       } else {
-        // This is a recovery token - use verifyOtp
-        console.log('🔍 AuthService: Detected recovery token, verifying OTP...');
-        const { data, error } = await this.supabaseService.client.auth.verifyOtp({
-          token_hash: token,
-          type: 'recovery'
-        });
-        sessionData = data;
-        sessionError = error;
-      }
-      
-      if (sessionError) {
-        console.error('❌ AuthService: Failed to verify reset token:', sessionError);
-        throw new Error(`Invalid or expired reset token: ${sessionError.message}`);
-      }
-      
-      if (!sessionData.session) {
-        console.error('❌ AuthService: No session established from token');
-        throw new Error('Failed to establish session from reset token');
+        // Need to establish session first
+        console.log('🔍 AuthService: No active session, establishing session...');
+        
+        // Only clear auth state if this is NOT a JWT token
+        if (!token.startsWith('eyJ')) {
+          await this.supabaseService.client.auth.signOut();
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Check if this is a JWT access token or a recovery token
+        let sessionData, sessionError;
+        
+        if (token.startsWith('eyJ')) {
+          console.log('🔍 AuthService: Setting session with JWT token...');
+          const { data, error } = await this.supabaseService.client.auth.setSession({
+            access_token: token,
+            refresh_token: refreshToken || ''
+          });
+          sessionData = data;
+          sessionError = error;
+        } else {
+          console.log('🔍 AuthService: Verifying OTP with recovery token...');
+          const { data, error } = await this.supabaseService.client.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery'
+          });
+          sessionData = data;
+          sessionError = error;
+        }
+        
+        if (sessionError) {
+          console.error('❌ AuthService: Failed to verify reset token:', sessionError);
+          throw new Error(`Invalid or expired reset token: ${sessionError.message}`);
+        }
+        
+        if (!sessionData.session) {
+          console.error('❌ AuthService: No session established from token');
+          throw new Error('Failed to establish session from reset token');
+        }
       }
       
             console.log('✅ AuthService: Session established successfully');
@@ -776,29 +795,36 @@ export class AuthService {
           
                               console.log('🔄 AuthService: Retrying password update after lock recovery...');
                     
-                    // Retry with the appropriate method based on token type
-                    let retrySessionData, retrySessionError;
+                    // Check if session exists before trying to establish one
+                    const { data: retryCurrentSession } = await this.supabaseService.client.auth.getSession();
                     
-                    if (token.startsWith('eyJ')) {
-                      // JWT token - set session
-                      const { data, error } = await this.supabaseService.client.auth.setSession({
-                        access_token: token,
-                        refresh_token: refreshToken || ''
-                      });
-                      retrySessionData = data;
-                      retrySessionError = error;
+                    if (!retryCurrentSession.session) {
+                      // Need to establish session
+                      let retrySessionData, retrySessionError;
+                      
+                      if (token.startsWith('eyJ')) {
+                        // JWT token - set session
+                        const { data, error } = await this.supabaseService.client.auth.setSession({
+                          access_token: token,
+                          refresh_token: refreshToken || ''
+                        });
+                        retrySessionData = data;
+                        retrySessionError = error;
+                      } else {
+                        // Recovery token - verify OTP
+                        const { data, error } = await this.supabaseService.client.auth.verifyOtp({
+                          token_hash: token,
+                          type: 'recovery'
+                        });
+                        retrySessionData = data;
+                        retrySessionError = error;
+                      }
+                      
+                      if (retrySessionError) {
+                        throw new Error(`Retry failed: ${retrySessionError.message}`);
+                      }
                     } else {
-                      // Recovery token - verify OTP
-                      const { data, error } = await this.supabaseService.client.auth.verifyOtp({
-                        token_hash: token,
-                        type: 'recovery'
-                      });
-                      retrySessionData = data;
-                      retrySessionError = error;
-                    }
-                    
-                    if (retrySessionError) {
-                      throw new Error(`Retry failed: ${retrySessionError.message}`);
+                      console.log('✅ AuthService: Session exists during retry, proceeding with password update...');
                     }
                     
                     const { data: retryUpdateData, error: retryUpdateError } = await this.supabaseService.client.auth.updateUser({
