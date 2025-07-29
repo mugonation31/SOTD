@@ -24,7 +24,7 @@ import {
   footballOutline
 } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
-import { validatePassword } from '../../../../core/utils/validation.utils';
+import { validatePassword, getPasswordErrors } from '../../../../core/utils/validation.utils';
 
 interface ValidationErrors {
   password: string;
@@ -106,7 +106,8 @@ export class ResetPasswordPage implements OnInit {
     if (!this.resetData.password) {
       this.validationErrors.password = 'Password is required';
     } else if (!validatePassword(this.resetData.password)) {
-      this.validationErrors.password = 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number';
+      const errors = getPasswordErrors(this.resetData.password);
+      this.validationErrors.password = errors.join(', ');
     } else {
       this.validationErrors.password = '';
     }
