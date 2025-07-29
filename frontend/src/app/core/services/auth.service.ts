@@ -659,6 +659,29 @@ export class AuthService {
   }
 
   /**
+   * Clear Supabase auth locks and state
+   */
+  public async clearAuthLocks(): Promise<void> {
+    console.log('🔧 AuthService: Clearing auth locks...');
+    
+    try {
+      // Sign out from Supabase to clear any locks
+      await this.supabaseService.client.auth.signOut();
+      
+      // Clear local storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Reset current user
+      this.currentUserSubject.next(null);
+      
+      console.log('✅ Auth locks cleared successfully');
+    } catch (error) {
+      console.error('❌ AuthService: Failed to clear auth locks:', error);
+    }
+  }
+
+  /**
    * Reset password using Supabase
    */
   resetPassword(email: string): Promise<{ error: any }> {
@@ -671,6 +694,12 @@ export class AuthService {
   async updatePassword(token: string, newPassword: string): Promise<boolean> {
     try {
       console.log('🔄 AuthService: Starting password update process...');
+      
+      // Clear any existing auth state to prevent lock conflicts
+      await this.supabaseService.client.auth.signOut();
+      
+      // Add a small delay to ensure clean state
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Exchange the reset token for a session
       const { data: sessionData, error: sessionError } = await this.supabaseService.client.auth.exchangeCodeForSession(token);
@@ -699,9 +728,33 @@ export class AuthService {
       
       console.log('✅ AuthService: Password updated successfully');
       
+      // Sign out after password update to clear the session
+      await this.supabaseService.client.auth.signOut();
+      
       return true;
     } catch (error) {
       console.error('❌ AuthService: Password update process failed:', error);
+      
+      // If it's a lock error, try to clear the state and retry once
+      if (error instanceof Error && error.message.includes('NavigatorLockAcquireTimeoutError')) {
+        console.log('🔄 AuthService: Detected lock error, attempting recovery...');
+        try {
+          // Clear all auth state
+          await this.supabaseService.client.auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Wait a bit and retry
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          console.log('🔄 AuthService: Retrying password update after lock recovery...');
+          return await this.updatePassword(token, newPassword);
+        } catch (retryError) {
+          console.error('❌ AuthService: Lock recovery failed:', retryError);
+          throw new Error('Authentication lock error. Please try again in a few moments.');
+        }
+      }
+      
       throw error;
     }
   }

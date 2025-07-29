@@ -194,6 +194,33 @@ export class ResetPasswordPage implements OnInit {
     } catch (error) {
       console.error('Password reset error:', error);
       
+      // Handle specific lock error
+      if (error instanceof Error && error.message.includes('NavigatorLockAcquireTimeoutError')) {
+        console.log('🔧 ResetPasswordPage: Detected lock error, attempting to clear locks...');
+        
+        try {
+          // Clear auth locks
+          await this.authService.clearAuthLocks();
+          
+          // Wait a moment and retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          console.log('🔄 ResetPasswordPage: Retrying password update after lock clearance...');
+          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+          
+          if (retrySuccess) {
+            await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
+            this.router.navigate(['/auth/login']);
+            return;
+          }
+        } catch (retryError) {
+          console.error('ResetPasswordPage: Lock recovery failed:', retryError);
+          await this.toastService.showToast('Authentication error. Please try again in a few moments.', 'error');
+          this.validationErrors.password = 'Authentication error. Please try again in a few moments.';
+          return;
+        }
+      }
+      
       // Show error message
       const errorMessage = (error as any)?.message || 'Failed to reset password. Please try again.';
       await this.toastService.showToast(errorMessage, 'error');
