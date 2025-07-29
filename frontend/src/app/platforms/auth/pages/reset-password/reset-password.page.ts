@@ -24,6 +24,7 @@ import {
   footballOutline
 } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { validatePassword, getPasswordErrors } from '../../../../core/utils/validation.utils';
 
 interface ValidationErrors {
@@ -82,6 +83,7 @@ export class ResetPasswordPage implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private toastService: ToastService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -140,20 +142,30 @@ export class ResetPasswordPage implements OnInit {
     this.isLoading = true;
 
     try {
-      // TODO: Call AuthService.updatePassword(token, newPassword) when method is available
-      // const result = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+      // Call AuthService.updatePassword with the access token and new password
+      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password);
       
-      // For now, simulate the password update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Password reset successful! You can now log in with your new password.');
-      this.router.navigate(['/auth/login']);
+      if (success) {
+        // Show success message
+        await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
+        
+        // Redirect to login page
+        this.router.navigate(['/auth/login']);
+      } else {
+        throw new Error('Password update failed');
+      }
     } catch (error) {
-      this.isLoading = false;
       console.error('Password reset error:', error);
       
+      // Show error message
       const errorMessage = (error as any)?.message || 'Failed to reset password. Please try again.';
+      await this.toastService.showToast(errorMessage, 'error');
+      
+      // Set validation error for user feedback
       this.validationErrors.password = errorMessage;
+    } finally {
+      // Stop loading regardless of success or failure
+      this.isLoading = false;
     }
   }
 
