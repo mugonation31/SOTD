@@ -657,4 +657,11 @@ export class AuthService {
     
     console.log('✅ Emergency auth reset completed - all state cleared');
   }
+
+  /**
+   * Reset password using Supabase
+   */
+  resetPassword(email: string): Promise<{ error: any }> {
+    return this.supabaseService.client.auth.resetPasswordForEmail(email);
+  }
 }
