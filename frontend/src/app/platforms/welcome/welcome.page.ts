@@ -106,6 +106,23 @@ export class WelcomePage implements OnInit {
     const hash = window.location.hash;
     if (hash.includes('access_token')) {
       this.router.navigate(['/auth/reset-password']);
+      return;
+    }
+    
+    // Check for reset password tokens in query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const type = urlParams.get('type');
+    
+    console.log('🔍 WelcomePage: Checking for reset tokens - token:', token ? 'present' : 'missing', 'type:', type);
+    
+    if (token && type === 'recovery') {
+      console.log('🔄 WelcomePage: Found reset password token, redirecting to reset-password page');
+      // Redirect to reset password page with the token
+      this.router.navigate(['/auth/reset-password'], {
+        queryParams: { token: token, type: type }
+      });
+      return;
     }
   }
 

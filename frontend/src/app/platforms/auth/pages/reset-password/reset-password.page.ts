@@ -70,6 +70,7 @@ export class ResetPasswordPage implements OnInit {
   showConfirmPassword = false;
   isLoading = false;
   accessToken: string = '';
+  refreshToken: string = '';
 
   get canSubmit(): boolean {
     return Boolean(
@@ -94,9 +95,18 @@ export class ResetPasswordPage implements OnInit {
   ngOnInit() {
     console.log('🔄 ResetPasswordPage: ngOnInit called');
     
+    // Clear any old test tokens
+    localStorage.removeItem('test_reset_token');
+    
+    // Log the full URL for debugging
+    console.log('🌐 ResetPasswordPage: Full URL:', window.location.href);
+    console.log('🔗 ResetPasswordPage: Current location:', window.location.toString());
+    
     // Extract access token from URL query parameters
     this.route.queryParams.subscribe(params => {
       console.log('📋 ResetPasswordPage: Received query parameters:', params);
+      console.log('🔍 ResetPasswordPage: Query params keys:', Object.keys(params));
+      console.log('🔍 ResetPasswordPage: Query params values:', Object.values(params));
       
       // Check for multiple possible parameter names that Supabase might send
       this.accessToken = params['code'] || 
@@ -105,9 +115,12 @@ export class ResetPasswordPage implements OnInit {
                         params['reset_token'] || 
                         '';
       
+      console.log('🔍 ResetPasswordPage: Extracted access token:', this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'none');
+      
       if (!this.accessToken) {
         console.error('❌ ResetPasswordPage: No access token found in URL');
         console.log('🔍 Available query parameters:', params);
+        
         this.validationErrors.password = 'Invalid reset link. Please request a new password reset.';
       } else {
         console.log('✅ ResetPasswordPage: Access token found:', this.accessToken.substring(0, 10) + '...');
@@ -119,8 +132,65 @@ export class ResetPasswordPage implements OnInit {
     // Also check for token in URL hash fragment (Supabase sometimes sends it there)
     this.checkHashFragment();
     
+    // Also check if token might be in the URL path itself
+    this.checkUrlPathForToken();
+    
+    // Also check the raw URL for any token-like strings
+    this.checkRawUrlForToken();
+    
     // Also log the current route for debugging
     console.log('📍 ResetPasswordPage: Current route:', this.router.url);
+  }
+
+  private checkUrlPathForToken() {
+    // Sometimes Supabase puts the token in the URL path
+    const pathSegments = this.router.url.split('/');
+    console.log('🔍 ResetPasswordPage: URL path segments:', pathSegments);
+    
+    // Look for segments that might be tokens (long strings)
+    for (const segment of pathSegments) {
+      if (segment.length > 50 && !this.accessToken) {
+        console.log('🔍 ResetPasswordPage: Found potential token in URL path:', segment.substring(0, 20) + '...');
+        this.accessToken = segment;
+        this.validationErrors.password = ''; // Clear any previous error
+        break;
+      }
+    }
+  }
+
+  private checkRawUrlForToken() {
+    // Check the raw URL for any token-like patterns
+    const fullUrl = window.location.href;
+    console.log('🔍 ResetPasswordPage: Checking raw URL for tokens:', fullUrl);
+    
+    // Look for common token patterns in the URL
+    const tokenPatterns = [
+      /[?&]token=([^&]+)/,
+      /[?&]access_token=([^&]+)/,
+      /[?&]code=([^&]+)/,
+      /[?&]reset_token=([^&]+)/,
+      /#access_token=([^&]+)/,
+      /#token=([^&]+)/
+    ];
+    
+    for (const pattern of tokenPatterns) {
+      const match = fullUrl.match(pattern);
+      if (match && match[1] && !this.accessToken) {
+        console.log('🔍 ResetPasswordPage: Found token in raw URL with pattern:', pattern);
+        this.accessToken = decodeURIComponent(match[1]);
+        this.validationErrors.password = '';
+        break;
+      }
+    }
+  }
+
+  // TEMPORARY: For testing purposes
+  // Remove this method in production
+  setTestToken(token: string) {
+    localStorage.setItem('test_reset_token', token);
+    this.accessToken = token;
+    this.validationErrors.password = '';
+    console.log('🧪 ResetPasswordPage: Test token set:', token.substring(0, 20) + '...');
   }
 
   private checkHashFragment() {
@@ -133,11 +203,34 @@ export class ResetPasswordPage implements OnInit {
       const hashParams = new URLSearchParams(hash.substring(1)); // Remove the # and parse
       const hashToken = hashParams.get('access_token');
       
-      if (hashToken && !this.accessToken) {
+      if (hashToken) {
         console.log('✅ ResetPasswordPage: Found access token in hash fragment');
         this.accessToken = hashToken;
+        
+        // Also extract refresh token if present
+        const refreshToken = hashParams.get('refresh_token');
+        if (refreshToken) {
+          this.refreshToken = refreshToken;
+          console.log('✅ ResetPasswordPage: Found refresh token in hash fragment');
+        }
+        
         this.validationErrors.password = ''; // Clear any previous error
+        return; // Exit early if we found the access token
       }
+      
+      // Also check for other possible token parameter names in hash
+      const possibleTokens = ['code', 'token', 'reset_token', 'auth_token'];
+      for (const param of possibleTokens) {
+        const token = hashParams.get(param);
+        if (token) {
+          console.log(`✅ ResetPasswordPage: Found ${param} in hash fragment`);
+          this.accessToken = token;
+          this.validationErrors.password = ''; // Clear any previous error
+          return;
+        }
+      }
+    } else {
+      console.log('🔍 ResetPasswordPage: No hash fragment found');
     }
   }
 
@@ -171,16 +264,21 @@ export class ResetPasswordPage implements OnInit {
   }
 
   async onSubmit() {
+    console.log('🚀 ResetPasswordPage: Submit button clicked');
     this.validatePassword();
     this.validateConfirmPassword();
 
-    if (!this.canSubmit || this.isLoading) return;
+    if (!this.canSubmit || this.isLoading) {
+      console.log('❌ ResetPasswordPage: Cannot submit - canSubmit:', this.canSubmit, 'isLoading:', this.isLoading);
+      return;
+    }
 
+    console.log('✅ ResetPasswordPage: Validation passed, starting reset process');
     this.isLoading = true;
 
     try {
       // Call AuthService.updatePassword with the access token and new password
-      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password, this.refreshToken);
       
       if (success) {
         // Show success message
@@ -206,7 +304,7 @@ export class ResetPasswordPage implements OnInit {
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           console.log('🔄 ResetPasswordPage: Retrying password update after lock clearance...');
-          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password, this.refreshToken);
           
           if (retrySuccess) {
             await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
@@ -230,6 +328,7 @@ export class ResetPasswordPage implements OnInit {
     } finally {
       // Stop loading regardless of success or failure
       this.isLoading = false;
+      console.log('🏁 ResetPasswordPage: Reset operation completed, loading state cleared');
     }
   }
 

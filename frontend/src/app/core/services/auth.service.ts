@@ -685,27 +685,52 @@ export class AuthService {
    * Reset password using Supabase
    */
   resetPassword(email: string): Promise<{ error: any }> {
-    return this.supabaseService.client.auth.resetPasswordForEmail(email);
+    return this.supabaseService.client.auth.resetPasswordForEmail(email, {
+      redirectTo: 'http://localhost:8100/auth/reset-password'
+    });
   }
 
   /**
    * Update password using Supabase reset token
    */
-  async updatePassword(token: string, newPassword: string): Promise<boolean> {
+  async updatePassword(token: string, newPassword: string, refreshToken?: string): Promise<boolean> {
     try {
       console.log('🔄 AuthService: Starting password update process...');
       
-      // Clear any existing auth state to prevent lock conflicts
-      await this.supabaseService.client.auth.signOut();
+      // Only clear auth state if this is NOT a JWT token (to avoid clearing the session we're about to set)
+      if (!token.startsWith('eyJ')) {
+        // Clear any existing auth state to prevent lock conflicts
+        await this.supabaseService.client.auth.signOut();
+        
+        // Add a small delay to ensure clean state
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       
-      // Add a small delay to ensure clean state
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Check if this is a JWT access token (from hash fragment) or a recovery token
+      let sessionData, sessionError;
       
-      // Exchange the reset token for a session
-      const { data: sessionData, error: sessionError } = await this.supabaseService.client.auth.exchangeCodeForSession(token);
+      if (token.startsWith('eyJ')) {
+        // This is a JWT access token from hash fragment - set the session directly
+        console.log('🔍 AuthService: Detected JWT access token, setting session...');
+        const { data, error } = await this.supabaseService.client.auth.setSession({
+          access_token: token,
+          refresh_token: refreshToken || ''
+        });
+        sessionData = data;
+        sessionError = error;
+      } else {
+        // This is a recovery token - use verifyOtp
+        console.log('🔍 AuthService: Detected recovery token, verifying OTP...');
+        const { data, error } = await this.supabaseService.client.auth.verifyOtp({
+          token_hash: token,
+          type: 'recovery'
+        });
+        sessionData = data;
+        sessionError = error;
+      }
       
       if (sessionError) {
-        console.error('❌ AuthService: Failed to exchange token for session:', sessionError);
+        console.error('❌ AuthService: Failed to verify reset token:', sessionError);
         throw new Error(`Invalid or expired reset token: ${sessionError.message}`);
       }
       
@@ -714,21 +739,23 @@ export class AuthService {
         throw new Error('Failed to establish session from reset token');
       }
       
-      console.log('✅ AuthService: Session established successfully');
+            console.log('✅ AuthService: Session established successfully');
       
-      // Update the user's password
+      // Now update the password - this is required even for JWT tokens from recovery flow
+      console.log('🔄 AuthService: Updating password...');
       const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
         password: newPassword
       });
       
       if (updateError) {
         console.error('❌ AuthService: Failed to update password:', updateError);
-        throw new Error(`Password update failed: ${updateError.message}`);
+        throw new Error(`Failed to update password: ${updateError.message}`);
       }
       
       console.log('✅ AuthService: Password updated successfully');
       
       // Sign out after password update to clear the session
+      console.log('🔄 AuthService: Signing out to complete password reset...');
       await this.supabaseService.client.auth.signOut();
       
       return true;
@@ -747,8 +774,43 @@ export class AuthService {
           // Wait a bit and retry
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          console.log('🔄 AuthService: Retrying password update after lock recovery...');
-          return await this.updatePassword(token, newPassword);
+                              console.log('🔄 AuthService: Retrying password update after lock recovery...');
+                    
+                    // Retry with the appropriate method based on token type
+                    let retrySessionData, retrySessionError;
+                    
+                    if (token.startsWith('eyJ')) {
+                      // JWT token - set session
+                      const { data, error } = await this.supabaseService.client.auth.setSession({
+                        access_token: token,
+                        refresh_token: refreshToken || ''
+                      });
+                      retrySessionData = data;
+                      retrySessionError = error;
+                    } else {
+                      // Recovery token - verify OTP
+                      const { data, error } = await this.supabaseService.client.auth.verifyOtp({
+                        token_hash: token,
+                        type: 'recovery'
+                      });
+                      retrySessionData = data;
+                      retrySessionError = error;
+                    }
+                    
+                    if (retrySessionError) {
+                      throw new Error(`Retry failed: ${retrySessionError.message}`);
+                    }
+                    
+                    const { data: retryUpdateData, error: retryUpdateError } = await this.supabaseService.client.auth.updateUser({
+                      password: newPassword
+                    });
+                    
+                    if (retryUpdateError) {
+                      throw new Error(`Retry password update failed: ${retryUpdateError.message}`);
+                    }
+                    
+                    await this.supabaseService.client.auth.signOut();
+                    return true;
         } catch (retryError) {
           console.error('❌ AuthService: Lock recovery failed:', retryError);
           throw new Error('Authentication lock error. Please try again in a few moments.');
