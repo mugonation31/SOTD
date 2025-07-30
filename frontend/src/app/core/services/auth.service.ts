@@ -691,21 +691,50 @@ export class AuthService {
   }
 
     /**
+   * Set Supabase session from URL fragment tokens
+   */
+  async setSessionFromFragment(): Promise<boolean> {
+    try {
+      console.log('🔍 AuthService: Parsing URL fragment and setting Supabase session...');
+      
+      // Parse the URL fragment to extract tokens
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.slice(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      
+      if (!accessToken || !refreshToken) {
+        console.error('❌ Missing tokens in URL fragment');
+        return false;
+      }
+      
+      console.log('✅ Tokens found in URL fragment, setting Supabase session...');
+      
+      // Set the Supabase session with the tokens from URL fragment
+      const { error } = await this.supabaseService.client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      
+      if (error) {
+        console.error('❌ Failed to set Supabase session:', error);
+        return false;
+      }
+      
+      console.log('✅ Supabase session established successfully');
+      return true;
+    } catch (err) {
+      console.error('❌ Error setting Supabase session:', err);
+      return false;
+    }
+  }
+
+  /**
    * Update password using Supabase reset token
    */
   async updatePasswordWithTokens(newPassword: string): Promise<boolean> {
     try {
-      console.log('🔐 Checking for auto-detected session...');
-      
-      // Check if Supabase has auto-detected the session from URL fragment
-      const { data, error } = await this.supabaseService.client.auth.getSession();
-      
-      if (error || !data.session) {
-        console.error('❌ No session found, user not authenticated:', error);
-        return false;
-      }
-      
-      console.log('✅ Session auto-detected, updating password...');
+      console.log('🔐 Updating password with established session...');
 
       const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
         password: newPassword

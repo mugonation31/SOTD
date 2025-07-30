@@ -141,11 +141,17 @@ export class ResetPasswordPage implements OnInit {
 
   private async checkSupabaseSession() {
     try {
-      console.log('🔍 ResetPasswordPage: Checking for auto-detected Supabase session...');
-      // We'll check the session in the auth service instead
-      console.log('✅ Session check will be handled by auth service');
+      console.log('🔍 ResetPasswordPage: Setting Supabase session from URL fragment...');
+      
+      const success = await this.authService.setSessionFromFragment();
+      
+      if (success) {
+        console.log('✅ Supabase session established successfully');
+      } else {
+        console.error('❌ Failed to establish Supabase session');
+      }
     } catch (err) {
-      console.error('❌ Error checking Supabase session:', err);
+      console.error('❌ Error setting Supabase session:', err);
     }
   }
 
