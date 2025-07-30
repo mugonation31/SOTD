@@ -105,28 +105,22 @@ export class ResetPasswordPage implements OnInit {
     // Extract access token from URL query parameters
     this.route.queryParams.subscribe(params => {
       console.log('📋 ResetPasswordPage: Received query parameters:', params);
-      console.log('🔍 ResetPasswordPage: Query params keys:', Object.keys(params));
-      console.log('🔍 ResetPasswordPage: Query params values:', Object.values(params));
-      
-      // Check for multiple possible parameter names that Supabase might send
-      this.accessToken = params['code'] || 
-                        params['access_token'] || 
-                        params['token'] || 
-                        params['reset_token'] || 
-                        '';
-      
-      console.log('🔍 ResetPasswordPage: Extracted access token:', this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'none');
-      
+
       if (!this.accessToken) {
-        console.error('❌ ResetPasswordPage: No access token found in URL');
-        console.log('🔍 Available query parameters:', params);
-        
-        this.validationErrors.password = 'Invalid reset link. Please request a new password reset.';
-      } else {
-        console.log('✅ ResetPasswordPage: Access token found:', this.accessToken.substring(0, 10) + '...');
+        this.accessToken = params['code'] ||
+                          params['access_token'] ||
+                          params['token'] ||
+                          params['reset_token'] || 
+                          '';
+
+        if (this.accessToken) {
+          console.log('✅ ResetPasswordPage: Access token set from query params');
+          this.validationErrors.password = '';
+        } else {
+          console.error('❌ ResetPasswordPage: No access token found in query params');
+          this.validationErrors.password = 'Invalid reset link. Please request a new password reset.';
+        }
       }
-      
-      console.log('🔍 Reset password page initialized with access token:', this.accessToken ? 'present' : 'missing');
     });
     
     // Also check for token in URL hash fragment (Supabase sometimes sends it there)
@@ -277,8 +271,8 @@ export class ResetPasswordPage implements OnInit {
     this.isLoading = true;
 
     try {
-      // Call AuthService.updatePassword with the access token and new password
-      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+      // Call AuthService.updatePasswordWithTokens with the tokens and new password
+      const success = await this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
       
       if (success) {
         // Show success message
@@ -304,7 +298,7 @@ export class ResetPasswordPage implements OnInit {
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           console.log('🔄 ResetPasswordPage: Retrying password update after lock clearance...');
-          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password);
+          const retrySuccess = await this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
           
           if (retrySuccess) {
             await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');

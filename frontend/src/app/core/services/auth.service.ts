@@ -690,48 +690,41 @@ export class AuthService {
     });
   }
 
-  /**
+    /**
    * Update password using Supabase reset token
    */
-  async updatePassword(token: string, newPassword: string): Promise<boolean> {
+  async updatePasswordWithTokens(newPassword: string, accessToken: string, refreshToken: string): Promise<boolean> {
     console.log('🔄 AuthService: Starting password update process...');
-
-    const url = new URL(window.location.href);
-    const hashParams = new URLSearchParams(url.hash.slice(1));
-    const refreshToken = hashParams.get('refresh_token');
-
-    if (!token || !refreshToken) {
-      throw new Error('Missing tokens in URL. Cannot reset password.');
-    }
 
     try {
       console.log('🔍 AuthService: Setting session with access and refresh token...');
       const { error: sessionError } = await this.supabaseService.client.auth.setSession({
-        access_token: token,
+        access_token: accessToken,
         refresh_token: refreshToken,
       });
 
       if (sessionError) {
-        console.error('❌ Failed to set session:', sessionError.message);
-        throw new Error('Failed to authenticate session.');
+        console.error('❌ AuthService: Failed to set session', sessionError);
+        return false;
       }
 
-      console.log('✅ Supabase session successfully established');
+      console.log('✅ AuthService: Session set, now updating password...');
 
-      const { data, error } = await this.supabaseService.client.auth.updateUser({
+      const { error: updateError } = await this.supabaseService.client.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) {
-        console.error('❌ Supabase updateUser error:', error.message);
-        throw new Error(error.message);
+      if (updateError) {
+        console.error('❌ AuthService: Failed to update password', updateError);
+        return false;
       }
 
-            console.log('✅ Password updated:', data);
+      console.log('🔐 AuthService: Password updated successfully');
       return true;
+
     } catch (err) {
-      console.error('❌ Password reset failed:', err);
-      throw err;
+      console.error('🔥 AuthService: Unexpected error in resetPassword', err);
+      return false;
     }
   }
 }
