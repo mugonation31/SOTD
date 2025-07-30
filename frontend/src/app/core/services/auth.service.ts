@@ -693,33 +693,30 @@ export class AuthService {
     /**
    * Update password using Supabase reset token
    */
-  async updatePasswordWithTokens(newPassword: string, accessToken: string): Promise<boolean> {
+  async updatePasswordWithTokens(newPassword: string): Promise<boolean> {
     try {
-      console.log('🔐 Setting session using access token before updating password...');
-
-      // Ensure session is set before calling updateUser
-      const { error: sessionError } = await this.supabaseService.client.auth.setSession({
-        access_token: accessToken,
-        refresh_token: '' // Required but unused during password reset; send empty string
-      });
-
-      if (sessionError) {
-        console.error('❌ Failed to set session:', sessionError);
+      console.log('🔐 Checking for auto-detected session...');
+      
+      // Check if Supabase has auto-detected the session from URL fragment
+      const { data, error } = await this.supabaseService.client.auth.getSession();
+      
+      if (error || !data.session) {
+        console.error('❌ No session found, user not authenticated:', error);
         return false;
       }
+      
+      console.log('✅ Session auto-detected, updating password...');
 
-      console.log('✅ Session set. Now updating password...');
-
-      const { data, error } = await this.supabaseService.client.auth.updateUser({
+      const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
         password: newPassword
       });
 
-      if (error) {
-        console.error('❌ Error updating password:', error);
+      if (updateError) {
+        console.error('❌ Error updating password:', updateError);
         return false;
       }
 
-      console.log('✅ Password updated successfully:', data);
+      console.log('✅ Password updated successfully:', updateData);
       return true;
 
     } catch (err) {
