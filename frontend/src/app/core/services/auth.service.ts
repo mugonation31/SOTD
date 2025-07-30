@@ -697,37 +697,9 @@ export class AuthService {
     console.log('🔄 AuthService: Starting password update process...');
 
     try {
-      // Check if there's already an active session
-      const { data: currentSession } = await this.supabaseService.client.auth.getSession();
+      // Since recovery links automatically establish a session, try updating password directly first
+      console.log('🔄 AuthService: Attempting password update with existing session...');
       
-      if (currentSession.session) {
-        console.log('✅ AuthService: Session already exists, proceeding with password update...');
-      } else {
-        console.log('🔍 AuthService: Setting session with access and refresh token...');
-        
-        // Add timeout to prevent hanging
-        const sessionPromise = this.supabaseService.client.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session setup timeout')), 10000)
-        );
-        
-        const { error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-
-        if (sessionError) {
-          console.error('❌ AuthService: Failed to set session', sessionError);
-          return false;
-        }
-        
-        console.log('✅ AuthService: Session set successfully');
-      }
-
-      console.log('🔄 AuthService: Updating password...');
-      
-      // Add timeout to prevent hanging on updateUser
       const updatePromise = this.supabaseService.client.auth.updateUser({
         password: newPassword,
       });
@@ -738,8 +710,39 @@ export class AuthService {
       
       const { error: updateError } = await Promise.race([updatePromise, updateTimeoutPromise]) as any;
 
-      if (updateError) {
-        console.error('❌ AuthService: Failed to update password', updateError);
+      if (!updateError) {
+        console.log('🔐 AuthService: Password updated successfully with existing session');
+        return true;
+      }
+
+      // If direct update fails, try setting session first
+      console.log('⚠️ AuthService: Direct update failed, trying to set session first...');
+      
+      const sessionPromise = this.supabaseService.client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      
+      const sessionTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session setup timeout')), 10000)
+      );
+      
+      const { error: sessionError } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as any;
+
+      if (sessionError) {
+        console.error('❌ AuthService: Failed to set session', sessionError);
+        return false;
+      }
+      
+      console.log('✅ AuthService: Session set successfully, now updating password...');
+      
+      // Try update again after setting session
+      const { error: retryUpdateError } = await this.supabaseService.client.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (retryUpdateError) {
+        console.error('❌ AuthService: Failed to update password after session setup', retryUpdateError);
         return false;
       }
 
