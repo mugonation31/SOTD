@@ -697,26 +697,15 @@ export class AuthService {
     console.log('🔄 AuthService: Starting password update process...');
 
     try {
-      // Since recovery links automatically establish a session, try updating password directly first
-      console.log('🔄 AuthService: Attempting password update with existing session...');
+      // Clear any existing session to start fresh
+      console.log('🧹 AuthService: Clearing existing session...');
+      await this.supabaseService.client.auth.signOut();
       
-      const updatePromise = this.supabaseService.client.auth.updateUser({
-        password: newPassword,
-      });
+      // Wait a moment for cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const updateTimeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Password update timeout')), 10000)
-      );
-      
-      const { error: updateError } = await Promise.race([updatePromise, updateTimeoutPromise]) as any;
-
-      if (!updateError) {
-        console.log('🔐 AuthService: Password updated successfully with existing session');
-        return true;
-      }
-
-      // If direct update fails, try setting session first
-      console.log('⚠️ AuthService: Direct update failed, trying to set session first...');
+      // Set the session with the recovery tokens
+      console.log('🔍 AuthService: Setting session with recovery tokens...');
       
       const sessionPromise = this.supabaseService.client.auth.setSession({
         access_token: accessToken,
@@ -736,17 +725,27 @@ export class AuthService {
       
       console.log('✅ AuthService: Session set successfully, now updating password...');
       
-      // Try update again after setting session
-      const { error: retryUpdateError } = await this.supabaseService.client.auth.updateUser({
+      // Update the password
+      const updatePromise = this.supabaseService.client.auth.updateUser({
         password: newPassword,
       });
+      
+      const updateTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password update timeout')), 10000)
+      );
+      
+      const { error: updateError } = await Promise.race([updatePromise, updateTimeoutPromise]) as any;
 
-      if (retryUpdateError) {
-        console.error('❌ AuthService: Failed to update password after session setup', retryUpdateError);
+      if (updateError) {
+        console.error('❌ AuthService: Failed to update password', updateError);
         return false;
       }
 
       console.log('🔐 AuthService: Password updated successfully');
+      
+      // Sign out to complete the process
+      await this.supabaseService.client.auth.signOut();
+      
       return true;
 
     } catch (err) {
