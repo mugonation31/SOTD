@@ -693,26 +693,37 @@ export class AuthService {
     /**
    * Update password using Supabase reset token
    */
-  async updatePasswordWithTokens(newPassword: string, accessToken: string, refreshToken: string): Promise<boolean> {
-    console.log('🔄 AuthService: Starting password update process...');
-
+  async updatePasswordWithTokens(newPassword: string, accessToken: string): Promise<boolean> {
     try {
-      // For now, simulate a successful password reset
-      // This will allow the UI to work while we debug the Supabase integration
-      console.log('🔍 AuthService: Simulating password reset for development...');
-      
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('🔐 AuthService: Password updated successfully (simulated)');
-      
-      // Store the new password for testing purposes
-      localStorage.setItem('mock_reset_password', newPassword);
-      
+      console.log('🔐 Setting session using access token before updating password...');
+
+      // Ensure session is set before calling updateUser
+      const { error: sessionError } = await this.supabaseService.client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: '' // Required but unused during password reset; send empty string
+      });
+
+      if (sessionError) {
+        console.error('❌ Failed to set session:', sessionError);
+        return false;
+      }
+
+      console.log('✅ Session set. Now updating password...');
+
+      const { data, error } = await this.supabaseService.client.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        console.error('❌ Error updating password:', error);
+        return false;
+      }
+
+      console.log('✅ Password updated successfully:', data);
       return true;
 
     } catch (err) {
-      console.error('🔥 AuthService: Unexpected error in resetPassword', err);
+      console.error('🔥 Exception during password reset:', err);
       return false;
     }
   }

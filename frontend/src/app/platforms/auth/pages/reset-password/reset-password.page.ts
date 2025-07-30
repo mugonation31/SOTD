@@ -274,9 +274,9 @@ export class ResetPasswordPage implements OnInit {
     this.authService.enableSupabaseAuth();
 
     try {
-      // Call AuthService.updatePasswordWithTokens with the tokens and new password
+      // Call AuthService.updatePasswordWithTokens with the new password and access token
       // Add timeout to prevent hanging
-      const updatePromise = this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
+      const updatePromise = this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken);
       const timeoutPromise = new Promise<boolean>((_, reject) => 
         setTimeout(() => reject(new Error('Password reset timeout')), 12000)
       );
@@ -307,7 +307,7 @@ export class ResetPasswordPage implements OnInit {
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           console.log('🔄 ResetPasswordPage: Retrying password update after lock clearance...');
-          const retrySuccess = await this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
+          const retrySuccess = await this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken);
           
           if (retrySuccess) {
             await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
