@@ -270,6 +270,9 @@ export class ResetPasswordPage implements OnInit {
     console.log('✅ ResetPasswordPage: Validation passed, starting reset process');
     this.isLoading = true;
 
+    // Enable Supabase auth for password reset
+    this.authService.enableSupabaseAuth();
+
     try {
       // Call AuthService.updatePasswordWithTokens with the tokens and new password
       // Add timeout to prevent hanging
