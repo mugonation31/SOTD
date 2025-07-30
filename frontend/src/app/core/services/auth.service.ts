@@ -709,22 +709,53 @@ export class AuthService {
       }
       
       console.log('✅ Tokens found in URL fragment, setting Supabase session...');
+      console.log('🔍 Token details:', {
+        accessTokenLength: accessToken.length,
+        refreshTokenLength: refreshToken.length,
+        accessTokenStart: accessToken.substring(0, 20) + '...',
+        refreshTokenStart: refreshToken.substring(0, 20) + '...'
+      });
+      
+      console.log('🔍 About to call setSession with tokens...');
       
       // Set the Supabase session with the tokens from URL fragment
-      const { error } = await this.supabaseService.client.auth.setSession({
+      console.log('🔍 Calling setSession...');
+      const { data, error } = await this.supabaseService.client.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
+      console.log('🔍 setSession completed, checking for errors...');
       
       if (error) {
         console.error('❌ Failed to set Supabase session:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
         return false;
       }
       
       console.log('✅ Supabase session established successfully');
+      console.log('🔍 Session data:', {
+        user: data.session?.user?.email,
+        expiresAt: data.session?.expires_at,
+        accessToken: data.session?.access_token ? 'Present' : 'Missing'
+      });
+      
+      // Skip session verification to avoid potential hang
+      console.log('✅ Session set successfully, skipping verification');
       return true;
+      
     } catch (err) {
       console.error('❌ Error setting Supabase session:', err);
+      if (err instanceof Error) {
+        console.error('❌ Error details:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+      }
       return false;
     }
   }
@@ -734,21 +765,45 @@ export class AuthService {
    */
   async updatePasswordWithTokens(newPassword: string): Promise<boolean> {
     try {
-      console.log('🔐 Updating password with established session...');
-
-      const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
-        password: newPassword
-      });
-
-      if (updateError) {
-        console.error('❌ Error updating password:', updateError);
+      // Extract access token from URL fragment
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.slice(1));
+      const accessToken = hashParams.get('access_token');
+      
+      if (!accessToken) {
+        console.error('❌ No access token found in URL fragment');
         return false;
       }
 
-      console.log('✅ Password updated successfully:', updateData);
+      // Use direct API call to update password
+      const response = await fetch(`${environment.supabase.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': environment.supabase.key
+        },
+        body: JSON.stringify({
+          password: newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Password update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        return false;
+      }
+
+      console.log('✅ Password updated successfully');
       return true;
 
     } catch (err) {
+      console.error('🔥 Exception during password reset:', err);
+      
       // Handle NavigatorLockAcquireTimeoutError gracefully - it's usually not fatal
       if (err instanceof Error && err.message.includes('NavigatorLockAcquireTimeoutError')) {
         console.log('⚠️ NavigatorLockAcquireTimeoutError detected - this is usually not fatal');
@@ -756,7 +811,15 @@ export class AuthService {
         return true;
       }
       
-      console.error('🔥 Exception during password reset:', err);
+      // Handle other specific errors
+      if (err instanceof Error) {
+        console.error('🔥 Error details:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+      }
+      
       return false;
     }
   }
