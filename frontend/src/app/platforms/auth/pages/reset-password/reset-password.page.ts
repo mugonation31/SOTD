@@ -278,7 +278,7 @@ export class ResetPasswordPage implements OnInit {
 
     try {
       // Call AuthService.updatePassword with the access token and new password
-      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password, this.refreshToken);
+      const success = await this.authService.updatePassword(this.accessToken, this.resetData.password);
       
       if (success) {
         // Show success message
@@ -304,7 +304,7 @@ export class ResetPasswordPage implements OnInit {
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           console.log('🔄 ResetPasswordPage: Retrying password update after lock clearance...');
-          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password, this.refreshToken);
+          const retrySuccess = await this.authService.updatePassword(this.accessToken, this.resetData.password);
           
           if (retrySuccess) {
             await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');

@@ -693,157 +693,45 @@ export class AuthService {
   /**
    * Update password using Supabase reset token
    */
-  async updatePassword(token: string, newPassword: string, refreshToken?: string): Promise<boolean> {
+  async updatePassword(token: string, newPassword: string): Promise<boolean> {
+    console.log('🔄 AuthService: Starting password update process...');
+
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.slice(1));
+    const refreshToken = hashParams.get('refresh_token');
+
+    if (!token || !refreshToken) {
+      throw new Error('Missing tokens in URL. Cannot reset password.');
+    }
+
     try {
-      console.log('🔄 AuthService: Starting password update process...');
-      
-      // Check if there's already an active session (common with recovery links)
-      // Add timeout to prevent hanging
-      const sessionPromise = this.supabaseService.client.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session check timeout')), 5000)
-      );
-      
-      let currentSession;
-      try {
-        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        currentSession = data;
-      } catch (error) {
-        console.log('⚠️ AuthService: Session check failed or timed out, proceeding without session check');
-        currentSession = { session: null };
-      }
-      
-      if (currentSession.session && token.startsWith('eyJ')) {
-        // Session already exists from recovery link, just update password
-        console.log('✅ AuthService: Session already established from recovery link, proceeding with password update...');
-      } else {
-        // Need to establish session first
-        console.log('🔍 AuthService: No active session, establishing session...');
-        
-        // Only clear auth state if this is NOT a JWT token
-        if (!token.startsWith('eyJ')) {
-          await this.supabaseService.client.auth.signOut();
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Check if this is a JWT access token or a recovery token
-        let sessionData, sessionError;
-        
-        if (token.startsWith('eyJ')) {
-          console.log('🔍 AuthService: Setting session with JWT token...');
-          const { data, error } = await this.supabaseService.client.auth.setSession({
-            access_token: token,
-            refresh_token: refreshToken || ''
-          });
-          sessionData = data;
-          sessionError = error;
-        } else {
-          console.log('🔍 AuthService: Verifying OTP with recovery token...');
-          const { data, error } = await this.supabaseService.client.auth.verifyOtp({
-            token_hash: token,
-            type: 'recovery'
-          });
-          sessionData = data;
-          sessionError = error;
-        }
-        
-        if (sessionError) {
-          console.error('❌ AuthService: Failed to verify reset token:', sessionError);
-          throw new Error(`Invalid or expired reset token: ${sessionError.message}`);
-        }
-        
-        if (!sessionData.session) {
-          console.error('❌ AuthService: No session established from token');
-          throw new Error('Failed to establish session from reset token');
-        }
-      }
-      
-            console.log('✅ AuthService: Session established successfully');
-      
-      // Now update the password - this is required even for JWT tokens from recovery flow
-      console.log('🔄 AuthService: Updating password...');
-      const { data: updateData, error: updateError } = await this.supabaseService.client.auth.updateUser({
-        password: newPassword
+      console.log('🔍 AuthService: Setting session with access and refresh token...');
+      const { error: sessionError } = await this.supabaseService.client.auth.setSession({
+        access_token: token,
+        refresh_token: refreshToken,
       });
-      
-      if (updateError) {
-        console.error('❌ AuthService: Failed to update password:', updateError);
-        throw new Error(`Failed to update password: ${updateError.message}`);
+
+      if (sessionError) {
+        console.error('❌ Failed to set session:', sessionError.message);
+        throw new Error('Failed to authenticate session.');
       }
-      
-      console.log('✅ AuthService: Password updated successfully');
-      
-      // Sign out after password update to clear the session
-      console.log('🔄 AuthService: Signing out to complete password reset...');
-      await this.supabaseService.client.auth.signOut();
-      
+
+      console.log('✅ Supabase session successfully established');
+
+      const { data, error } = await this.supabaseService.client.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        console.error('❌ Supabase updateUser error:', error.message);
+        throw new Error(error.message);
+      }
+
+            console.log('✅ Password updated:', data);
       return true;
-    } catch (error) {
-      console.error('❌ AuthService: Password update process failed:', error);
-      
-      // If it's a lock error, try to clear the state and retry once
-      if (error instanceof Error && error.message.includes('NavigatorLockAcquireTimeoutError')) {
-        console.log('🔄 AuthService: Detected lock error, attempting recovery...');
-        try {
-          // Clear all auth state
-          await this.supabaseService.client.auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          
-          // Wait a bit and retry
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-                              console.log('🔄 AuthService: Retrying password update after lock recovery...');
-                    
-                    // Check if session exists before trying to establish one
-                    const { data: retryCurrentSession } = await this.supabaseService.client.auth.getSession();
-                    
-                    if (!retryCurrentSession.session) {
-                      // Need to establish session
-                      let retrySessionData, retrySessionError;
-                      
-                      if (token.startsWith('eyJ')) {
-                        // JWT token - set session
-                        const { data, error } = await this.supabaseService.client.auth.setSession({
-                          access_token: token,
-                          refresh_token: refreshToken || ''
-                        });
-                        retrySessionData = data;
-                        retrySessionError = error;
-                      } else {
-                        // Recovery token - verify OTP
-                        const { data, error } = await this.supabaseService.client.auth.verifyOtp({
-                          token_hash: token,
-                          type: 'recovery'
-                        });
-                        retrySessionData = data;
-                        retrySessionError = error;
-                      }
-                      
-                      if (retrySessionError) {
-                        throw new Error(`Retry failed: ${retrySessionError.message}`);
-                      }
-                    } else {
-                      console.log('✅ AuthService: Session exists during retry, proceeding with password update...');
-                    }
-                    
-                    const { data: retryUpdateData, error: retryUpdateError } = await this.supabaseService.client.auth.updateUser({
-                      password: newPassword
-                    });
-                    
-                    if (retryUpdateError) {
-                      throw new Error(`Retry password update failed: ${retryUpdateError.message}`);
-                    }
-                    
-                    await this.supabaseService.client.auth.signOut();
-                    return true;
-        } catch (retryError) {
-          console.error('❌ AuthService: Lock recovery failed:', retryError);
-          throw new Error('Authentication lock error. Please try again in a few moments.');
-        }
-      }
-      
-      throw error;
+    } catch (err) {
+      console.error('❌ Password reset failed:', err);
+      throw err;
     }
   }
 }
