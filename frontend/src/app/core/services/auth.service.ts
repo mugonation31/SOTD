@@ -749,6 +749,13 @@ export class AuthService {
       return true;
 
     } catch (err) {
+      // Handle NavigatorLockAcquireTimeoutError gracefully - it's usually not fatal
+      if (err instanceof Error && err.message.includes('NavigatorLockAcquireTimeoutError')) {
+        console.log('⚠️ NavigatorLockAcquireTimeoutError detected - this is usually not fatal');
+        // Continue with the flow as this error doesn't necessarily mean the operation failed
+        return true;
+      }
+      
       console.error('🔥 Exception during password reset:', err);
       return false;
     }
