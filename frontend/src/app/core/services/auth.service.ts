@@ -697,22 +697,46 @@ export class AuthService {
     console.log('🔄 AuthService: Starting password update process...');
 
     try {
-      console.log('🔍 AuthService: Setting session with access and refresh token...');
-      const { error: sessionError } = await this.supabaseService.client.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+      // Check if there's already an active session
+      const { data: currentSession } = await this.supabaseService.client.auth.getSession();
+      
+      if (currentSession.session) {
+        console.log('✅ AuthService: Session already exists, proceeding with password update...');
+      } else {
+        console.log('🔍 AuthService: Setting session with access and refresh token...');
+        
+        // Add timeout to prevent hanging
+        const sessionPromise = this.supabaseService.client.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session setup timeout')), 10000)
+        );
+        
+        const { error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
 
-      if (sessionError) {
-        console.error('❌ AuthService: Failed to set session', sessionError);
-        return false;
+        if (sessionError) {
+          console.error('❌ AuthService: Failed to set session', sessionError);
+          return false;
+        }
+        
+        console.log('✅ AuthService: Session set successfully');
       }
 
-      console.log('✅ AuthService: Session set, now updating password...');
-
-      const { error: updateError } = await this.supabaseService.client.auth.updateUser({
+      console.log('🔄 AuthService: Updating password...');
+      
+      // Add timeout to prevent hanging on updateUser
+      const updatePromise = this.supabaseService.client.auth.updateUser({
         password: newPassword,
       });
+      
+      const updateTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password update timeout')), 10000)
+      );
+      
+      const { error: updateError } = await Promise.race([updatePromise, updateTimeoutPromise]) as any;
 
       if (updateError) {
         console.error('❌ AuthService: Failed to update password', updateError);

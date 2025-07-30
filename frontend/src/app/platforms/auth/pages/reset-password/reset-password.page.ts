@@ -272,7 +272,13 @@ export class ResetPasswordPage implements OnInit {
 
     try {
       // Call AuthService.updatePasswordWithTokens with the tokens and new password
-      const success = await this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
+      // Add timeout to prevent hanging
+      const updatePromise = this.authService.updatePasswordWithTokens(this.resetData.password, this.accessToken, this.refreshToken);
+      const timeoutPromise = new Promise<boolean>((_, reject) => 
+        setTimeout(() => reject(new Error('Password reset timeout')), 15000)
+      );
+      
+      const success = await Promise.race([updatePromise, timeoutPromise]);
       
       if (success) {
         // Show success message
