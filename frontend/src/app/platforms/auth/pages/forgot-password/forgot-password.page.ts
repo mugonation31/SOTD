@@ -48,6 +48,7 @@ import { footballOutline } from 'ionicons/icons';
 export class ForgotPasswordPage {
   email = '';
   validationError = '';
+  private validationTimeout: any;
 
   get canSubmit(): boolean {
     return Boolean(this.email && !this.validationError);
@@ -60,7 +61,8 @@ export class ForgotPasswordPage {
   validateEmail() {
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
 
-    if (!this.email) {
+    // Clear previous error when user starts typing
+    if (!this.email || this.email.trim() === '') {
       this.validationError = 'Email is required';
     } else if (!emailPattern.test(this.email)) {
       this.validationError = 'Please enter a valid email address';
@@ -69,12 +71,33 @@ export class ForgotPasswordPage {
     }
   }
 
+  onEmailInput() {
+    // Trigger validation on every input change with minimal delay for better UX
+    // Clear any existing timeout to prevent multiple validations
+    if (this.validationTimeout) {
+      clearTimeout(this.validationTimeout);
+    }
+    this.validationTimeout = setTimeout(() => {
+      this.validateEmail();
+    }, 10);
+  }
+
+  onEmailBlur() {
+    // Trigger validation when user clicks outside the field
+    this.validateEmail();
+  }
+
   async onSubmit() {
+    // Validate email before submission
     this.validateEmail();
 
-    if (!this.canSubmit) return;
+    if (!this.canSubmit) {
+      console.log('Cannot submit - validation failed');
+      return;
+    }
 
     try {
+      console.log('Submitting password reset request for:', this.email);
       const { error } = await this.authService.resetPassword(this.email);
       if (error) {
         this.validationError = 'Failed to send reset email. Please try again.';

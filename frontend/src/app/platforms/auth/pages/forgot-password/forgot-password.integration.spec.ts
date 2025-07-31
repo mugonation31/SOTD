@@ -54,8 +54,8 @@ describe('ForgotPasswordPage Integration Tests', () => {
       component.validateEmail();
       fixture.detectChanges();
       
-      const errorNote = compiled.querySelector('ion-note');
-      expect(errorNote.textContent).toContain('Email is required');
+      const errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Email is required');
     });
 
     it('should show validation error for invalid email format', () => {
@@ -65,8 +65,8 @@ describe('ForgotPasswordPage Integration Tests', () => {
       component.validateEmail();
       fixture.detectChanges();
       
-      const errorNote = compiled.querySelector('ion-note');
-      expect(errorNote.textContent).toContain('Please enter a valid email address');
+      const errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Please enter a valid email address');
     });
 
     it('should clear validation error for valid email', () => {
@@ -106,6 +106,78 @@ describe('ForgotPasswordPage Integration Tests', () => {
       
       const submitButton = compiled.querySelector('ion-button[type="submit"]');
       expect(submitButton.disabled).toBe(false);
+    });
+
+    it('should show real-time validation feedback', () => {
+      const compiled = fixture.nativeElement;
+      
+      // Start with empty email
+      component.email = '';
+      component.validateEmail(); // Call directly to avoid delay
+      fixture.detectChanges();
+      
+      let errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Email is required');
+      
+      // Type invalid email
+      component.email = 'invalid';
+      component.validateEmail(); // Call directly to avoid delay
+      fixture.detectChanges();
+      
+      errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Please enter a valid email address');
+      
+      // Type valid email
+      component.email = 'test@example.com';
+      component.validateEmail(); // Call directly to avoid delay
+      fixture.detectChanges();
+      
+      errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage).toBeFalsy();
+    });
+
+    it('should trigger validation on blur event', () => {
+      const compiled = fixture.nativeElement;
+      
+      // Set invalid email and trigger blur
+      component.email = 'invalid';
+      component.onEmailBlur();
+      fixture.detectChanges();
+      
+      const errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Please enter a valid email address');
+    });
+
+    it('should display error messages with correct styling', () => {
+      const compiled = fixture.nativeElement;
+      
+      component.email = 'invalid';
+      component.validateEmail();
+      fixture.detectChanges();
+      
+      const errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage).toBeTruthy();
+      expect(errorMessage.classList.contains('error-message')).toBe(true);
+      expect(errorMessage.textContent).toContain('Please enter a valid email address');
+    });
+
+    it('should handle rapid validation state changes', () => {
+      const compiled = fixture.nativeElement;
+      
+      // Rapid state changes
+      component.email = '';
+      component.validateEmail(); // Call directly to avoid delay
+      fixture.detectChanges();
+      
+      let errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage.textContent).toContain('Email is required');
+      
+      component.email = 'test@example.com';
+      component.validateEmail(); // Call directly to avoid delay
+      fixture.detectChanges();
+      
+      errorMessage = compiled.querySelector('.error-message');
+      expect(errorMessage).toBeFalsy();
     });
   });
 

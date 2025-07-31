@@ -99,6 +99,74 @@ describe('ForgotPasswordPage', () => {
     });
   });
 
+  describe('Real-time Validation Behavior', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should trigger validation on input with minimal delay', () => {
+      const validateEmailSpy = jest.spyOn(component, 'validateEmail');
+      
+      component.onEmailInput();
+      
+      expect(validateEmailSpy).not.toHaveBeenCalled();
+      
+      jest.advanceTimersByTime(10);
+      expect(validateEmailSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should trigger validation immediately on blur', () => {
+      const validateEmailSpy = jest.spyOn(component, 'validateEmail');
+      
+      component.onEmailBlur();
+      
+      expect(validateEmailSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update validation state in real-time during typing', () => {
+      // Start with empty email
+      component.email = '';
+      component.onEmailInput();
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('Email is required');
+      expect(component.canSubmit).toBe(false);
+
+      // Type invalid email
+      component.email = 'invalid';
+      component.onEmailInput();
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('Please enter a valid email address');
+      expect(component.canSubmit).toBe(false);
+
+      // Type valid email
+      component.email = 'test@example.com';
+      component.onEmailInput();
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('');
+      expect(component.canSubmit).toBe(true);
+    });
+
+    it('should handle rapid email changes with proper validation', () => {
+      const validateEmailSpy = jest.spyOn(component, 'validateEmail');
+      
+      // Rapid changes - each call should trigger a new timeout
+      component.email = 'a';
+      component.onEmailInput();
+      component.email = 'ab';
+      component.onEmailInput();
+      component.email = 'abc';
+      component.onEmailInput();
+      
+      // All timeouts should be called, but only the last one should execute
+      jest.advanceTimersByTime(10);
+      expect(validateEmailSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Form Submission', () => {
     beforeEach(() => {
       component.email = ForgotPasswordTestUtils.createValidEmail();
@@ -230,6 +298,68 @@ describe('ForgotPasswordPage', () => {
       await component.onSubmit();
 
       expect(component.validationError).toBe('Failed to send reset email. Please try again.');
+    });
+  });
+
+  describe('UI Responsiveness and Event Handling', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should handle input events correctly', () => {
+      const onEmailInputSpy = jest.spyOn(component, 'onEmailInput');
+      const onEmailBlurSpy = jest.spyOn(component, 'onEmailBlur');
+      
+      // Simulate input event
+      component.onEmailInput();
+      expect(onEmailInputSpy).toHaveBeenCalledTimes(1);
+      
+      // Simulate blur event
+      component.onEmailBlur();
+      expect(onEmailBlurSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should maintain consistent state during rapid interactions', () => {
+      // Rapid input changes
+      component.email = 'a';
+      component.onEmailInput();
+      component.email = 'ab';
+      component.onEmailInput();
+      component.email = 'abc';
+      component.onEmailInput();
+      
+      // Final state should be consistent
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('Please enter a valid email address');
+      expect(component.canSubmit).toBe(false);
+    });
+
+    it('should handle edge cases in validation timing', () => {
+      // Test with empty string
+      component.email = '';
+      component.onEmailInput();
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('Email is required');
+      
+      // Test with whitespace
+      component.email = '   ';
+      component.onEmailInput();
+      jest.advanceTimersByTime(10);
+      expect(component.validationError).toBe('Email is required');
+    });
+
+    it('should validate immediately on blur without delay', () => {
+      const validateEmailSpy = jest.spyOn(component, 'validateEmail');
+      
+      component.email = 'invalid';
+      component.onEmailBlur();
+      
+      expect(validateEmailSpy).toHaveBeenCalledTimes(1);
+      expect(component.validationError).toBe('Please enter a valid email address');
     });
   });
 
