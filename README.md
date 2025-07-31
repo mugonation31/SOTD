@@ -10,6 +10,7 @@ MVP (Minimum Viable Product) Features:
 - [x] Session management and security
 - [x] User profile management
 - [x] Password management and security questions
+- [x] **Password reset functionality with comprehensive test coverage (42/42 passing tests)**
 - [x] Welcome page with user journey selection [[memory:603137]]
 
 ### 2. Super Admin Features (UI Complete)
@@ -46,6 +47,13 @@ MVP (Minimum Viable Product) Features:
 - [x] Error handling and toast notifications
 - [x] Storage services and state management
 - [x] Reusable components and shared modules
+
+### 6. Testing Infrastructure
+- [x] **Comprehensive test suite for reset-password functionality**
+- [x] **Jest configuration optimized for Angular/Ionic testing**
+- [x] **Unit tests, integration tests, and service tests**
+- [x] **Mock services and test utilities**
+- [x] **DOM environment configuration for component testing**
 
 ## 🔄 IN PROGRESS - Backend Integration Needed
 
@@ -202,6 +210,24 @@ MVP (Minimum Viable Product) Features:
 **State Management:** Services with RxJS observables
 **Security:** JWT tokens, role-based guards, encrypted storage
 **Responsive Design:** Mobile-first approach with web compatibility
+**Testing:** Jest + Angular Testing Utilities with comprehensive coverage
 
 **Current Status:** Frontend complete with mock data, ready for backend integration
 **Next Priority:** Backend API development and database implementation
+
+## 🚨 Development Rules
+
+### Test Stability Rule
+**NEVER make changes to tests once they are written and passing.** Tests serve as a contract for expected behavior. If functionality needs to change, update the implementation to match the existing test expectations, not the other way around. This ensures:
+- Consistent behavior across the application
+- Reliable regression testing
+- Clear documentation of expected functionality
+- Stable development workflow
+
+### Password Reset Implementation Details
+The reset password functionality includes:
+- **Token Extraction:** Multi-source token retrieval (URL hash fragment, localStorage, sessionStorage)
+- **Direct API Integration:** Uses fetch API directly to Supabase Auth endpoints for reliability
+- **Comprehensive Testing:** 42 tests covering unit, integration, and service scenarios
+- **Error Handling:** Robust error handling with user-friendly messages
+- **Security:** Proper token cleanup and session management
