@@ -115,6 +115,8 @@ export class ResetPasswordPage implements OnInit {
 
         if (this.accessToken) {
           console.log('✅ ResetPasswordPage: Access token set from query params');
+          // Store token in localStorage for service access
+          localStorage.setItem('current_reset_token', this.accessToken);
           this.validationErrors.password = '';
         } else {
           console.error('❌ ResetPasswordPage: No access token found in query params');
@@ -165,6 +167,8 @@ export class ResetPasswordPage implements OnInit {
       if (segment.length > 50 && !this.accessToken) {
         console.log('🔍 ResetPasswordPage: Found potential token in URL path:', segment.substring(0, 20) + '...');
         this.accessToken = segment;
+        // Store token in localStorage for service access
+        localStorage.setItem('current_reset_token', segment);
         this.validationErrors.password = ''; // Clear any previous error
         break;
       }
@@ -191,6 +195,8 @@ export class ResetPasswordPage implements OnInit {
       if (match && match[1] && !this.accessToken) {
         console.log('🔍 ResetPasswordPage: Found token in raw URL with pattern:', pattern);
         this.accessToken = decodeURIComponent(match[1]);
+        // Store token in localStorage for service access
+        localStorage.setItem('current_reset_token', decodeURIComponent(match[1]));
         this.validationErrors.password = '';
         break;
       }
@@ -220,6 +226,9 @@ export class ResetPasswordPage implements OnInit {
         console.log('✅ ResetPasswordPage: Found access token in hash fragment');
         this.accessToken = hashToken;
         
+        // Store token in localStorage for service access
+        localStorage.setItem('current_reset_token', hashToken);
+        
         // Also extract refresh token if present
         const refreshToken = hashParams.get('refresh_token');
         if (refreshToken) {
@@ -236,10 +245,12 @@ export class ResetPasswordPage implements OnInit {
       for (const param of possibleTokens) {
         const token = hashParams.get(param);
         if (token) {
-          console.log(`✅ ResetPasswordPage: Found ${param} in hash fragment`);
-          this.accessToken = token;
-          this.validationErrors.password = ''; // Clear any previous error
-          return;
+                  console.log(`✅ ResetPasswordPage: Found ${param} in hash fragment`);
+        this.accessToken = token;
+        // Store token in localStorage for service access
+        localStorage.setItem('current_reset_token', token);
+        this.validationErrors.password = ''; // Clear any previous error
+        return;
         }
       }
     } else {
@@ -297,6 +308,9 @@ export class ResetPasswordPage implements OnInit {
       const success = await this.authService.updatePasswordWithTokens(this.resetData.password);
       
       if (success) {
+        // Clean up stored token
+        localStorage.removeItem('current_reset_token');
+        
         // Show success message
         await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
         
@@ -307,6 +321,9 @@ export class ResetPasswordPage implements OnInit {
       }
     } catch (error) {
       console.error('Password reset error:', error);
+      
+      // Clean up stored token on error
+      localStorage.removeItem('current_reset_token');
       
       // Show error message
       const errorMessage = (error as any)?.message || 'Failed to reset password. Please try again.';

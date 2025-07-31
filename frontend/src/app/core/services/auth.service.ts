@@ -765,15 +765,30 @@ export class AuthService {
    */
   async updatePasswordWithTokens(newPassword: string): Promise<boolean> {
     try {
-      // Extract access token from URL fragment
+      // Try multiple sources for the access token
+      let accessToken = '';
+      
+      // First, try to get from URL fragment
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.slice(1));
-      const accessToken = hashParams.get('access_token');
+      accessToken = hashParams.get('access_token') || '';
+      
+      // If not found in URL, try to get from localStorage (component might have stored it)
+      if (!accessToken) {
+        accessToken = localStorage.getItem('current_reset_token') || '';
+      }
+      
+      // If still not found, try to get from session storage
+      if (!accessToken) {
+        accessToken = sessionStorage.getItem('current_reset_token') || '';
+      }
       
       if (!accessToken) {
-        console.error('❌ No access token found in URL fragment');
+        console.error('❌ No access token found in URL fragment, localStorage, or sessionStorage');
         return false;
       }
+
+      console.log('🔍 Using direct API call with access token...');
 
       // Use direct API call to update password
       const response = await fetch(`${environment.supabase.url}/auth/v1/user`, {

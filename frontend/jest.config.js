@@ -2,6 +2,11 @@ module.exports = {
     preset: 'jest-preset-angular',
     setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
     testEnvironment: 'jsdom',
+    testEnvironmentOptions: {
+      customExportConditions: ['node', 'node-addons'],
+    },
+
+
     
     // Module name mapping for absolute imports and Ionic/Angular modules
   moduleNameMapper: {
@@ -19,8 +24,9 @@ module.exports = {
         'jest-preset-angular',
         {
           tsconfig: 'tsconfig.spec.json',
-        stringifyContentPathRegex: '\\.(html|svg)$',
-        useESM: true
+          stringifyContentPathRegex: '\\.(html|svg)$',
+          useESM: true,
+          isolatedModules: false
         }
       ]
     },
@@ -32,6 +38,13 @@ module.exports = {
     testMatch: [
       '<rootDir>/src/**/__tests__/**/*.(ts|js)',
       '<rootDir>/src/**/*.(test|spec).(ts|js)'
+    ],
+    
+    // Ignore patterns
+    testPathIgnorePatterns: [
+      '<rootDir>/node_modules/',
+      '<rootDir>/dist/',
+      '<rootDir>/e2e/'
     ],
     
     // Coverage configuration
@@ -46,12 +59,7 @@ module.exports = {
     coverageDirectory: 'coverage',
     coverageReporters: ['html', 'text-summary', 'lcov'],
     
-    // Ignore patterns
-    testPathIgnorePatterns: [
-      '<rootDir>/node_modules/',
-      '<rootDir>/dist/',
-      '<rootDir>/e2e/'
-    ],
+
     
   // Setup for Ionic/Angular testing - include Supabase and other ESM modules
     transformIgnorePatterns: [
