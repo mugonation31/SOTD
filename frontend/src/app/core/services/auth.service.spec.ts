@@ -236,6 +236,130 @@ describe('AuthService', () => {
     });
   });
 
+  describe('resetPassword', () => {
+    beforeEach(() => {
+      // Mock Supabase client
+      mockSupabaseService.client = {
+        auth: {
+          resetPasswordForEmail: jest.fn()
+        }
+      };
+    });
+
+    it('should successfully send reset password email', async () => {
+      const testEmail = 'test@example.com';
+      
+      // Mock successful response
+      mockSupabaseService.client.auth.resetPasswordForEmail.mockResolvedValue({
+        data: {},
+        error: null
+      });
+
+      const result = await service.resetPassword(testEmail);
+
+      expect(mockSupabaseService.client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+        testEmail,
+        {
+          redirectTo: 'http://localhost:8100/auth/reset-password'
+        }
+      );
+      expect(result.error).toBe(null);
+    });
+
+    it('should handle reset password failure', async () => {
+      const testEmail = 'nonexistent@example.com';
+      const errorMessage = 'User not found';
+      
+      // Mock error response
+      mockSupabaseService.client.auth.resetPasswordForEmail.mockResolvedValue({
+        data: null,
+        error: {
+          message: errorMessage,
+          status: 404
+        }
+      });
+
+      const result = await service.resetPassword(testEmail);
+
+      expect(mockSupabaseService.client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+        testEmail,
+        {
+          redirectTo: 'http://localhost:8100/auth/reset-password'
+        }
+      );
+      expect(result.error).toEqual({
+        message: errorMessage,
+        status: 404
+      });
+    });
+
+    it('should handle network errors', async () => {
+      const testEmail = 'test@example.com';
+      
+      // Mock network error
+      mockSupabaseService.client.auth.resetPasswordForEmail.mockRejectedValue(
+        new Error('Network error')
+      );
+
+      const result = await service.resetPassword(testEmail);
+
+      expect(mockSupabaseService.client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+        testEmail,
+        {
+          redirectTo: 'http://localhost:8100/auth/reset-password'
+        }
+      );
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error.message).toBe('Network error');
+    });
+
+    it('should handle empty email', async () => {
+      const testEmail = '';
+      
+      // Mock successful response (Supabase might handle empty email differently)
+      mockSupabaseService.client.auth.resetPasswordForEmail.mockResolvedValue({
+        data: {},
+        error: null
+      });
+
+      const result = await service.resetPassword(testEmail);
+
+      expect(mockSupabaseService.client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+        testEmail,
+        {
+          redirectTo: 'http://localhost:8100/auth/reset-password'
+        }
+      );
+      expect(result.error).toBe(null);
+    });
+
+    it('should handle malformed email', async () => {
+      const testEmail = 'invalid-email';
+      
+      // Mock error response for malformed email
+      mockSupabaseService.client.auth.resetPasswordForEmail.mockResolvedValue({
+        data: null,
+        error: {
+          message: 'Invalid email format',
+          status: 400
+        }
+      });
+
+      const result = await service.resetPassword(testEmail);
+
+      expect(mockSupabaseService.client.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+        testEmail,
+        {
+          redirectTo: 'http://localhost:8100/auth/reset-password'
+        }
+      );
+      expect(result.error).toEqual({
+        message: 'Invalid email format',
+        status: 400
+      });
+    });
+  });
+
   describe('setSessionFromFragment', () => {
     let mockFetch: jest.Mock;
     let originalFetch: typeof global.fetch;
