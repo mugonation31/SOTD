@@ -27,7 +27,7 @@ import {
   cashOutline,
   logInOutline,
 } from 'ionicons/icons';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '../../core/services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
 
 @Component({

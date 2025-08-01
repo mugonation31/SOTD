@@ -50,10 +50,18 @@ export class SignupTestConfig {
         if (next) next();
       })
     }),
-    login: jest.fn(),
+    login: jest.fn().mockReturnValue({
+      subscribe: jest.fn().mockImplementation(({ next, error }) => {
+        // Default to success
+        if (next) next();
+      })
+    }),
     logout: jest.fn(),
+    logoutSilent: jest.fn(),
     getCurrentUser: jest.fn(),
+    getUserRole: jest.fn(),
     isAuthenticated: jest.fn(),
+    isFirstTimeUser: jest.fn().mockReturnValue(false),
     resetPassword: jest.fn(),
     updatePasswordWithTokens: jest.fn(),
     setSessionFromFragment: jest.fn(),
