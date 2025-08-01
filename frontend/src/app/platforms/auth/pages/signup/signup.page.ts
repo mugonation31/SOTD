@@ -36,6 +36,7 @@ import {
   validatePassword,
   getPasswordErrors,
 } from '../../../../core/utils/validation.utils';
+import { extractErrorMessage } from '../../../../core/utils/error.utils';
 
 interface ValidationErrors {
   username: string;
@@ -281,8 +282,8 @@ export class SignupPage implements OnInit {
         this.isLoading = false;
         console.error('Signup error:', error);
         
-        // Provide user feedback instead of just console logging
-        const errorMessage = error?.error?.message || error?.message || 'Signup failed. Please try again.';
+        // Use the new error handling utility to extract meaningful error messages
+        const errorMessage = extractErrorMessage(error);
         alert(errorMessage);
       },
     });
