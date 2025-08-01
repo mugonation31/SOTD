@@ -452,9 +452,21 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       mockAuthService.getUserRole.mockReturnValue('group-admin');
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      // Set login data
+      // Configure login to succeed
+      mockAuthService.login.mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ next }) => {
+          if (next) next();
+        })
+      });
+
+      // Set login data and validate
       loginComponent.loginData.email = 'admin@example.com';
       loginComponent.loginData.password = 'AdminPass123!';
+      loginComponent.validateEmail();
+      loginComponent.validatePassword();
+
+      // Ensure canSubmit is true
+      expect(loginComponent.canSubmit).toBe(true);
 
       // Simulate login with group-admin role
       await loginComponent.onLogin();
@@ -468,9 +480,21 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       mockAuthService.getUserRole.mockReturnValue('player');
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      // Set login data
+      // Configure login to succeed
+      mockAuthService.login.mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ next }) => {
+          if (next) next();
+        })
+      });
+
+      // Set login data and validate
       loginComponent.loginData.email = 'player@example.com';
       loginComponent.loginData.password = 'PlayerPass123!';
+      loginComponent.validateEmail();
+      loginComponent.validatePassword();
+
+      // Ensure canSubmit is true
+      expect(loginComponent.canSubmit).toBe(true);
 
       // Simulate login with player role
       await loginComponent.onLogin();
@@ -484,9 +508,21 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       mockAuthService.getUserRole.mockReturnValue('super-admin');
       mockAuthService.isAuthenticated.mockReturnValue(true);
 
-      // Set login data
+      // Configure login to succeed
+      mockAuthService.login.mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ next }) => {
+          if (next) next();
+        })
+      });
+
+      // Set login data and validate
       loginComponent.loginData.email = 'superadmin@example.com';
       loginComponent.loginData.password = 'SuperAdminPass123!';
+      loginComponent.validateEmail();
+      loginComponent.validatePassword();
+
+      // Ensure canSubmit is true
+      expect(loginComponent.canSubmit).toBe(true);
 
       // Simulate login with super-admin role
       await loginComponent.onLogin();
