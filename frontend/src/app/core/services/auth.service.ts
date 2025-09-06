@@ -363,15 +363,23 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
+    console.log('🔧 AuthService: Starting signup process...');
+    console.log('🔧 AuthService: useSupabase =', this.useSupabase);
+    console.log('🔧 AuthService: userData =', userData);
+    
     if (this.useSupabase) {
+      console.log('🔧 AuthService: Using Supabase signup');
       return this.signupWithSupabase(userData);
     } else {
+      console.log('🔧 AuthService: Using Mock signup');
       return this.signupWithMock(userData);
     }
   }
 
   private signupWithSupabase(userData: SignupData): Observable<AuthResponse> {
+    console.log('🔧 AuthService: Starting Supabase signup...');
     return new Observable(subscriber => {
+      console.log('🔧 AuthService: Calling supabaseService.signUp...');
       this.supabaseService.signUp(userData.email, userData.password, {
         username: userData.username || '',
         first_name: userData.firstName,
@@ -393,6 +401,7 @@ export class AuthService {
           }
         };
         
+        console.log('🔧 AuthService: Sending success response:', authResponse);
         subscriber.next(authResponse);
         subscriber.complete();
       })

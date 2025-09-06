@@ -177,26 +177,44 @@ export class SupabaseService {
     last_name: string;
     role: UserRole;
   }) {
-    const { data, error } = await this.supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
-      }
-    });
-
-    if (error) throw error;
-
-    // Create profile after successful signup
-    if (data.user) {
-      await this.createProfile(data.user.id, {
-        ...userData,
+    console.log('🔧 SupabaseService: Starting signUp...');
+    console.log('🔧 SupabaseService: email =', email);
+    console.log('🔧 SupabaseService: userData =', userData);
+    
+    try {
+      console.log('🔧 SupabaseService: Calling supabase.auth.signUp...');
+      const { data, error } = await this.supabase.auth.signUp({
         email,
-        first_login: true
+        password,
+        options: {
+          data: userData
+        }
       });
-    }
 
-    return data;
+      if (error) {
+        console.error('❌ SupabaseService: Auth signup error:', error);
+        throw error;
+      }
+
+      console.log('✅ SupabaseService: Auth signup successful:', data);
+
+      // Create profile after successful signup
+      if (data.user) {
+        console.log('🔧 SupabaseService: Creating profile for user:', data.user.id);
+        await this.createProfile(data.user.id, {
+          ...userData,
+          email,
+          first_login: true
+        });
+        console.log('✅ SupabaseService: Profile created successfully');
+      }
+
+      console.log('✅ SupabaseService: SignUp completed successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ SupabaseService: SignUp failed:', error);
+      throw error;
+    }
   }
 
   async signIn(email: string, password: string) {
@@ -221,19 +239,33 @@ export class SupabaseService {
 
   // Profile Management
   async createProfile(userId: string, profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await this.supabase
-      .from('profiles')
-      .insert([{
-        id: userId,
-        ...profileData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
+    console.log('🔧 SupabaseService: Creating profile...');
+    console.log('🔧 SupabaseService: userId =', userId);
+    console.log('🔧 SupabaseService: profileData =', profileData);
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('profiles')
+        .insert([{
+          id: userId,
+          ...profileData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error('❌ SupabaseService: Profile creation error:', error);
+        throw error;
+      }
+      
+      console.log('✅ SupabaseService: Profile created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ SupabaseService: Profile creation failed:', error);
+      throw error;
+    }
   }
 
   async updateProfile(userId: string, updates: Partial<Profile>) {

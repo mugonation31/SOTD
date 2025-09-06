@@ -254,6 +254,9 @@ export class SignupPage implements OnInit {
   }
 
   onSignup() {
+    console.log('🚀 SignupPage: Starting signup process...');
+    console.log('📝 SignupPage: Form data:', this.signupData);
+    
     this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
     this.validateRequired('lastName', this.signupData.lastName);
@@ -262,13 +265,20 @@ export class SignupPage implements OnInit {
     this.validateConfirmPassword();
     this.validateAcceptedTerms();
 
-    if (!this.canSubmit || this.isLoading) return;
+    if (!this.canSubmit || this.isLoading) {
+      console.log('❌ SignupPage: Cannot submit - canSubmit:', this.canSubmit, 'isLoading:', this.isLoading);
+      return;
+    }
 
+    console.log('✅ SignupPage: Validation passed, starting signup...');
     this.isLoading = true;
 
     const { confirmPassword, acceptedTerms, ...signupPayload } = this.signupData;
+    console.log('📤 SignupPage: Calling authService.signup with payload:', signupPayload);
+    
     this.authService.signup(signupPayload).subscribe({
-      next: () => {
+      next: (response) => {
+        console.log('✅ SignupPage: Signup successful:', response);
         this.isLoading = false;
         // After successful signup, redirect to login with role and return URL
         this.router.navigate(['/auth/login'], {
@@ -279,11 +289,12 @@ export class SignupPage implements OnInit {
         });
       },
       error: (error) => {
+        console.error('❌ SignupPage: Signup error:', error);
         this.isLoading = false;
-        console.error('Signup error:', error);
         
         // Use the new error handling utility to extract meaningful error messages
         const errorMessage = extractErrorMessage(error);
+        console.log('📝 SignupPage: Extracted error message:', errorMessage);
         alert(errorMessage);
       },
     });
@@ -311,5 +322,13 @@ export class SignupPage implements OnInit {
 
   navigateToWelcome() {
     this.router.navigate(['/welcome']);
+  }
+
+  // Debug method to enable Supabase for testing
+  enableSupabaseForTesting() {
+    console.log('🔧 SignupPage: Enabling Supabase for testing...');
+    this.authService.enableSupabaseAuth();
+    this.authService.debugAuthState();
+    alert('Supabase enabled for testing. Please try signing up again.');
   }
 }
