@@ -21,8 +21,7 @@ import { addIcons } from 'ionicons';
 import {
   eye,
   eyeOff,
-  footballOutline
-} from 'ionicons/icons';
+  footballOutline, mailOutline } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import {
   validateEmail,
@@ -74,6 +73,10 @@ export class LoginPage implements OnInit {
   showPassword = false;
   isLoading = false;
   private returnUrl: string = '';
+  
+  // Email confirmation state
+  pendingConfirmation = false;
+  userEmail = '';
 
   get canSubmit(): boolean {
     return Boolean(
@@ -89,7 +92,7 @@ export class LoginPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    addIcons({footballOutline,eye,eyeOff});
+    addIcons({footballOutline,mailOutline,eye,eyeOff});
   }
 
   ngOnInit() {
@@ -98,9 +101,15 @@ export class LoginPage implements OnInit {
       this.returnUrl = params['returnUrl'] || '';
       const expectedRole = params['role'] || '';
       
+      // Check for email confirmation parameters
+      this.pendingConfirmation = params['pendingConfirmation'] === 'true';
+      this.userEmail = params['email'] || '';
+      
       console.log('🔍 Login page initialized with:', {
         returnUrl: this.returnUrl,
-        expectedRole
+        expectedRole,
+        pendingConfirmation: this.pendingConfirmation,
+        userEmail: this.userEmail
       });
     });
   }

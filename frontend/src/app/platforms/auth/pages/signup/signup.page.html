@@ -125,7 +125,8 @@
           <div class="terms-container">
             <ion-checkbox 
               [(ngModel)]="signupData.acceptedTerms" 
-              name="acceptedTerms">
+              name="acceptedTerms"
+              (ionChange)="validateAcceptedTerms()">
             </ion-checkbox>
             <div class="terms-text">
               <span>I agree to the <a href="#" (click)="openTerms($event)">Terms and Conditions</a> and <a href="#" (click)="openPrivacy($event)">Privacy Policy</a></span>

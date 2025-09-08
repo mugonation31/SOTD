@@ -60,6 +60,21 @@
           </ion-button>
         </div>
 
+        <!-- Email Confirmation Message -->
+        <div *ngIf="pendingConfirmation && userEmail" class="email-confirmation-message">
+          <ion-card color="primary">
+            <ion-card-content>
+              <div class="confirmation-content">
+                <ion-icon name="mail-outline" class="confirmation-icon"></ion-icon>
+                <div class="confirmation-text">
+                  <h3>Check Your Email</h3>
+                  <p>We've sent you a confirmation email to <strong>{{ userEmail }}</strong></p>
+                  <p>Please click the confirmation link and return here to sign in.</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </div>
 
       </form>
     </ion-card-content>

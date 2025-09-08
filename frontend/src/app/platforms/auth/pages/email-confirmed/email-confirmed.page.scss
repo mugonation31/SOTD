@@ -1,0 +1,126 @@
+.confirmation-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 20px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 16px;
+  
+  .football-icon {
+    font-size: 28px;
+    color: var(--ion-color-primary);
+    margin-right: 12px;
+  }
+  
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    
+    .logo-sotd {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ion-color-primary);
+    }
+    
+    .logo-subtitle {
+      font-size: 12px;
+      color: var(--ion-color-medium);
+      font-weight: 500;
+    }
+  }
+}
+
+.success-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 0 30px 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  
+  ion-card-content {
+    padding: 40px 30px;
+  }
+}
+
+.success-content {
+  text-align: center;
+  
+  .success-icon {
+    font-size: 64px;
+    color: var(--ion-color-success);
+    margin-bottom: 20px;
+    display: block;
+  }
+  
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+    margin: 0 0 16px 0;
+  }
+  
+  p {
+    font-size: 16px;
+    color: var(--ion-color-dark);
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.action-buttons {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  
+  ion-button {
+    height: 48px;
+    font-weight: 600;
+    border-radius: 12px;
+    
+    ion-icon {
+      font-size: 18px;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 576px) {
+  .confirmation-container {
+    min-height: 60vh;
+    padding: 16px;
+  }
+  
+  .success-card ion-card-content {
+    padding: 30px 20px;
+  }
+  
+  .success-content {
+    .success-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    
+    p {
+      font-size: 14px;
+    }
+  }
+}

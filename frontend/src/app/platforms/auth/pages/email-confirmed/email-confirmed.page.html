@@ -1,0 +1,38 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="logo-container" (click)="goToWelcome()">
+      <ion-icon name="football-outline" class="football-icon"></ion-icon>
+      <div class="logo-text">
+        <span class="logo-sotd">SOTD</span>
+        <span class="logo-subtitle">Predict 3</span>
+      </div>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="confirmation-container">
+    <ion-card class="success-card">
+      <ion-card-content>
+        <div class="success-content">
+          <ion-icon name="checkmark-circle" class="success-icon"></ion-icon>
+          <h1>Email Confirmed!</h1>
+          <p>Thank you for verifying your email address.</p>
+          <p>You can now return to the login page to sign in to your account.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <div class="action-buttons">
+      <ion-button expand="block" fill="solid" (click)="goToLogin()">
+        <ion-icon name="arrow-back" slot="start"></ion-icon>
+        Return to Login
+      </ion-button>
+      
+      <ion-button expand="block" fill="outline" (click)="goToWelcome()">
+        <ion-icon name="home" slot="start"></ion-icon>
+        Go to Home
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

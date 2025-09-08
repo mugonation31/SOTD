@@ -34,5 +34,9 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
     ],
+  },  {
+    path: 'email-confirmed',
+    loadComponent: () => import('./pages/email-confirmed/email-confirmed.page').then( m => m.EmailConfirmedPage)
   },
+
 ];

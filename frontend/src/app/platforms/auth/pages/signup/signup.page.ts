@@ -118,23 +118,41 @@ export class SignupPage implements OnInit {
   };
 
   get canSubmit(): boolean {
-    return Boolean(
+    const hasAllFields = Boolean(
       this.signupData.username &&
       this.signupData.firstName &&
-        this.signupData.lastName &&
-        this.signupData.email &&
-        this.signupData.password &&
-        this.signupData.confirmPassword &&
-        this.signupData.acceptedTerms &&
-        !this.validationErrors.username &&
-        !this.validationErrors.firstName &&
-        !this.validationErrors.lastName &&
-        !this.validationErrors.email &&
-        !this.validationErrors.password &&
-        !this.validationErrors.confirmPassword &&
-        !this.validationErrors.acceptedTerms &&
-        this.isPasswordValid()
+      this.signupData.lastName &&
+      this.signupData.email &&
+      this.signupData.password &&
+      this.signupData.confirmPassword &&
+      this.signupData.acceptedTerms
     );
+    
+    const hasNoErrors = Boolean(
+      !this.validationErrors.username &&
+      !this.validationErrors.firstName &&
+      !this.validationErrors.lastName &&
+      !this.validationErrors.email &&
+      !this.validationErrors.password &&
+      !this.validationErrors.confirmPassword &&
+      !this.validationErrors.acceptedTerms
+    );
+    
+    const isPasswordValid = this.isPasswordValid();
+    
+    const canSubmit = hasAllFields && hasNoErrors && isPasswordValid;
+    
+    // Debug logging
+    console.log('🔍 Signup Form Debug:', {
+      hasAllFields,
+      hasNoErrors,
+      isPasswordValid,
+      canSubmit,
+      signupData: this.signupData,
+      validationErrors: this.validationErrors
+    });
+    
+    return canSubmit;
   }
 
 
@@ -184,6 +202,20 @@ export class SignupPage implements OnInit {
       // Continue with signup flow
       console.log('📝 Signup flow for role:', requiredRole);
     });
+    
+    // Trigger initial validation to clear any default errors
+    this.validateAllFields();
+  }
+  
+  validateAllFields() {
+    console.log('🔍 validateAllFields called');
+    this.validateRequired('username', this.signupData.username);
+    this.validateRequired('firstName', this.signupData.firstName);
+    this.validateRequired('lastName', this.signupData.lastName);
+    this.validateEmail();
+    this.validatePassword();
+    this.validateConfirmPassword();
+    this.validateAcceptedTerms();
   }
 
   validateRequired(field: keyof ValidationErrors, value: string) {
@@ -276,20 +308,37 @@ export class SignupPage implements OnInit {
     const { confirmPassword, acceptedTerms, ...signupPayload } = this.signupData;
     console.log('📤 SignupPage: Calling authService.signup with payload:', signupPayload);
     
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (this.isLoading) {
+        console.error('⏰ SignupPage: Signup timeout - taking too long');
+        this.isLoading = false;
+        alert('Signup is taking longer than expected. Please try again.');
+      }
+    }, 30000); // 30 second timeout
+    
     this.authService.signup(signupPayload).subscribe({
       next: (response) => {
         console.log('✅ SignupPage: Signup successful:', response);
+        clearTimeout(timeoutId); // Clear the timeout
         this.isLoading = false;
-        // After successful signup, redirect to login with role and return URL
-        this.router.navigate(['/auth/login'], {
-          queryParams: {
-            returnUrl: this.returnUrl,
-            role: this.signupData.role
-          }
-        });
+        
+        // Add a small delay to ensure the loading state is visible
+        setTimeout(() => {
+          // After successful signup, redirect to login with role, return URL, and email confirmation info
+          this.router.navigate(['/auth/login'], {
+            queryParams: {
+              returnUrl: this.returnUrl,
+              role: this.signupData.role,
+              email: this.signupData.email,
+              pendingConfirmation: 'true'
+            }
+          });
+        }, 500);
       },
       error: (error) => {
         console.error('❌ SignupPage: Signup error:', error);
+        clearTimeout(timeoutId); // Clear the timeout
         this.isLoading = false;
         
         // Use the new error handling utility to extract meaningful error messages
@@ -301,11 +350,15 @@ export class SignupPage implements OnInit {
   }
 
   validateAcceptedTerms() {
+    console.log('🔍 validateAcceptedTerms called, acceptedTerms:', this.signupData.acceptedTerms);
     if (!this.signupData.acceptedTerms) {
       this.validationErrors.acceptedTerms = 'You must accept the Terms and Conditions to continue';
+      console.log('❌ Terms not accepted, setting error');
     } else {
       this.validationErrors.acceptedTerms = '';
+      console.log('✅ Terms accepted, clearing error');
     }
+    console.log('🔍 validationErrors.acceptedTerms:', this.validationErrors.acceptedTerms);
   }
 
   openTerms(event: Event) {

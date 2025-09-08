@@ -171,24 +171,25 @@ export class SupabaseService {
   }
 
   // Authentication Methods
-  async signUp(email: string, password: string, userData: {
-    username: string;
-    first_name: string;
-    last_name: string;
-    role: UserRole;
-  }) {
+  async signUp(
+    email: string,
+    password: string,
+    metadata: { username: string; first_name: string; last_name: string; role: UserRole },
+    redirectTo?: string // optional; fallback to current origin
+  ) {
     console.log('🔧 SupabaseService: Starting signUp...');
     console.log('🔧 SupabaseService: email =', email);
-    console.log('🔧 SupabaseService: userData =', userData);
-    
+    console.log('🔧 SupabaseService: metadata =', metadata);
+  
     try {
       console.log('🔧 SupabaseService: Calling supabase.auth.signUp...');
       const { data, error } = await this.supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData
-        }
+          data: metadata, // store profile metadata on the user
+          emailRedirectTo: redirectTo ?? `${window.location.origin}/auth/email-confirmed`,
+        },
       });
 
       if (error) {
@@ -198,15 +199,23 @@ export class SupabaseService {
 
       console.log('✅ SupabaseService: Auth signup successful:', data);
 
-      // Create profile after successful signup
+      // Create profile after successful signup (non-blocking)
       if (data.user) {
         console.log('🔧 SupabaseService: Creating profile for user:', data.user.id);
-        await this.createProfile(data.user.id, {
-          ...userData,
+        // Don't await - let it run in background
+        this.createProfile(data.user.id, {
           email,
-          first_login: true
+          ...metadata,
+          first_login: true,
+          // the following will be set in createProfile() anyway:
+          // created_at / updated_at
+        } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>)
+        .then(() => {
+          console.log('✅ SupabaseService: Profile created successfully');
+        })
+        .catch((error) => {
+          console.error('❌ SupabaseService: Profile creation failed:', error);
         });
-        console.log('✅ SupabaseService: Profile created successfully');
       }
 
       console.log('✅ SupabaseService: SignUp completed successfully');
