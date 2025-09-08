@@ -32,7 +32,6 @@ export class AuthGuard {
           // Check if user is authenticated using the reactive state
           if (!authResponse || !authResponse.user) {
             const loginRoute = this.getLoginRoute(expectedRole);
-            console.log(`🚫 AuthGuard: No authenticated user, redirecting to ${loginRoute}`);
             this.router.navigate([loginRoute]);
             return false;
           }
@@ -42,25 +41,22 @@ export class AuthGuard {
           
           // If no expected role is specified, just check if user is authenticated
           if (!expectedRole) {
-            console.log('✅ AuthGuard: User authenticated, no specific role required');
             return true;
           }
 
           // Check if user role matches expected role
           if (userRole === expectedRole) {
-            console.log(`✅ AuthGuard: User role "${userRole}" matches expected role "${expectedRole}"`);
             return true;
           }
 
           // Role mismatch - redirect to appropriate login
           const loginRoute = this.getLoginRoute(expectedRole);
-          console.log(`🚫 AuthGuard: Role mismatch. User role: "${userRole}", Expected: "${expectedRole}". Redirecting to ${loginRoute}`);
           this.router.navigate([loginRoute]);
           return false;
         } catch (error) {
           // Error parsing user data - redirect to default login
           const loginRoute = this.getLoginRoute(route.data?.['expectedRole']);
-          console.error(`❌ AuthGuard: Error getting user data, redirecting to ${loginRoute}:`, error);
+          console.error('AuthGuard: Error getting user data, redirecting to login:', error);
           this.router.navigate([loginRoute]);
           return false;
         }
@@ -83,23 +79,18 @@ export class NoAuthGuard {
         try {
           // Special case: Allow access to reset-password page even for authenticated users
           if (route.routeConfig?.path === 'reset-password') {
-            console.log('✅ NoAuthGuard: Allowing access to reset-password page for all users');
             return true;
           }
           
           // Also check the full URL path for reset-password
           const currentUrl = this.router.url;
           if (currentUrl.includes('reset-password')) {
-            console.log('✅ NoAuthGuard: Allowing access to reset-password page via URL check');
             return true;
           }
           
           if (!authResponse || !authResponse.user) {
-            console.log('✅ NoAuthGuard: No authenticated user, allowing access to public routes');
             return true; // No authenticated user, allow access to public routes
           }
-
-          console.log('🔄 NoAuthGuard: User is authenticated, redirecting to appropriate route');
 
           // User is authenticated, redirect to their appropriate route
           const userRole = authResponse.user.role;
@@ -110,7 +101,6 @@ export class NoAuthGuard {
           
           if (isFirstLogin) {
             // First time user - redirect to first-time routes
-            console.log(`🆕 NoAuthGuard: First-time ${userRole} user, redirecting to first-time route`);
             switch (userRole) {
               case 'super-admin':
                 this.router.navigate(['/super-admin/dashboard']);
@@ -126,7 +116,6 @@ export class NoAuthGuard {
             }
           } else {
             // Returning user - redirect to dashboard
-            console.log(`🏠 NoAuthGuard: Returning ${userRole} user, redirecting to dashboard`);
             switch (userRole) {
               case 'super-admin':
                 this.router.navigate(['/super-admin/dashboard']);
@@ -144,7 +133,7 @@ export class NoAuthGuard {
           
           return false;
         } catch (error) {
-          console.error('❌ NoAuthGuard: Error getting user data:', error);
+          console.error('NoAuthGuard: Error getting user data:', error);
           return true; // Allow access to public routes if there's an error
         }
       })

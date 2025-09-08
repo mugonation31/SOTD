@@ -68,18 +68,8 @@ export class SuperAdminLoginPage implements OnInit {
   }
 
   ngOnInit() {
-    // Debug: Log current auth state
-    console.log('🔍 Super Admin Login Page - Current Auth State:');
-    console.log('isAuthenticated:', this.authService.isAuthenticated());
-    console.log('isSuperAdmin:', this.authService.isSuperAdmin());
-    console.log('currentUser:', this.authService.getCurrentUser());
   }
 
-  // Debug method to check auth state
-  debugAuthState() {
-    console.log('🔍 Debug Auth State Called:');
-    (this.authService as any).debugAuthState();
-  }
 
   onSubmit() {
     if (this.loginForm.valid) {
@@ -103,8 +93,6 @@ export class SuperAdminLoginPage implements OnInit {
       // Use the centralized AuthService for login
       this.authService.login(loginData).subscribe({
         next: (response) => {
-          console.log('Super admin login successful:', response);
-          
           // Navigate to super-admin dashboard
         this.router.navigate(['/super-admin/dashboard']);
           this.isLoading = false;

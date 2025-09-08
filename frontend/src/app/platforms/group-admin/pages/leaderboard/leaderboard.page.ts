@@ -81,13 +81,13 @@ export class LeaderboardPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('🚀 Leaderboard: Initializing...');
+
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
     this.loadGroupStandings();
     
     // Subscribe to group updates for real-time member count and standings updates
     this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-      console.log('🔄 Leaderboard: Received group update, reloading standings...');
+
       this.loadGroupStandings();
     });
   }
@@ -99,7 +99,7 @@ export class LeaderboardPage implements OnInit, OnDestroy {
   }
 
   private loadGroupStandings() {
-    console.log('📊 Leaderboard: Loading group standings...');
+
     const groupsWithLeaderboards = this.groupService.getAdminGroupsWithLeaderboards();
     
     this.groupStandings = groupsWithLeaderboards.map(item => {
@@ -109,7 +109,7 @@ export class LeaderboardPage implements OnInit, OnDestroy {
       // Ensure member count is synced with actual members
       const actualMemberCount = item.group.members.length;
       
-      console.log(`📋 Group "${item.group.name}": memberCount=${item.group.memberCount}, actualMembers=${actualMemberCount}`);
+
       
       return {
         group: {
@@ -123,13 +123,6 @@ export class LeaderboardPage implements OnInit, OnDestroy {
         adminPosition: item.adminPosition
       };
     });
-    
-    console.log('✅ Leaderboard: Loaded standings for', this.groupStandings.length, 'groups');
-    console.log('📊 Member counts:', this.groupStandings.map(gs => ({ 
-      name: gs.group.name, 
-      memberCount: gs.group.memberCount,
-      leaderboardEntries: gs.leaderboard.length
-    })));
   }
 
   // Track by function for better performance when rendering groups

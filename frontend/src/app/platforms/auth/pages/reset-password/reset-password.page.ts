@@ -88,23 +88,22 @@ export class ResetPasswordPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    console.log('🏗️ ResetPasswordPage: Component constructed');
     addIcons({ footballOutline, eye, eyeOff });
   }
 
   ngOnInit() {
-    console.log('🔄 ResetPasswordPage: ngOnInit called');
+
     
     // Clear any old test tokens
     localStorage.removeItem('test_reset_token');
     
     // Log the full URL for debugging
-    console.log('🌐 ResetPasswordPage: Full URL:', window.location.href);
-    console.log('🔗 ResetPasswordPage: Current location:', window.location.toString());
+
+
     
     // Extract access token from URL query parameters
     this.route.queryParams.subscribe(params => {
-      console.log('📋 ResetPasswordPage: Received query parameters:', params);
+
 
       if (!this.accessToken) {
         this.accessToken = params['code'] ||
@@ -114,7 +113,7 @@ export class ResetPasswordPage implements OnInit {
                           '';
 
         if (this.accessToken) {
-          console.log('✅ ResetPasswordPage: Access token set from query params');
+
           // Store token in localStorage for service access
           localStorage.setItem('current_reset_token', this.accessToken);
           this.validationErrors.password = '';
@@ -135,7 +134,7 @@ export class ResetPasswordPage implements OnInit {
     this.checkRawUrlForToken();
     
     // Also log the current route for debugging
-    console.log('📍 ResetPasswordPage: Current route:', this.router.url);
+
     
     // Check if Supabase has auto-detected the session from URL fragment
     this.checkSupabaseSession();
@@ -143,12 +142,12 @@ export class ResetPasswordPage implements OnInit {
 
   private async checkSupabaseSession() {
     try {
-      console.log('🔍 ResetPasswordPage: Setting Supabase session from URL fragment...');
+
       
       const success = await this.authService.setSessionFromFragment();
       
       if (success) {
-        console.log('✅ Supabase session established successfully');
+
       } else {
         console.error('❌ Failed to establish Supabase session');
       }
@@ -160,12 +159,12 @@ export class ResetPasswordPage implements OnInit {
   private checkUrlPathForToken() {
     // Sometimes Supabase puts the token in the URL path
     const pathSegments = this.router.url.split('/');
-    console.log('🔍 ResetPasswordPage: URL path segments:', pathSegments);
+
     
     // Look for segments that might be tokens (long strings)
     for (const segment of pathSegments) {
       if (segment.length > 50 && !this.accessToken) {
-        console.log('🔍 ResetPasswordPage: Found potential token in URL path:', segment.substring(0, 20) + '...');
+
         this.accessToken = segment;
         // Store token in localStorage for service access
         localStorage.setItem('current_reset_token', segment);
@@ -178,7 +177,7 @@ export class ResetPasswordPage implements OnInit {
   private checkRawUrlForToken() {
     // Check the raw URL for any token-like patterns
     const fullUrl = window.location.href;
-    console.log('🔍 ResetPasswordPage: Checking raw URL for tokens:', fullUrl);
+
     
     // Look for common token patterns in the URL
     const tokenPatterns = [
@@ -193,7 +192,7 @@ export class ResetPasswordPage implements OnInit {
     for (const pattern of tokenPatterns) {
       const match = fullUrl.match(pattern);
       if (match && match[1] && !this.accessToken) {
-        console.log('🔍 ResetPasswordPage: Found token in raw URL with pattern:', pattern);
+
         this.accessToken = decodeURIComponent(match[1]);
         // Store token in localStorage for service access
         localStorage.setItem('current_reset_token', decodeURIComponent(match[1]));
@@ -209,21 +208,21 @@ export class ResetPasswordPage implements OnInit {
     localStorage.setItem('test_reset_token', token);
     this.accessToken = token;
     this.validationErrors.password = '';
-    console.log('🧪 ResetPasswordPage: Test token set:', token.substring(0, 20) + '...');
+
   }
 
   private checkHashFragment() {
     // Check if there's a hash fragment with the access token
     const hash = window.location.hash;
     if (hash) {
-      console.log('🔍 ResetPasswordPage: Found hash fragment:', hash);
+
       
       // Parse the hash fragment for access_token
       const hashParams = new URLSearchParams(hash.substring(1)); // Remove the # and parse
       const hashToken = hashParams.get('access_token');
       
       if (hashToken) {
-        console.log('✅ ResetPasswordPage: Found access token in hash fragment');
+
         this.accessToken = hashToken;
         
         // Store token in localStorage for service access
@@ -233,7 +232,7 @@ export class ResetPasswordPage implements OnInit {
         const refreshToken = hashParams.get('refresh_token');
         if (refreshToken) {
           this.refreshToken = refreshToken;
-          console.log('✅ ResetPasswordPage: Found refresh token in hash fragment');
+
         }
         
         this.validationErrors.password = ''; // Clear any previous error
@@ -245,7 +244,7 @@ export class ResetPasswordPage implements OnInit {
       for (const param of possibleTokens) {
         const token = hashParams.get(param);
         if (token) {
-                  console.log(`✅ ResetPasswordPage: Found ${param} in hash fragment`);
+
         this.accessToken = token;
         // Store token in localStorage for service access
         localStorage.setItem('current_reset_token', token);
@@ -254,7 +253,7 @@ export class ResetPasswordPage implements OnInit {
         }
       }
     } else {
-      console.log('🔍 ResetPasswordPage: No hash fragment found');
+
     }
   }
 
@@ -288,16 +287,16 @@ export class ResetPasswordPage implements OnInit {
   }
 
   async onSubmit() {
-    console.log('🚀 ResetPasswordPage: Submit button clicked');
+
     this.validatePassword();
     this.validateConfirmPassword();
 
     if (!this.canSubmit || this.isLoading) {
-      console.log('❌ ResetPasswordPage: Cannot submit - canSubmit:', this.canSubmit, 'isLoading:', this.isLoading);
+
       return;
     }
 
-    console.log('✅ ResetPasswordPage: Validation passed, starting reset process');
+
     this.isLoading = true;
 
     // Enable Supabase auth for password reset
@@ -334,7 +333,7 @@ export class ResetPasswordPage implements OnInit {
     } finally {
       // Stop loading regardless of success or failure
       this.isLoading = false;
-      console.log('🏁 ResetPasswordPage: Reset operation completed, loading state cleared');
+
     }
   }
 

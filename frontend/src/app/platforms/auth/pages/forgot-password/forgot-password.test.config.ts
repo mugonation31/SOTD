@@ -52,7 +52,6 @@ export class ForgotPasswordTestConfig {
     isFirstTimeUser: jest.fn(),
     getToken: jest.fn(),
     clearAllUserData: jest.fn(),
-    debugAuthState: jest.fn(),
     emergencyAuthReset: jest.fn(),
     clearAuthLocks: jest.fn(),
     enableSupabaseAuth: jest.fn(),

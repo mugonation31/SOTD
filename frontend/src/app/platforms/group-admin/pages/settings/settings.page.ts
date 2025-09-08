@@ -229,7 +229,7 @@ export class SettingsPage {
   validatePointsTotal() {
     const total = this.calculatePointsTotal();
     if (total !== 100) {
-      console.log(`Points total is ${total}%, should be 100%`);
+
     }
   }
 

@@ -223,8 +223,8 @@ export class PredictionsPage implements OnInit {
     }
 
     // For debugging
-    console.log('Valid predictions:', validPredictions);
-    console.log('Show warning:', this.showTooManyPredictionsWarning);
+
+
   }
 
   private getSampleCurrentGameWeek(): GameWeek {
@@ -459,8 +459,8 @@ export class PredictionsPage implements OnInit {
 
     // Force UI update
     this.filterPredictions();
-    console.log('Current predictions:', this.allPredictions);
-    console.log('Filtered predictions:', this.filteredPredictions);
+
+
   }
 
   resetPredictions() {
@@ -620,7 +620,7 @@ export class PredictionsPage implements OnInit {
 
   loadGameweekMatches(gameweek: number) {
     // TODO: Implement service call to load matches for the gameweek
-    console.log('Loading matches for gameweek:', gameweek);
+
   }
 
   ionViewWillEnter() {

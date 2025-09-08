@@ -278,14 +278,6 @@ export class GroupsPage implements OnInit, OnDestroy {
       ...group,
       memberCount: group.members.length
     }));
-    
-    console.log('🔄 Group-admin: Loaded groups with updated member counts:', 
-      this.groups.map(g => ({ 
-        name: g.name, 
-        memberCount: g.memberCount, 
-        actualMembers: g.members.length,
-        memberNames: g.members.map(m => m.name)
-      })));
   }
 
   onGroupTypeChange() {
@@ -387,9 +379,6 @@ export class GroupsPage implements OnInit, OnDestroy {
     const latestGroup = this.groupService.getAllGroups().find(g => g.id === group.id);
     this.selectedGroup = latestGroup || group;
     this.filteredMembers = [...this.selectedGroup.members];
-    
-    console.log(`🔍 Group modal: "${this.selectedGroup.name}" showing ${this.selectedGroup.members.length} members:`, 
-      this.selectedGroup.members.map(m => ({ name: m.name, role: m.role })));
     
     // Load existing prize breakdown if available
     if (this.selectedGroup.prizeBreakdown?.positions) {
@@ -603,9 +592,6 @@ export class GroupsPage implements OnInit, OnDestroy {
     this.selectedGroup = latestGroup || group;
     this.selectedTab = 'members';
     this.filteredMembers = [...this.selectedGroup.members];
-    
-    console.log(`👥 Group members tab: "${this.selectedGroup.name}" showing ${this.selectedGroup.members.length} members:`, 
-      this.selectedGroup.members.map(m => ({ name: m.name, role: m.role })));
   }
 
   viewGroupLeaderboard(group: Group) {

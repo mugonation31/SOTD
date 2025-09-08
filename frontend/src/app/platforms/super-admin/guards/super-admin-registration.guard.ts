@@ -14,17 +14,16 @@ export class SuperAdminRegistrationGuard implements CanActivate {
       // which is separate from user authentication state
       const hasRegisteredSuperAdmin = localStorage.getItem('superAdminRegistered');
       
-      console.log('🔍 SuperAdminRegistrationGuard: Checking registration status...', {
         hasRegisteredSuperAdmin
       });
 
       if (hasRegisteredSuperAdmin === 'true') {
-        console.log('🚫 SuperAdminRegistrationGuard: Super-admin already registered, redirecting to login');
+
         this.router.navigate(['/super-admin/login']);
         return of(false);
       }
 
-      console.log('✅ SuperAdminRegistrationGuard: No super-admin registered, allowing access to registration');
+
       return of(true);
     } catch (error) {
       console.error('❌ SuperAdminRegistrationGuard: Error checking registration status:', error);

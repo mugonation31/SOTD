@@ -297,17 +297,17 @@ export class DashboardPage {
 
   async manageSpecialEvent() {
     // TODO: Implement special event management modal
-    console.log('Managing special events');
+
   }
 
   async manageJokers() {
     // TODO: Implement joker management modal
-    console.log('Managing joker rules');
+
   }
 
   async managePayments() {
     // TODO: Implement payment overview modal
-    console.log('Managing payments');
+
   }
 
 

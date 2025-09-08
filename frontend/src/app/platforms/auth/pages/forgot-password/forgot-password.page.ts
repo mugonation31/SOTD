@@ -92,12 +92,10 @@ export class ForgotPasswordPage {
     this.validateEmail();
 
     if (!this.canSubmit) {
-      console.log('Cannot submit - validation failed');
       return;
     }
 
     try {
-      console.log('Submitting password reset request for:', this.email);
       const { error } = await this.authService.resetPassword(this.email);
       if (error) {
         this.validationError = 'Failed to send reset email. Please try again.';

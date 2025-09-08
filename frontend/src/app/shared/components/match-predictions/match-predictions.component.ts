@@ -180,7 +180,7 @@ export class MatchPredictionsComponent {
 
   updatePrediction(matchId: string) {
     // Implement prediction update logic
-    console.log('Prediction updated for match:', matchId);
+
   }
 
   submitPrediction(matchId: string) {

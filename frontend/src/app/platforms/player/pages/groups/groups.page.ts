@@ -194,7 +194,7 @@ export class GroupsPage implements OnInit, OnDestroy {
 
   viewGroupMembers(group: Group) {
     // Show group members in a modal or navigate to members page
-    console.log('Viewing members for group:', group.name, group.members);
+
   }
 
   getPositionSuffix(position: number): string {

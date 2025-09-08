@@ -213,7 +213,7 @@ export class MetricsPage implements OnInit, OnDestroy {
   loadHistoricalData() {
     this.metricsService.getMetricsHistory(this.selectedTimeframe).subscribe({
       next: (data) => {
-        console.log('Historical data:', data);
+
       },
       error: (error) => {
         console.error('Error loading historical data:', error);

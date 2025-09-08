@@ -22,18 +22,17 @@ export class SuperAdminAuthGuard implements CanActivate {
         const isAuthenticated = this.authService.isAuthenticated();
         const isSuperAdmin = this.authService.isSuperAdmin();
 
-        console.log('🔍 SuperAdminAuthGuard: Checking access...', {
           isAuthenticated,
           isSuperAdmin,
           userRole: user?.role
         });
 
         if (isAuthenticated && isSuperAdmin) {
-          console.log('✅ SuperAdminAuthGuard: Access granted to super-admin');
+
           return true;
         }
 
-        console.log('🚫 SuperAdminAuthGuard: Access denied, redirecting to super-admin login');
+
         this.router.navigate(['/super-admin/login']);
         return false;
       })

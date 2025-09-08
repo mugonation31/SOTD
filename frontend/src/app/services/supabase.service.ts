@@ -108,8 +108,6 @@ export class SupabaseService {
 
     // Listen for auth changes
     this.supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Supabase Auth State Change:', event, session?.user?.email);
-      
       this.currentSession$.next(session);
       this.currentUser$.next(session?.user || null);
 
@@ -135,10 +133,9 @@ export class SupabaseService {
       }
 
       this.currentProfile$.next(profile);
-      console.log('✅ User profile loaded:', profile);
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
-  }
+    }
   }
 
   // Getters for reactive state
@@ -177,12 +174,7 @@ export class SupabaseService {
     metadata: { username: string; first_name: string; last_name: string; role: UserRole },
     redirectTo?: string // optional; fallback to current origin
   ) {
-    console.log('🔧 SupabaseService: Starting signUp...');
-    console.log('🔧 SupabaseService: email =', email);
-    console.log('🔧 SupabaseService: metadata =', metadata);
-  
     try {
-      console.log('🔧 SupabaseService: Calling supabase.auth.signUp...');
       const { data, error } = await this.supabase.auth.signUp({
         email,
         password,
@@ -193,15 +185,12 @@ export class SupabaseService {
       });
 
       if (error) {
-        console.error('❌ SupabaseService: Auth signup error:', error);
+        console.error('Auth signup error:', error);
         throw error;
       }
 
-      console.log('✅ SupabaseService: Auth signup successful:', data);
-
       // Create profile after successful signup (non-blocking)
       if (data.user) {
-        console.log('🔧 SupabaseService: Creating profile for user:', data.user.id);
         // Don't await - let it run in background
         this.createProfile(data.user.id, {
           email,
@@ -210,38 +199,37 @@ export class SupabaseService {
           // the following will be set in createProfile() anyway:
           // created_at / updated_at
         } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>)
-        .then(() => {
-          console.log('✅ SupabaseService: Profile created successfully');
-        })
         .catch((error) => {
-          console.error('❌ SupabaseService: Profile creation failed:', error);
+          console.error('Profile creation failed:', error);
         });
       }
 
-      console.log('✅ SupabaseService: SignUp completed successfully');
       return data;
     } catch (error) {
-      console.error('❌ SupabaseService: SignUp failed:', error);
+      console.error('SignUp failed:', error);
       throw error;
     }
   }
 
   async signIn(email: string, password: string) {
+    console.log('🔍 SupabaseService: Starting signIn...');
+    
     const { data, error } = await this.supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ SupabaseService: SignIn error:', error);
+      throw error;
+    }
+    console.log('✅ SupabaseService: SignIn successful:', data);
     return data;
   }
 
   async signOut() {
-    console.log('🔧 SupabaseService: Starting signOut...');
-    
     try {
       // First, clear local state to prevent race conditions
-      console.log('🧹 SupabaseService: Pre-clearing local state...');
       this.currentUser$.next(null);
       this.currentSession$.next(null);
       this.currentProfile$.next(null);
@@ -249,31 +237,22 @@ export class SupabaseService {
       // Then perform Supabase signOut
       const { error } = await this.supabase.auth.signOut();
       if (error) {
-        console.error('❌ SupabaseService: Auth signOut error:', error);
+        console.error('Auth signOut error:', error);
         throw error;
       }
-      
-      console.log('✅ SupabaseService: Auth signOut successful');
     } catch (error) {
-      console.error('❌ SupabaseService: signOut failed:', error);
+      console.error('signOut failed:', error);
       // Continue with local cleanup even if Supabase signOut fails
     }
     
     // Ensure local state is cleared (in case it wasn't cleared above)
-    console.log('🧹 SupabaseService: Final local state cleanup...');
     this.currentUser$.next(null);
     this.currentSession$.next(null);
     this.currentProfile$.next(null);
-    
-    console.log('✅ SupabaseService: SignOut completed and local state cleared');
   }
 
   // Profile Management
   async createProfile(userId: string, profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) {
-    console.log('🔧 SupabaseService: Creating profile...');
-    console.log('🔧 SupabaseService: userId =', userId);
-    console.log('🔧 SupabaseService: profileData =', profileData);
-    
     try {
       const { data, error } = await this.supabase
         .from('profiles')
@@ -287,14 +266,13 @@ export class SupabaseService {
         .single();
 
       if (error) {
-        console.error('❌ SupabaseService: Profile creation error:', error);
+        console.error('Profile creation error:', error);
         throw error;
       }
       
-      console.log('✅ SupabaseService: Profile created successfully:', data);
       return data;
     } catch (error) {
-      console.error('❌ SupabaseService: Profile creation failed:', error);
+      console.error('Profile creation failed:', error);
       throw error;
     }
   }

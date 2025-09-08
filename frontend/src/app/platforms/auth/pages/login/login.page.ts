@@ -98,7 +98,6 @@ export class LoginPage implements OnInit {
   ngOnInit() {
     // Get return URL and role from route parameters
     this.route.queryParams.subscribe(params => {
-      console.log('🔍 Login page received query params:', params);
       
       this.returnUrl = params['returnUrl'] || '';
       const expectedRole = params['role'] || '';
@@ -107,12 +106,6 @@ export class LoginPage implements OnInit {
       this.pendingConfirmation = params['pendingConfirmation'] === 'true';
       this.userEmail = params['email'] || '';
       
-      console.log('🔍 Login page initialized with:', {
-        returnUrl: this.returnUrl,
-        expectedRole,
-        pendingConfirmation: this.pendingConfirmation,
-        userEmail: this.userEmail
-      });
     });
   }
 
@@ -149,18 +142,31 @@ export class LoginPage implements OnInit {
     if (!this.canSubmit || this.isLoading) return;
 
     this.isLoading = true;
+    console.log('🔍 Login: Starting login process...');
 
     // Set default security question and answer for development
     this.loginData.securityQuestion = 'What is your favorite color?';
     this.loginData.securityAnswer = 'blue';
 
+    // Add timeout to prevent infinite hanging
+    const timeoutId = setTimeout(() => {
+      if (this.isLoading) {
+        console.error('⏰ Login: Timeout - login taking too long');
+        this.isLoading = false;
+        alert('Login is taking longer than expected. Please try again.');
+      }
+    }, 30000); // 30 second timeout
+
     this.authService.login(this.loginData).subscribe({
-      next: () => {
+      next: (response) => {
+        console.log('✅ Login: Success response received:', response);
+        clearTimeout(timeoutId);
         this.handleSuccessfulLogin();
       },
       error: (error) => {
+        console.error('❌ Login: Error occurred:', error);
+        clearTimeout(timeoutId);
         this.isLoading = false;
-        console.error('Login error:', error);
         
         // TODO: Replace with proper toast service when available
         // For now, use a simple alert for user feedback
@@ -176,7 +182,6 @@ export class LoginPage implements OnInit {
     
     // Handle specific return URL from external navigation (e.g., guard redirects)
     if (this.returnUrl && this.returnUrl.trim() !== '') {
-      console.log('🎯 Redirecting to return URL:', this.returnUrl);
       this.router.navigate([this.returnUrl], { replaceUrl: true });
       return;
     }
@@ -222,7 +227,6 @@ export class LoginPage implements OnInit {
       }
     }
 
-    console.log('Redirecting to:', targetRoute, 'isFirstLogin:', isFirstLogin);
     this.router.navigate([targetRoute], { replaceUrl: true });
   }
 

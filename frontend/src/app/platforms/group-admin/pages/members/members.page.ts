@@ -142,7 +142,7 @@ export class MembersPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('🚀 Members: Initializing...');
+
     this.loadMembersFromGroups();
     this.subscribeToGroupUpdates();
   }
@@ -154,7 +154,7 @@ export class MembersPage implements OnInit, OnDestroy {
   }
 
   private loadMembersFromGroups() {
-    console.log('📊 Members: Loading members from groups...');
+
     const adminGroups = this.groupService.getAdminGroups();
     
     this.members = adminGroups.flatMap(group => 
@@ -169,7 +169,7 @@ export class MembersPage implements OnInit, OnDestroy {
       }))
     );
     
-    console.log('✅ Members: Loaded', this.members.length, 'members');
+
     this.applyFilters();
   }
 
@@ -199,7 +199,7 @@ export class MembersPage implements OnInit, OnDestroy {
   }
 
   applyFilters() {
-    console.log('🔍 Members: Applying filters...');
+
       let filtered = [...this.members];
 
     // Apply segment filter
@@ -229,48 +229,48 @@ export class MembersPage implements OnInit, OnDestroy {
       }
 
       this.filteredMembers = filtered;
-    console.log('✅ Members: Filtered to', this.filteredMembers.length, 'members');
+
   }
 
   async makeAdmin(member: Member) {
-    console.log('👑 Members: Making member admin:', member.name);
+
     try {
       // In a real app, this would call the group service
       // await this.groupService.makeMemberAdmin(member.id, member.groupName);
-      console.log('✅ Members: Successfully made', member.name, 'an admin');
+
     } catch (error) {
       console.error('❌ Members: Error making member admin:', error);
     }
   }
 
   async revokeAdminStatus(member: Member) {
-    console.log('👤 Members: Revoking admin status from:', member.name);
+
     try {
       // In a real app, this would call the group service
       // await this.groupService.revokeAdminStatus(member.id, member.groupName);
-      console.log('✅ Members: Successfully revoked admin status from', member.name);
+
     } catch (error) {
       console.error('❌ Members: Error revoking admin status:', error);
     }
   }
 
   async removeMember(member: Member) {
-    console.log('🗑️ Members: Removing member:', member.name);
+
     try {
       // In a real app, this would call the group service
       // await this.groupService.removeMember(member.id, member.groupName);
-      console.log('✅ Members: Successfully removed', member.name);
+
     } catch (error) {
       console.error('❌ Members: Error removing member:', error);
     }
   }
 
   async readmitMember(member: Member) {
-    console.log('✅ Members: Readmitting member:', member.name);
+
     try {
       // In a real app, this would call the group service
       // await this.groupService.readmitMember(member.id, member.groupName);
-      console.log('✅ Members: Successfully readmitted', member.name);
+
     } catch (error) {
       console.error('❌ Members: Error readmitting member:', error);
     }
@@ -278,7 +278,7 @@ export class MembersPage implements OnInit, OnDestroy {
 
   private subscribeToGroupUpdates() {
     this.subscription = this.groupService.groups$.subscribe(() => {
-      console.log('🔄 Members: Received group update, reloading members...');
+
       this.loadMembersFromGroups();
     });
   }

@@ -882,7 +882,7 @@ export class MatchesPage {
 
   loadGameweekMatches(gameweek: number) {
     // TODO: Implement service call to load matches for the gameweek
-    console.log('Loading matches for gameweek:', gameweek);
+
   }
 
   navigateTo(path: string) {

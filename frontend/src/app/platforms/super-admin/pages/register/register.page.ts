@@ -107,14 +107,14 @@ export class SuperAdminRegisterPage implements OnInit {
       this.superAdminExists = existingSuperAdmin === 'true';
       
       if (this.superAdminExists) {
-        console.log('ℹ️ Super admin already exists (dummy data), redirecting to login');
+
         this.toastService.showToast('Super admin already exists. Please login instead.', 'warning');
         // Wait a moment then redirect
         setTimeout(() => {
           this.router.navigate(['/super-admin/login']);
         }, 2000);
       } else {
-        console.log('✅ No super admin found, registration available');
+
       }
     } catch (error) {
       console.error('Error checking super admin existence:', error);
@@ -142,7 +142,7 @@ export class SuperAdminRegisterPage implements OnInit {
       try {
         const formData = this.registrationForm.value;
         
-        console.log('🚀 Starting Super Admin Registration for Predict 3...');
+
         
         // Use AuthService signup (which defaults to mock mode for development)
         const signupData: SignupData = {
@@ -156,7 +156,7 @@ export class SuperAdminRegisterPage implements OnInit {
 
         this.authService.signup(signupData).subscribe({
           next: (response) => {
-            console.log('✅ Super Admin Registration successful:', response);
+
             
             // Mark super admin as created (for dummy data mode)
             localStorage.setItem('superAdminCreated', 'true');
@@ -168,7 +168,7 @@ export class SuperAdminRegisterPage implements OnInit {
             );
 
             // Auto-login after registration
-            console.log('🔄 Auto-logging in super admin...');
+
             this.autoLoginAfterRegistration(formData.email, formData.password);
           },
           error: (error) => {
@@ -215,7 +215,7 @@ export class SuperAdminRegisterPage implements OnInit {
       // Login through AuthService
       this.authService.login(loginData).subscribe({
         next: (response) => {
-          console.log('✅ Auto-login successful:', response);
+
           
           // Navigate to super-admin dashboard
           this.router.navigate(['/super-admin/dashboard']);
@@ -304,7 +304,7 @@ export class SuperAdminRegisterPage implements OnInit {
   // Development helper - reset registration state
   resetRegistrationState() {
     localStorage.removeItem('superAdminCreated');
-    console.log('🔄 Registration state reset - super admin can be created again');
+
     this.checkExistingSuperAdmin();
   }
 }

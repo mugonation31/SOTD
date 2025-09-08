@@ -95,25 +95,25 @@ export class GroupService {
   public groups$ = this.groupsSubject.asObservable();
 
   constructor(private authService: AuthService) {
-    console.log('🏗️ GroupService: Initializing service');
+
     
     // Initialize global storage
     this.initializeGlobalStorage();
     
     // Subscribe to auth changes
     this.authService.currentUser.subscribe((authResponse: any) => {
-      console.log('👤 GroupService: User changed, reinitializing storage');
+
       this.handleUserChange(authResponse?.user || null);
     });
   }
 
   private handleUserChange(user: any | null): void {
-    console.log('🔄 GroupService: Handling user change');
+
     if (user) {
-      console.log('👤 GroupService: User authenticated, loading groups');
+
       this.loadGroups();
     } else {
-      console.log('👤 GroupService: User logged out, clearing groups');
+
       this.groupsSubject.next([]);
     }
   }
@@ -122,7 +122,7 @@ export class GroupService {
    * Reinitialize storage for current user (useful when user logs in)
    */
   public reinitializeForCurrentUser(): void {
-    console.log('🔄 GroupService: Manually reinitializing for current user');
+
     this.initializeGlobalStorage();
     this.loadGroups();
   }
@@ -134,17 +134,17 @@ export class GroupService {
     const globalData = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
     const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
 
-    console.log(`🔄 GroupService: Initializing global storage`);
-    console.log(`📂 Global data exists: ${!!globalData}`);
-    console.log(`📂 Legacy data exists: ${!!legacyData}`);
+
+
+
 
     // If no global data but legacy data exists, migrate it
     if (!globalData && legacyData) {
-      console.log('📦 GroupService: Migrating legacy group data to global storage');
+
       
       try {
         const legacyGroups = JSON.parse(legacyData);
-        console.log(`📊 GroupService: Migrated ${legacyGroups.length} groups to global storage`);
+
         localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(legacyGroups));
       } catch (error) {
         console.error('❌ GroupService: Error migrating legacy data:', error);
@@ -152,7 +152,7 @@ export class GroupService {
       }
     } else if (!globalData) {
       // Initialize empty array for new installation
-      console.log('🆕 GroupService: Initializing empty global group storage');
+
       localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify([]));
     }
   }
@@ -165,12 +165,12 @@ export class GroupService {
     const currentUser = this.authService.getCurrentUser();
     
     if (!currentUser?.id) {
-      console.log('⚠️ GroupService: No authenticated user, using legacy storage key');
+
       return this.LEGACY_STORAGE_KEY;
     }
     
     const userSpecificKey = `${this.STORAGE_KEY_PREFIX}_${currentUser.id}`;
-    console.log(`🔑 GroupService: Using user-specific storage key: ${userSpecificKey}`);
+
     return userSpecificKey;
   }
 
@@ -181,12 +181,12 @@ export class GroupService {
     const currentUser = this.authService.getCurrentUser();
     
     if (!currentUser?.id) {
-      console.log('⚠️ GroupService: Cannot clear user data - no authenticated user');
+
       return;
     }
 
     // Note: We don't clear global groups on logout, only user-specific data
-    console.log(`🗑️ GroupService: User logged out, clearing observable but keeping global groups`);
+
     
     // Clear the observable
     this.groupsSubject.next([]);
@@ -201,13 +201,13 @@ export class GroupService {
     const groupsJson = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
     
     if (!groupsJson) {
-      console.log(`📂 GroupService: No group data found in global storage`);
+
       return [];
     }
 
     try {
       const groups = JSON.parse(groupsJson);
-      console.log(`📂 GroupService: Loaded ${groups.length} groups from global storage`);
+
       
       return groups.map((group: any) => ({
         ...group,
@@ -227,7 +227,7 @@ export class GroupService {
   getUserGroups(): Group[] {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?.email) {
-      console.log('⚠️ GroupService: No authenticated user for getUserGroups');
+
       return [];
     }
 
@@ -236,7 +236,7 @@ export class GroupService {
       group.members.some((member: GroupMember) => member.email === currentUser.email)
     );
 
-    console.log(`👤 GroupService: Found ${userGroups.length} groups for user ${currentUser.email}`);
+
     return userGroups;
   }
 
@@ -245,7 +245,7 @@ export class GroupService {
     const currentUser = this.authService.getCurrentUser();
     
     if (!currentUser?.email) {
-      console.log('⚠️ GroupService: No authenticated user for getAdminGroups');
+
       return [];
     }
 
@@ -256,7 +256,7 @@ export class GroupService {
       )
     );
 
-    console.log(`👑 GroupService: Found ${adminGroups.length} admin groups for user ${currentUser.email}`);
+
     return adminGroups;
   }
 
@@ -272,97 +272,97 @@ export class GroupService {
     const existingIndex = groups.findIndex((g) => g.id === group.id);
 
     if (existingIndex >= 0) {
-      console.log(`🔄 GroupService: Updating existing group ${group.id}`);
+
       groups[existingIndex] = group;
     } else {
-      console.log(`➕ GroupService: Adding new group ${group.id}`);
+
       groups.push(group);
     }
 
     // Save to global storage instead of user-specific
     localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(groups));
-    console.log(`💾 GroupService: Saved ${groups.length} groups to global storage`);
+
     
     // Trigger real-time updates
     this.loadGroups();
   }
 
   findGroupByCode(code: string): Group | null {
-    console.log('🔍 Looking for group with code:', code);
+
     const groups = this.getAllGroups();
-    console.log('📂 Available groups:', groups.length);
-    console.log('📂 Available codes:', groups.map(g => g.code));
+
+
     
     const group = groups.find((g) => g.code === code);
-    console.log('🎯 Found group by code search:', group ? 'YES' : 'NO');
+
     
     return group || null;
   }
 
   joinGroup(groupCode: string, customMember?: GroupMember): Group | null {
-    console.log('🚀 Starting joinGroup process with code:', groupCode);
+
     
     const currentUser = this.authService.getCurrentUser();
-    console.log('👤 Current user:', currentUser);
-    console.log('👤 Current user ID:', currentUser?.id);
-    console.log('👤 Current user email:', currentUser?.email);
+
+
+
     
     // Debug: Show detailed user information
-    console.log('🔍 DETAILED USER DEBUG:');
-    console.log('  - Full user object:', JSON.stringify(currentUser, null, 2));
-    console.log('  - User ID type:', typeof currentUser?.id);
-    console.log('  - User email type:', typeof currentUser?.email);
+
+
+
+
     
     if (!currentUser) {
-      console.log('❌ User not authenticated');
+
       throw new Error('User not authenticated');
     }
 
     const groups = this.getAllGroups();
-    console.log('📂 Total groups available:', groups.length);
+
     
     const groupIndex = groups.findIndex((g) => g.code === groupCode);
-    console.log('🔍 Group index found:', groupIndex);
+
 
     if (groupIndex === -1) {
-      console.log('❌ Group not found with code:', groupCode);
+
       return null;
     }
 
     const group = groups[groupIndex];
-    console.log('🎯 Found group to join:', group);
-    console.log('👑 Group admin member:', group.members.find(m => m.role === 'admin'));
-    console.log('👥 All group members:', group.members.map(m => ({ id: m.id, email: m.email, role: m.role })));
+
+
+
 
     // Enhanced debugging for member matching
-    console.log('🔍 MEMBER MATCHING DEBUG:');
+
     group.members.forEach((member, index) => {
-      console.log(`  Member ${index + 1}:`);
-      console.log(`    - ID: "${member.id}" (type: ${typeof member.id})`);
-      console.log(`    - Email: "${member.email}" (type: ${typeof member.email})`);
-      console.log(`    - Role: "${member.role}"`);
-      console.log(`    - ID Match: ${member.id === currentUser.id}`);
-      console.log(`    - Email Match: ${member.email === currentUser.email}`);
+
+
+
+
+
+
     });
 
     // Check if user already exists in this group
     // Use both ID and email for comprehensive checking, but prioritize ID for accuracy
     const existingMemberById = group.members.find((m: GroupMember) => m.id === currentUser.id);
     const existingMemberByEmail = group.members.find((m: GroupMember) => m.email === currentUser.email);
-    console.log('👥 Existing member by ID:', existingMemberById);
-    console.log('👥 Existing member by email:', existingMemberByEmail);
+
+
     
     // If found by ID (most accurate), use that
     const existingMember = existingMemberById || existingMemberByEmail;
     
     if (existingMember) {
-      console.log('⚠️ User already exists in group with role:', existingMember.role);
-      console.log('🔍 CONFLICT DETAILS:');
-      console.log('  - Existing member ID:', existingMember.id);
-      console.log('  - Current user ID:', currentUser.id);
-      console.log('  - Existing member email:', existingMember.email);
-      console.log('  - Current user email:', currentUser.email);
-      console.log('  - Match type:', existingMemberById ? 'ID' : 'EMAIL');
+
+
+
+
+
+
+
       
       // If user is already an admin, they can't join as a player
       if (existingMember.role === 'admin') {
@@ -386,12 +386,12 @@ export class GroupService {
       role: 'player'
     };
 
-    console.log('➕ Adding new member:', member);
+
 
     // Add member to group
     group.members.push(member);
     group.memberCount = group.members.length;
-    console.log('📊 Updated group member count:', group.memberCount);
+
 
     // Clear existing leaderboard to force regeneration with new member
     group.leaderboard = [];
@@ -401,7 +401,7 @@ export class GroupService {
     localStorage.setItem(this.GLOBAL_GROUPS_KEY, JSON.stringify(groups));
     this.loadGroups();
 
-    console.log('✅ Successfully joined group, returning updated group');
+
     return group;
   }
 
@@ -448,16 +448,16 @@ export class GroupService {
       leaderboard: [],
     };
 
-    console.log('✅ Creating group:', newGroup);
-    console.log('📝 Group code:', newGroup.code);
-    console.log('👤 Admin member:', adminMember);
+
+
+
     
     this.saveGroup(newGroup);
     
     // Verify group was saved
     const savedGroups = this.getAllGroups();
-    console.log('💾 All groups after save:', savedGroups);
-    console.log('💾 Saved group codes:', savedGroups.map(g => ({ name: g.name, code: g.code })));
+
+
     
     return of(newGroup);
   }
@@ -711,7 +711,7 @@ export class GroupService {
     };
 
     this.saveGroup(testGroup);
-    console.log('Created joinable test group with code:', testGroup.code);
+
     return testGroup;
   }
 
@@ -720,27 +720,27 @@ export class GroupService {
    */
   public debugStorageState(): void {
     const currentUser = this.authService.getCurrentUser();
-    console.log('🔍 GroupService Debug Storage State:');
-    console.log(`👤 Current User: ${currentUser?.id || 'None'} (${currentUser?.email || 'No email'})`);
+
+
     
     // Show global storage (new approach)
     const globalData = localStorage.getItem(this.GLOBAL_GROUPS_KEY);
-    console.log(`🌍 Global Groups Count: ${globalData ? JSON.parse(globalData).length : 0}`);
+
     
     // Show legacy storage for comparison
     const legacyData = localStorage.getItem(this.LEGACY_STORAGE_KEY);
-    console.log(`📂 Legacy Groups Count: ${legacyData ? JSON.parse(legacyData).length : 0}`);
+
     
     // Show all sotd_groups keys in localStorage
     const allKeys = Object.keys(localStorage).filter(key => key.startsWith('sotd_'));
-    console.log(`🗝️ All SOTD Storage Keys:`, allKeys);
+
     
     // Show user-specific group filtering results
     if (currentUser) {
       const userGroups = this.getUserGroups();
       const adminGroups = this.getAdminGroups();
-      console.log(`👤 User Groups (filtered): ${userGroups.length}`);
-      console.log(`👑 Admin Groups (filtered): ${adminGroups.length}`);
+
+
     }
   }
 }

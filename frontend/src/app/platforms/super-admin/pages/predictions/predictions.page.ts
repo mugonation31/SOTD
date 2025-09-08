@@ -266,7 +266,7 @@ export class PredictionsPage implements OnInit {
 
   ngOnInit(): void {
     // Initialize analytics data
-    console.log('Prediction Intelligence Center initialized');
+
   }
 
   // Platform Health Analytics Methods

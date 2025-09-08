@@ -46,13 +46,11 @@ export class EmailConfirmedPage implements OnInit {
   }
 
   ngOnInit() {
-    console.log('✅ Email confirmation page loaded');
     this.handleEmailConfirmation();
   }
 
   async handleEmailConfirmation() {
     try {
-      console.log('🔍 Email confirmation page loaded - user needs to login manually');
       
       // Check if we have tokens in the URL fragment (for logging purposes only)
       const url = new URL(window.location.href);
@@ -61,11 +59,9 @@ export class EmailConfirmedPage implements OnInit {
       const refreshToken = hashParams.get('refresh_token');
       
       if (accessToken && refreshToken) {
-        console.log('✅ Email confirmation tokens found in URL - user should now login manually');
         // Note: We intentionally do NOT set the session here to prevent auto-login
         // The user must manually login after email confirmation
       } else {
-        console.log('ℹ️ No tokens found in URL, user may have already confirmed or accessed page directly');
       }
     } catch (error) {
       console.error('❌ Error handling email confirmation:', error);

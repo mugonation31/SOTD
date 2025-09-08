@@ -48,11 +48,9 @@ export class OtpPage {
   }
 
   onVerify() {
-    console.log('Verifying OTP:', this.otp);
   }
 
   resendOTP() {
-    console.log('Resending OTP');
   }
 
   navigateToWelcome() {

@@ -140,19 +140,7 @@ export class SignupPage implements OnInit {
     
     const isPasswordValid = this.isPasswordValid();
     
-    const canSubmit = hasAllFields && hasNoErrors && isPasswordValid;
-    
-    // Debug logging
-    console.log('🔍 Signup Form Debug:', {
-      hasAllFields,
-      hasNoErrors,
-      isPasswordValid,
-      canSubmit,
-      signupData: this.signupData,
-      validationErrors: this.validationErrors
-    });
-    
-    return canSubmit;
+    return hasAllFields && hasNoErrors && isPasswordValid;
   }
 
 
@@ -182,7 +170,6 @@ export class SignupPage implements OnInit {
       // If forceRole is true, always logout current user and force new signup
       // This ensures clean session separation between different user roles
       if (forceRole && this.authService.isAuthenticated()) {
-        console.log('🔄 Force role signup detected - logging out current user silently');
         this.authService.logoutSilent();
         // Continue with signup flow after silent logout
       }
@@ -198,9 +185,6 @@ export class SignupPage implements OnInit {
           return;
         }
       }
-      
-      // Continue with signup flow
-      console.log('📝 Signup flow for role:', requiredRole);
     });
     
     // Trigger initial validation to clear any default errors
@@ -208,7 +192,6 @@ export class SignupPage implements OnInit {
   }
   
   validateAllFields() {
-    console.log('🔍 validateAllFields called');
     this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
     this.validateRequired('lastName', this.signupData.lastName);
@@ -286,9 +269,6 @@ export class SignupPage implements OnInit {
   }
 
   onSignup() {
-    console.log('🚀 SignupPage: Starting signup process...');
-    console.log('📝 SignupPage: Form data:', this.signupData);
-    
     this.validateRequired('username', this.signupData.username);
     this.validateRequired('firstName', this.signupData.firstName);
     this.validateRequired('lastName', this.signupData.lastName);
@@ -298,20 +278,17 @@ export class SignupPage implements OnInit {
     this.validateAcceptedTerms();
 
     if (!this.canSubmit || this.isLoading) {
-      console.log('❌ SignupPage: Cannot submit - canSubmit:', this.canSubmit, 'isLoading:', this.isLoading);
       return;
     }
 
-    console.log('✅ SignupPage: Validation passed, starting signup...');
     this.isLoading = true;
 
     const { confirmPassword, acceptedTerms, ...signupPayload } = this.signupData;
-    console.log('📤 SignupPage: Calling authService.signup with payload:', signupPayload);
     
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       if (this.isLoading) {
-        console.error('⏰ SignupPage: Signup timeout - taking too long');
+        console.error('Signup timeout - taking too long');
         this.isLoading = false;
         alert('Signup is taking longer than expected. Please try again.');
       }
@@ -319,7 +296,6 @@ export class SignupPage implements OnInit {
     
     this.authService.signup(signupPayload).subscribe({
       next: (response) => {
-        console.log('✅ SignupPage: Signup successful:', response);
         clearTimeout(timeoutId); // Clear the timeout
         this.isLoading = false;
         
@@ -332,56 +308,40 @@ export class SignupPage implements OnInit {
             email: this.signupData.email,
             pendingConfirmation: 'true'
           };
-          console.log('🔄 SignupPage: Redirecting to login with email confirmation message');
           this.router.navigate(['/auth/login'], { queryParams });
         }, 500);
       },
       error: (error) => {
-        console.error('❌ SignupPage: Signup error:', error);
+        console.error('Signup error:', error);
         clearTimeout(timeoutId); // Clear the timeout
         this.isLoading = false;
         
         // Use the new error handling utility to extract meaningful error messages
         const errorMessage = extractErrorMessage(error);
-        console.log('📝 SignupPage: Extracted error message:', errorMessage);
         alert(errorMessage);
       },
     });
   }
 
   validateAcceptedTerms() {
-    console.log('🔍 validateAcceptedTerms called, acceptedTerms:', this.signupData.acceptedTerms);
     if (!this.signupData.acceptedTerms) {
       this.validationErrors.acceptedTerms = 'You must accept the Terms and Conditions to continue';
-      console.log('❌ Terms not accepted, setting error');
     } else {
       this.validationErrors.acceptedTerms = '';
-      console.log('✅ Terms accepted, clearing error');
     }
-    console.log('🔍 validationErrors.acceptedTerms:', this.validationErrors.acceptedTerms);
   }
 
   openTerms(event: Event) {
     event.preventDefault();
     // TODO: Open Terms and Conditions modal or page
-    console.log('Opening Terms and Conditions...');
   }
 
   openPrivacy(event: Event) {
     event.preventDefault();
     // TODO: Open Privacy Policy modal or page
-    console.log('Opening Privacy Policy...');
   }
 
   navigateToWelcome() {
     this.router.navigate(['/welcome']);
-  }
-
-  // Debug method to enable Supabase for testing
-  enableSupabaseForTesting() {
-    console.log('🔧 SignupPage: Enabling Supabase for testing...');
-    this.authService.enableSupabaseAuth();
-    this.authService.debugAuthState();
-    alert('Supabase enabled for testing. Please try signing up again.');
   }
 }

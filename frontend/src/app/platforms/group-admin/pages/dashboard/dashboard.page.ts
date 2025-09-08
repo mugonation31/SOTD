@@ -250,7 +250,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('🚀 Dashboard: Initializing with real group data...');
+
     this.loadRealGroupData();
     this.subscribeToGroupUpdates();
     // Initialize Community Intelligence data
@@ -265,7 +265,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private loadRealGroupData() {
     const adminGroups = this.groupService.getAdminGroups();
-    console.log('📊 Dashboard: Loading data from admin groups:', adminGroups.length);
+
 
     // Calculate real group statistics (existing functionality)
     this.calculateGroupStats(adminGroups);
@@ -280,7 +280,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private subscribeToGroupUpdates() {
     this.subscription = this.groupService.groups$.subscribe(() => {
-      console.log('🔄 Dashboard: Received group update, reloading data...');
+
       this.loadRealGroupData();
     });
   }
@@ -313,7 +313,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       perfectScores: Math.floor(totalMembers * 0.2), // Mock calculation
     };
 
-    console.log('📈 Dashboard: Calculated group stats:', this.groupStats);
+
   }
 
   private calculateTopPerformers(groups: any[]) {
@@ -347,7 +347,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.topPerformers = allPerformers.slice(0, 3);
-    console.log('🏆 Dashboard: Calculated top performers:', this.topPerformers);
+
   }
 
   private calculateGameweekStatus(groups: any[]) {
@@ -375,7 +375,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       pendingMembers: pendingMembers.slice(0, 4), // Limit to 4 for display
     };
 
-    console.log('🎯 Dashboard: Calculated gameweek status:', this.currentGameweek);
+
   }
 
   async sendReminder(member: PendingMember) {
@@ -394,7 +394,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   // Community Intelligence Methods
   private initializeCommunityIntelligence() {
-    console.log('🧠 Dashboard: Initializing Community Intelligence...');
+
     this.initializeEngagementInsights();
     this.initializeCommunityMilestones();
   }
@@ -417,7 +417,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       predictionQualityScore: Math.floor(Math.random() * 20) + 75,
     };
 
-    console.log('💙 Dashboard: Calculated community health:', this.communityHealth);
+
   }
 
   private generateMemberInsights(groups: any[]) {
@@ -444,7 +444,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
 
     this.memberInsights = insights.slice(0, 6); // Show top 6 insights
-    console.log('👥 Dashboard: Generated member insights:', this.memberInsights.length);
+
   }
 
   private generateCommunityAlerts(groups: any[]) {
@@ -493,7 +493,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.communityAlerts = alerts;
-    console.log('🚨 Dashboard: Generated community alerts:', this.communityAlerts.length);
+
   }
 
   private initializeEngagementInsights() {

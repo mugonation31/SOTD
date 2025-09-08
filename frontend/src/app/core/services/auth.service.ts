@@ -83,10 +83,8 @@ export class AuthService {
     this.useSupabase = localStorage.getItem(STORAGE_KEYS.USE_SUPABASE) === 'true';
     
     if (this.useSupabase) {
-      console.log('🔧 AuthService: Using Supabase authentication');
       // Subscribe to Supabase auth state changes
       this.supabaseService.user$.subscribe(user => {
-        console.log('🔍 AuthService: Supabase user$ subscription fired, user:', user?.email || 'null');
         if (user) {
           this.supabaseService.profile$.pipe(take(1)).subscribe(profile => {
             if (profile) {
@@ -107,20 +105,16 @@ export class AuthService {
               
               // Update reactive state
               this.currentUserSubject.next(authResponse);
-              
-              console.log('✅ AuthService: Supabase user authenticated:', authResponse);
             }
           });
         } else {
           // User logged out
-          console.log('🚪 AuthService: Supabase user$ subscription detected logout, clearing state...');
           this.currentUserSubject.next(null);
           localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
         }
       });
     } else {
-      console.log('🔧 AuthService: Using mock authentication for development');
-    this.initializeSessionTimer();
+      this.initializeSessionTimer();
     }
   }
 
@@ -128,14 +122,12 @@ export class AuthService {
   enableSupabaseAuth(): void {
     this.useSupabase = true;
     localStorage.setItem(STORAGE_KEYS.USE_SUPABASE, 'true');
-    console.log('🔄 AuthService: Switched to Supabase authentication');
   }
 
   // Disable Supabase authentication (for development)
   disableSupabaseAuth(): void {
     this.useSupabase = false;
     localStorage.removeItem(STORAGE_KEYS.USE_SUPABASE);
-    console.log('🔄 AuthService: Switched to mock authentication');
   }
 
   // Centralized storage methods
@@ -274,16 +266,28 @@ export class AuthService {
 
   private async performSupabaseLogin(loginData: LoginData, subscriber: any) {
     try {
+      console.log('🔍 AuthService: Starting Supabase login...');
+      
+      // Clear any existing Supabase locks first with timeout
+      console.log('🔧 AuthService: Clearing Supabase locks...');
+      try {
+        await Promise.race([
+          this.clearAuthLocks(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Lock clearing timeout')), 5000))
+        ]);
+      } catch (error) {
+        console.log('⚠️ AuthService: Lock clearing timed out, continuing anyway...');
+      }
+      
       // Ensure we're in a clean state before attempting login
-      console.log('🔍 AuthService: Verifying clean state before Supabase login...');
       if (this.currentUserValue) {
-        console.log('⚠️ AuthService: User still authenticated, performing cleanup before new login...');
         this.currentUserSubject.next(null);
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       }
       
+      console.log('🔍 AuthService: Calling supabaseService.signIn...');
       const result = await this.supabaseService.signIn(loginData.email, loginData.password);
-      console.log('✅ Supabase login successful:', result);
+      console.log('✅ AuthService: Supabase signIn completed:', result);
       
       // Create AuthResponse directly from Supabase result
       if (result.user && result.session) {
@@ -320,7 +324,6 @@ export class AuthService {
             // Update reactive state
             this.currentUserSubject.next(authResponse);
             
-            console.log('✅ AuthService: Login response created:', authResponse);
             subscriber.next(authResponse);
             subscriber.complete();
           } else {
@@ -415,23 +418,15 @@ export class AuthService {
   }
 
   signup(userData: SignupData): Observable<AuthResponse> {
-    console.log('🔧 AuthService: Starting signup process...');
-    console.log('🔧 AuthService: useSupabase =', this.useSupabase);
-    console.log('🔧 AuthService: userData =', userData);
-    
     if (this.useSupabase) {
-      console.log('🔧 AuthService: Using Supabase signup');
       return this.signupWithSupabase(userData);
     } else {
-      console.log('🔧 AuthService: Using Mock signup');
       return this.signupWithMock(userData);
     }
   }
 
   private signupWithSupabase(userData: SignupData): Observable<AuthResponse> {
-    console.log('🔧 AuthService: Starting Supabase signup...');
     return new Observable(subscriber => {
-      console.log('🔧 AuthService: Calling supabaseService.signUp...');
       this.supabaseService.signUp(userData.email, userData.password, {
         username: userData.username || '',
         first_name: userData.firstName,
@@ -439,10 +434,6 @@ export class AuthService {
         role: userData.role
       })
       .then(result => {
-        console.log('✅ Supabase signup successful:', result);
-
-        // NEW (fallback): 
-        
         // Create mock AuthResponse for consistency
         const authResponse: AuthResponse = {
           token: 'supabase-signup-token',
@@ -455,12 +446,11 @@ export class AuthService {
           }
         };
         
-        console.log('🔧 AuthService: Sending success response:', authResponse);
         subscriber.next(authResponse);
         subscriber.complete();
       })
       .catch(error => {
-        console.error('❌ Supabase signup failed:', error);
+        console.error('Supabase signup failed:', error);
         subscriber.error(error);
       });
     });
@@ -495,20 +485,16 @@ export class AuthService {
   }
 
   logout(): void {
-    console.log('🚪 AuthService: Logout called, performing cleanup and triggering reactive updates...');
-    
     if (this.useSupabase) {
       // For Supabase, immediately clear the reactive state to prevent race conditions
-      console.log('🧹 AuthService: Immediately clearing reactive state for Supabase logout...');
       this.currentUserSubject.next(null);
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       
       // Then perform Supabase signOut with proper cleanup
       this.supabaseService.signOut().then(() => {
-        console.log('✅ Supabase logout successful');
         this.performLogout();
       }).catch(error => {
-        console.error('❌ Supabase logout failed:', error);
+        console.error('Supabase logout failed:', error);
         this.performLogout();
       });
     } else {
@@ -518,33 +504,23 @@ export class AuthService {
 
   // Logout without redirect (for use in signup flow)
   logoutSilent() {
-    console.log('🔇 AuthService: Silent logout called, performing cleanup without logging...');
     this.performLogout();
   }
 
   private performLogout() {
-    console.log('🧹 AuthService: Starting logout cleanup process...');
-    
     // Store user email to track that they have completed first login
     const user = this.getUserFromStorage();
     if (user?.firstLogin && user.email) {
-      console.log(`📝 AuthService: Marking first login complete for user: ${user.email}`);
       // Mark this user as having completed first login
       localStorage.setItem(`firstLoginComplete_${user.email}`, 'true');
     }
     
-    console.log('🗑️ AuthService: Clearing user storage...');
     this.clearUserStorage();
-    
-    console.log('📡 AuthService: Triggering BehaviorSubject.next(null) for reactive guard updates...');
     this.currentUserSubject.next(null);
     
     if (this.sessionTimer) {
-      console.log('⏰ AuthService: Clearing session timer...');
       clearInterval(this.sessionTimer);
     }
-    
-    console.log('✅ AuthService: Logout cleanup completed - guards should now react to auth state change');
   }
 
   // Method to mark first login as complete (called from first-time pages)
@@ -556,7 +532,6 @@ export class AuthService {
         firstLogin: false
       };
       this.setUserInStorage(updatedUser);
-      console.log('First login marked as complete for user:', updatedUser);
     }
   }
 
@@ -662,8 +637,6 @@ export class AuthService {
    * Complete user data cleanup - ensures proper user switching
    */
   public clearAllUserData(): void {
-    console.log('🧹 AuthService: Performing complete user data cleanup...');
-    
     // Get all localStorage keys
     const allKeys = Object.keys(localStorage);
     
@@ -678,7 +651,6 @@ export class AuthService {
           key === 'pendingUserData' ||
           key.startsWith('sb-') ||  // Supabase keys
           key.includes('supabase')) {
-        console.log(`🗑️ Removing key: ${key}`);
         localStorage.removeItem(key);
       }
     });
@@ -688,36 +660,12 @@ export class AuthService {
     
     // Clear the current user subject
     this.currentUserSubject.next(null);
-    
-    console.log('✅ Complete user data cleanup finished');
-  }
-
-  /**
-   * Debug method to check current authentication state
-   */
-  public debugAuthState(): void {
-    console.log('🔍 Auth Debug State:');
-    console.log('useSupabase:', this.useSupabase);
-    console.log('currentUserSubject value:', this.currentUserSubject.value);
-    console.log('getCurrentUser():', this.getCurrentUser());
-    console.log('getUserFromStorage():', this.getUserFromStorage());
-    console.log('isAuthenticated():', this.isAuthenticated());
-    console.log('isSuperAdmin():', this.isSuperAdmin());
-    console.log('localStorage user:', localStorage.getItem('user'));
-    console.log('localStorage currentUser:', localStorage.getItem('currentUser'));
-    
-    if (this.useSupabase) {
-      console.log('Supabase currentUser:', this.supabaseService.currentUser);
-      console.log('Supabase currentProfile:', this.supabaseService.currentProfile);
-    }
   }
 
   /**
    * Emergency auth reset - resolves Supabase lock conflicts
    */
   public emergencyAuthReset(): void {
-    console.log('🚨 AuthService: Emergency auth reset initiated...');
-    
     // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
@@ -730,31 +678,46 @@ export class AuthService {
       clearInterval(this.sessionTimer);
       this.sessionTimer = null;
     }
-    
-    console.log('✅ Emergency auth reset completed - all state cleared');
   }
 
   /**
    * Clear Supabase auth locks and state
    */
   public async clearAuthLocks(): Promise<void> {
-    console.log('🔧 AuthService: Clearing auth locks...');
+    console.log('🔧 AuthService: Clearing Supabase locks...');
     
+    // Clear local state first
+    this.currentUserSubject.next(null);
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Try to clear Supabase locks more aggressively
     try {
-      // Sign out from Supabase to clear any locks
+      // Clear any existing Supabase session
       await this.supabaseService.client.auth.signOut();
-      
-      // Clear local storage
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Reset current user
-      this.currentUserSubject.next(null);
-      
-      console.log('✅ Auth locks cleared successfully');
-    } catch (error) {
-      console.error('❌ AuthService: Failed to clear auth locks:', error);
+    } catch (e) {
+      // Ignore errors
     }
+    
+    // Try to clear the lock manually
+    try {
+      if ('locks' in navigator) {
+        await (navigator as any).locks.query().then((locks: any[]) => {
+          locks.forEach(lock => {
+            if (lock.name.includes('sb-') || lock.name.includes('supabase')) {
+              console.log('🔧 AuthService: Found Supabase lock, attempting to release...');
+            }
+          });
+        });
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    
+    // Wait a bit for locks to clear
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('✅ AuthService: Supabase locks cleared');
   }
 
   /**
@@ -771,8 +734,6 @@ export class AuthService {
    */
   async setSessionFromFragment(): Promise<boolean> {
     try {
-      console.log('🔍 AuthService: Parsing URL fragment and setting Supabase session...');
-      
       // Parse the URL fragment to extract tokens
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.slice(1));
@@ -780,58 +741,25 @@ export class AuthService {
       const refreshToken = hashParams.get('refresh_token');
       
       if (!accessToken || !refreshToken) {
-        console.error('❌ Missing tokens in URL fragment');
+        console.error('Missing tokens in URL fragment');
         return false;
       }
       
-      console.log('✅ Tokens found in URL fragment, setting Supabase session...');
-      console.log('🔍 Token details:', {
-        accessTokenLength: accessToken.length,
-        refreshTokenLength: refreshToken.length,
-        accessTokenStart: accessToken.substring(0, 20) + '...',
-        refreshTokenStart: refreshToken.substring(0, 20) + '...'
-      });
-      
-      console.log('🔍 About to call setSession with tokens...');
-      
       // Set the Supabase session with the tokens from URL fragment
-      console.log('🔍 Calling setSession...');
       const { data, error } = await this.supabaseService.client.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
-      console.log('🔍 setSession completed, checking for errors...');
       
       if (error) {
-        console.error('❌ Failed to set Supabase session:', error);
-        console.error('❌ Error details:', {
-          message: error.message,
-          status: error.status,
-          name: error.name
-        });
+        console.error('Failed to set Supabase session:', error);
         return false;
       }
       
-      console.log('✅ Supabase session established successfully');
-      console.log('🔍 Session data:', {
-        user: data.session?.user?.email,
-        expiresAt: data.session?.expires_at,
-        accessToken: data.session?.access_token ? 'Present' : 'Missing'
-      });
-      
-      // Skip session verification to avoid potential hang
-      console.log('✅ Session set successfully, skipping verification');
       return true;
       
     } catch (err) {
-      console.error('❌ Error setting Supabase session:', err);
-      if (err instanceof Error) {
-        console.error('❌ Error details:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        });
-      }
+      console.error('Error setting Supabase session:', err);
       return false;
     }
   }
@@ -860,11 +788,9 @@ export class AuthService {
       }
       
       if (!accessToken) {
-        console.error('❌ No access token found in URL fragment, localStorage, or sessionStorage');
+        console.error('No access token found in URL fragment, localStorage, or sessionStorage');
         return false;
       }
-
-      console.log('🔍 Using direct API call with access token...');
 
       // Use direct API call to update password
       const response = await fetch(`${environment.supabase.url}/auth/v1/user`, {
@@ -881,7 +807,7 @@ export class AuthService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Password update failed:', {
+        console.error('Password update failed:', {
           status: response.status,
           statusText: response.statusText,
           error: errorData
@@ -889,26 +815,15 @@ export class AuthService {
         return false;
       }
 
-      console.log('✅ Password updated successfully');
       return true;
 
     } catch (err) {
-      console.error('🔥 Exception during password reset:', err);
+      console.error('Exception during password reset:', err);
       
       // Handle NavigatorLockAcquireTimeoutError gracefully - it's usually not fatal
       if (err instanceof Error && err.message.includes('NavigatorLockAcquireTimeoutError')) {
-        console.log('⚠️ NavigatorLockAcquireTimeoutError detected - this is usually not fatal');
         // Continue with the flow as this error doesn't necessarily mean the operation failed
         return true;
-      }
-      
-      // Handle other specific errors
-      if (err instanceof Error) {
-        console.error('🔥 Error details:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        });
       }
       
       return false;
