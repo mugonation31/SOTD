@@ -86,6 +86,7 @@ export class AuthService {
       console.log('🔧 AuthService: Using Supabase authentication');
       // Subscribe to Supabase auth state changes
       this.supabaseService.user$.subscribe(user => {
+        console.log('🔍 AuthService: Supabase user$ subscription fired, user:', user?.email || 'null');
         if (user) {
           this.supabaseService.profile$.pipe(take(1)).subscribe(profile => {
             if (profile) {
@@ -112,6 +113,7 @@ export class AuthService {
           });
         } else {
           // User logged out
+          console.log('🚪 AuthService: Supabase user$ subscription detected logout, clearing state...');
           this.currentUserSubject.next(null);
           localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
         }
@@ -272,6 +274,14 @@ export class AuthService {
 
   private async performSupabaseLogin(loginData: LoginData, subscriber: any) {
     try {
+      // Ensure we're in a clean state before attempting login
+      console.log('🔍 AuthService: Verifying clean state before Supabase login...');
+      if (this.currentUserValue) {
+        console.log('⚠️ AuthService: User still authenticated, performing cleanup before new login...');
+        this.currentUserSubject.next(null);
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      }
+      
       const result = await this.supabaseService.signIn(loginData.email, loginData.password);
       console.log('✅ Supabase login successful:', result);
       
@@ -488,15 +498,21 @@ export class AuthService {
     console.log('🚪 AuthService: Logout called, performing cleanup and triggering reactive updates...');
     
     if (this.useSupabase) {
+      // For Supabase, immediately clear the reactive state to prevent race conditions
+      console.log('🧹 AuthService: Immediately clearing reactive state for Supabase logout...');
+      this.currentUserSubject.next(null);
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      
+      // Then perform Supabase signOut with proper cleanup
       this.supabaseService.signOut().then(() => {
         console.log('✅ Supabase logout successful');
         this.performLogout();
       }).catch(error => {
         console.error('❌ Supabase logout failed:', error);
-        this.performLogout(); // Still perform local cleanup
+        this.performLogout();
       });
     } else {
-    this.performLogout();
+      this.performLogout();
     }
   }
 

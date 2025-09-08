@@ -237,13 +237,35 @@ export class SupabaseService {
   }
 
   async signOut() {
-    const { error } = await this.supabase.auth.signOut();
-    if (error) throw error;
+    console.log('🔧 SupabaseService: Starting signOut...');
     
-    // Clear local state
+    try {
+      // First, clear local state to prevent race conditions
+      console.log('🧹 SupabaseService: Pre-clearing local state...');
+      this.currentUser$.next(null);
+      this.currentSession$.next(null);
+      this.currentProfile$.next(null);
+      
+      // Then perform Supabase signOut
+      const { error } = await this.supabase.auth.signOut();
+      if (error) {
+        console.error('❌ SupabaseService: Auth signOut error:', error);
+        throw error;
+      }
+      
+      console.log('✅ SupabaseService: Auth signOut successful');
+    } catch (error) {
+      console.error('❌ SupabaseService: signOut failed:', error);
+      // Continue with local cleanup even if Supabase signOut fails
+    }
+    
+    // Ensure local state is cleared (in case it wasn't cleared above)
+    console.log('🧹 SupabaseService: Final local state cleanup...');
     this.currentUser$.next(null);
     this.currentSession$.next(null);
     this.currentProfile$.next(null);
+    
+    console.log('✅ SupabaseService: SignOut completed and local state cleared');
   }
 
   // Profile Management
