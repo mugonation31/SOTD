@@ -98,6 +98,8 @@ export class LoginPage implements OnInit {
   ngOnInit() {
     // Get return URL and role from route parameters
     this.route.queryParams.subscribe(params => {
+      console.log('🔍 Login page received query params:', params);
+      
       this.returnUrl = params['returnUrl'] || '';
       const expectedRole = params['role'] || '';
       

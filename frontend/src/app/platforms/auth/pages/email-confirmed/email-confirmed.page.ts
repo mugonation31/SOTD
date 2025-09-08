@@ -52,28 +52,18 @@ export class EmailConfirmedPage implements OnInit {
 
   async handleEmailConfirmation() {
     try {
-      console.log('🔍 Checking for Supabase session from email confirmation...');
+      console.log('🔍 Email confirmation page loaded - user needs to login manually');
       
-      // Check if we have tokens in the URL fragment
+      // Check if we have tokens in the URL fragment (for logging purposes only)
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.slice(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       
       if (accessToken && refreshToken) {
-        console.log('✅ Found tokens in URL, setting Supabase session...');
-        
-        // Set the session with the tokens from the email confirmation
-        const { data, error } = await this.supabaseService.client.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-        
-        if (error) {
-          console.error('❌ Failed to set session:', error);
-        } else {
-          console.log('✅ Email confirmation successful, session established');
-        }
+        console.log('✅ Email confirmation tokens found in URL - user should now login manually');
+        // Note: We intentionally do NOT set the session here to prevent auto-login
+        // The user must manually login after email confirmation
       } else {
         console.log('ℹ️ No tokens found in URL, user may have already confirmed or accessed page directly');
       }

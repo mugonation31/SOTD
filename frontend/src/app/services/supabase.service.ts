@@ -86,7 +86,7 @@ export class SupabaseService {
         auth: {
           persistSession: true, // Enable session persistence for proper auth
           autoRefreshToken: true,
-          detectSessionInUrl: true
+          detectSessionInUrl: false // Disable automatic session detection to handle email confirmation manually
         }
       }
     );

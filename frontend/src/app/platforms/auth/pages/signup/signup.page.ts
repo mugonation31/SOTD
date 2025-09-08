@@ -325,15 +325,15 @@ export class SignupPage implements OnInit {
         
         // Add a small delay to ensure the loading state is visible
         setTimeout(() => {
-          // After successful signup, redirect to login with role, return URL, and email confirmation info
-          this.router.navigate(['/auth/login'], {
-            queryParams: {
-              returnUrl: this.returnUrl,
-              role: this.signupData.role,
-              email: this.signupData.email,
-              pendingConfirmation: 'true'
-            }
-          });
+          // After successful signup, redirect to login with email confirmation message
+          const queryParams = {
+            returnUrl: this.returnUrl,
+            role: this.signupData.role,
+            email: this.signupData.email,
+            pendingConfirmation: 'true'
+          };
+          console.log('🔄 SignupPage: Redirecting to login with email confirmation message');
+          this.router.navigate(['/auth/login'], { queryParams });
         }, 500);
       },
       error: (error) => {

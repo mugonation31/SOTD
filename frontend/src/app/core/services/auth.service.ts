@@ -266,50 +266,69 @@ export class AuthService {
 
   private loginWithSupabase(loginData: LoginData): Observable<AuthResponse> {
     return new Observable(subscriber => {
-      this.supabaseService.signIn(loginData.email, loginData.password)
-        .then(result => {
-          console.log('✅ Supabase login successful:', result);
-          
-          // Create AuthResponse directly from Supabase result
-          if (result.user && result.session) {
-            // Get profile data
-            this.supabaseService.profile$.pipe(take(1)).subscribe(profile => {
-              if (profile) {
-                const authResponse: AuthResponse = {
-                  token: result.session.access_token,
-                  user: {
-                    id: profile.id,
-                    email: profile.email,
-                    role: profile.role,
-                    firstName: profile.first_name,
-                    lastName: profile.last_name,
-                  }
-                };
-                
-                // Store in localStorage for consistency
-                localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
-                
-                // Update reactive state
-                this.currentUserSubject.next(authResponse);
-                
-                console.log('✅ AuthService: Login response created:', authResponse);
-                subscriber.next(authResponse);
-                subscriber.complete();
-              } else {
-                console.error('❌ No profile found for user');
-                subscriber.error(new Error('Profile not found'));
-              }
-            });
-          } else {
-            console.error('❌ Invalid Supabase login result');
-            subscriber.error(new Error('Invalid login result'));
-          }
-        })
-        .catch(error => {
-          console.error('❌ Supabase login failed:', error);
-          subscriber.error(error);
-        });
+      this.performSupabaseLogin(loginData, subscriber);
     });
+  }
+
+  private async performSupabaseLogin(loginData: LoginData, subscriber: any) {
+    try {
+      const result = await this.supabaseService.signIn(loginData.email, loginData.password);
+      console.log('✅ Supabase login successful:', result);
+      
+      // Create AuthResponse directly from Supabase result
+      if (result.user && result.session) {
+        // Fetch profile data directly from Supabase
+        try {
+          const profileResult = await this.supabaseService.client
+            .from('profiles')
+            .select('*')
+            .eq('id', result.user.id)
+            .single();
+
+          if (profileResult.error) {
+            console.error('❌ Error fetching profile:', profileResult.error);
+            subscriber.error(new Error('Profile not found'));
+            return;
+          }
+
+          const profile = profileResult.data;
+          if (profile) {
+            const authResponse: AuthResponse = {
+              token: result.session.access_token,
+              user: {
+                id: profile.id,
+                email: profile.email,
+                role: profile.role,
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+              }
+            };
+            
+            // Store in localStorage for consistency
+            localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
+            
+            // Update reactive state
+            this.currentUserSubject.next(authResponse);
+            
+            console.log('✅ AuthService: Login response created:', authResponse);
+            subscriber.next(authResponse);
+            subscriber.complete();
+          } else {
+            console.error('❌ No profile found for user');
+            subscriber.error(new Error('Profile not found'));
+          }
+        } catch (error) {
+          console.error('❌ Error fetching profile:', error);
+          subscriber.error(new Error('Profile not found'));
+        }
+      } else {
+        console.error('❌ Invalid Supabase login result');
+        subscriber.error(new Error('Invalid login result'));
+      }
+    } catch (error) {
+      console.error('❌ Supabase login failed:', error);
+      subscriber.error(error);
+    }
   }
 
   private loginWithMock(loginData: LoginData): Observable<AuthResponse> {
@@ -539,8 +558,15 @@ export class AuthService {
 
   // Updated to use new storage format
   isFirstTimeUser(): boolean {
-    const user = this.getUserFromStorage();
-    return user?.firstLogin === true;
+    if (this.useSupabase) {
+      // For Supabase, check the current profile
+      const profile = this.supabaseService.currentProfile;
+      return profile?.first_login === true;
+    } else {
+      // For mock authentication, check stored user data
+      const user = this.getUserFromStorage();
+      return user?.firstLogin === true;
+    }
   }
 
   // Updated to use new storage format

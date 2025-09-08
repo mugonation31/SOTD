@@ -29,14 +29,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'email-confirmed',
+        loadComponent: () => import('./pages/email-confirmed/email-confirmed.page').then( m => m.EmailConfirmedPage)
+      },
+      {
         path: '',
         redirectTo: 'login',
         pathMatch: 'full',
       },
     ],
-  },  {
-    path: 'email-confirmed',
-    loadComponent: () => import('./pages/email-confirmed/email-confirmed.page').then( m => m.EmailConfirmedPage)
   },
-
 ];
