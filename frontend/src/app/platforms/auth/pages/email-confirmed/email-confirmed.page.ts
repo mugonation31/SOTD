@@ -51,17 +51,29 @@ export class EmailConfirmedPage implements OnInit {
 
   async handleEmailConfirmation() {
     try {
+      console.log('📧 Handling email confirmation...');
       
-      // Check if we have tokens in the URL fragment (for logging purposes only)
+      // Check if we have tokens in the URL fragment
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.slice(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       
       if (accessToken && refreshToken) {
-        // Note: We intentionally do NOT set the session here to prevent auto-login
-        // The user must manually login after email confirmation
+        console.log('🔗 Found auth tokens in URL, processing session...');
+        
+        // Set the session using the tokens from the email confirmation
+        const success = await this.supabaseService.handleDeepLinkSession(window.location.href);
+        
+        if (success) {
+          console.log('✅ Email confirmation successful, session established');
+          // The app will automatically navigate based on the user's role and first login status
+          // through the routing guards and session restoration flow
+        } else {
+          console.error('❌ Failed to establish session from email confirmation');
+        }
       } else {
+        console.log('ℹ️ No auth tokens found in URL - user may need to login manually');
       }
     } catch (error) {
       console.error('❌ Error handling email confirmation:', error);

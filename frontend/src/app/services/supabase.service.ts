@@ -3,6 +3,7 @@ import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-
 import { environment } from '../../environments/environment';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { UserRole } from '../core/services/auth.service';
+import { CrossPlatformStorageService } from '../core/services/cross-platform-storage.service';
 
 // Predict 3 Database Types
 export interface Profile {
@@ -73,53 +74,96 @@ export interface GroupMember {
   providedIn: 'root'
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  private supabase!: SupabaseClient;
   private currentUser$ = new BehaviorSubject<User | null>(null);
   private currentSession$ = new BehaviorSubject<Session | null>(null);
   private currentProfile$ = new BehaviorSubject<Profile | null>(null);
 
-  constructor() {
-    this.supabase = createClient(
-      environment.supabase.url,
-      environment.supabase.key,
-      {
-        auth: {
-          persistSession: true, // Enable session persistence for proper auth
-          autoRefreshToken: true,
-          detectSessionInUrl: false // Disable automatic session detection to handle email confirmation manually
+  constructor(private storageService: CrossPlatformStorageService) {
+    // Initialize Supabase client with better error handling
+    try {
+      this.supabase = createClient(
+        environment.supabase.url,
+        environment.supabase.key,
+        {
+          auth: {
+            persistSession: true, // Enable session persistence for proper auth
+            autoRefreshToken: true,
+            detectSessionInUrl: false, // Disable automatic session detection to handle email confirmation manually
+            storage: {
+              getItem: async (key: string) => {
+                try {
+                  return await this.storageService.get(key);
+                } catch (error) {
+                  console.warn(`⚠️ SupabaseService: Error getting item ${key}:`, error);
+                  return null;
+                }
+              },
+              setItem: async (key: string, value: string) => {
+                try {
+                  await this.storageService.set(key, value);
+                } catch (error) {
+                  console.warn(`⚠️ SupabaseService: Error setting item ${key}:`, error);
+                }
+              },
+              removeItem: async (key: string) => {
+                try {
+                  await this.storageService.remove(key);
+                } catch (error) {
+                  console.warn(`⚠️ SupabaseService: Error removing item ${key}:`, error);
+                }
+              }
+            }
+          }
         }
-      }
-    );
+      );
 
-    // Initialize auth state
-    this.initializeAuth();
+      // Initialize auth state
+      this.initializeAuth();
+    } catch (error) {
+      console.error('❌ SupabaseService: Failed to initialize Supabase client:', error);
+    }
   }
 
   private async initializeAuth() {
-    // Get initial session
-    const { data: { session } } = await this.supabase.auth.getSession();
-    this.currentSession$.next(session);
-    this.currentUser$.next(session?.user || null);
-
-    // Load profile if user exists
-    if (session?.user) {
-      await this.loadUserProfile(session.user.id);
+    if (!this.supabase) {
+      console.error('❌ SupabaseService: Supabase client not initialized');
+      return;
     }
 
-    // Listen for auth changes
-    this.supabase.auth.onAuthStateChange(async (event, session) => {
+    try {
+      // Get initial session
+      const { data: { session } } = await this.supabase.auth.getSession();
       this.currentSession$.next(session);
       this.currentUser$.next(session?.user || null);
 
+      // Load profile if user exists
       if (session?.user) {
         await this.loadUserProfile(session.user.id);
-      } else {
-        this.currentProfile$.next(null);
       }
-    });
+
+      // Listen for auth changes
+      this.supabase.auth.onAuthStateChange(async (event, session) => {
+        this.currentSession$.next(session);
+        this.currentUser$.next(session?.user || null);
+
+        if (session?.user) {
+          await this.loadUserProfile(session.user.id);
+        } else {
+          this.currentProfile$.next(null);
+        }
+      });
+    } catch (error) {
+      console.error('❌ SupabaseService: Error initializing auth:', error);
+    }
   }
 
   private async loadUserProfile(userId: string) {
+    if (!this.supabase) {
+      console.error('❌ SupabaseService: Supabase client not initialized');
+      return;
+    }
+
     try {
       const { data: profile, error } = await this.supabase
         .from('profiles')
@@ -175,12 +219,15 @@ export class SupabaseService {
     redirectTo?: string // optional; fallback to current origin
   ) {
     try {
+      // Determine the appropriate redirect URL based on platform
+      const defaultRedirectUrl = redirectTo ?? this.getDefaultRedirectUrl();
+      
       const { data, error } = await this.supabase.auth.signUp({
         email,
         password,
         options: {
           data: metadata, // store profile metadata on the user
-          emailRedirectTo: redirectTo ?? `${window.location.origin}/auth/email-confirmed`,
+          emailRedirectTo: defaultRedirectUrl,
         },
       });
 
@@ -212,6 +259,10 @@ export class SupabaseService {
   }
 
   async signIn(email: string, password: string) {
+    if (!this.supabase) {
+      throw new Error('Supabase client not initialized');
+    }
+
     console.log('🔍 SupabaseService: Starting signIn...');
     
     const { data, error } = await this.supabase.auth.signInWithPassword({
@@ -234,11 +285,13 @@ export class SupabaseService {
       this.currentSession$.next(null);
       this.currentProfile$.next(null);
       
-      // Then perform Supabase signOut
-      const { error } = await this.supabase.auth.signOut();
-      if (error) {
-        console.error('Auth signOut error:', error);
-        throw error;
+      // Then perform Supabase signOut if client is available
+      if (this.supabase) {
+        const { error } = await this.supabase.auth.signOut();
+        if (error) {
+          console.error('Auth signOut error:', error);
+          throw error;
+        }
       }
     } catch (error) {
       console.error('signOut failed:', error);
@@ -435,5 +488,80 @@ export class SupabaseService {
         callback
       )
       .subscribe();
+  }
+
+  /**
+   * Get the default redirect URL based on platform
+   */
+  private getDefaultRedirectUrl(): string {
+    // For web, use the current origin
+    if (typeof window !== 'undefined' && window.location) {
+      return `${window.location.origin}/auth/email-confirmed`;
+    }
+    
+    // For native platforms, use a custom scheme
+    return 'io.ionic.starter://auth/email-confirmed';
+  }
+
+  /**
+   * Handle deep link session exchange for email confirmation
+   * This method should be called when the app receives a deep link with auth tokens
+   */
+  async handleDeepLinkSession(url: string): Promise<boolean> {
+    try {
+      console.log('🔗 Handling deep link session:', url);
+      
+      // Parse the URL to extract tokens
+      const urlObj = new URL(url);
+      const hashParams = new URLSearchParams(urlObj.hash.slice(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+      
+      if (!accessToken || !refreshToken) {
+        console.error('❌ Missing tokens in deep link');
+        return false;
+      }
+      
+      // Set the session using the tokens from the deep link
+      const { data, error } = await this.supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      
+      if (error) {
+        console.error('❌ Failed to set session from deep link:', error);
+        return false;
+      }
+      
+      console.log('✅ Successfully set session from deep link');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error handling deep link session:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if the current URL contains auth tokens (for web platform)
+   */
+  hasAuthTokensInUrl(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    const hash = window.location.hash;
+    return hash.includes('access_token') && hash.includes('refresh_token');
+  }
+
+  /**
+   * Extract and set session from URL tokens (for web platform)
+   */
+  async setSessionFromUrl(): Promise<boolean> {
+    if (!this.hasAuthTokensInUrl()) {
+      return false;
+    }
+    
+    const url = window.location.href;
+    return await this.handleDeepLinkSession(url);
   }
 }

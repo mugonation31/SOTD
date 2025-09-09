@@ -1,7 +1,12 @@
 import { Routes } from '@angular/router';
 import { AuthGuard, NoAuthGuard } from './core/guards/auth.guard';
+import { DebugAuthPage } from './debug-auth.page';
 
 export const routes: Routes = [
+  {
+    path: 'debug-auth',
+    component: DebugAuthPage,
+  },
   {
     path: 'welcome',
     canActivate: [NoAuthGuard],

@@ -82,6 +82,12 @@ export class AuthService {
     // Check if we should use Supabase
     this.useSupabase = localStorage.getItem(STORAGE_KEYS.USE_SUPABASE) === 'true';
     
+    // Auto-enable Supabase if not explicitly disabled
+    if (!this.useSupabase) {
+      console.log('🔄 AuthService: Auto-enabling Supabase authentication...');
+      this.enableSupabaseAuth();
+    }
+    
     if (this.useSupabase) {
       // Subscribe to Supabase auth state changes
       this.supabaseService.user$.subscribe(user => {
@@ -105,12 +111,19 @@ export class AuthService {
               
               // Update reactive state
               this.currentUserSubject.next(authResponse);
+              
+              console.log('✅ AuthService: User session restored', { 
+                userId: user.id, 
+                role: profile.role,
+                firstLogin: profile.first_login 
+              });
             }
           });
         } else {
           // User logged out
           this.currentUserSubject.next(null);
           localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+          console.log('ℹ️ AuthService: User session cleared');
         }
       });
     } else {
@@ -278,6 +291,9 @@ export class AuthService {
       } catch (error) {
         console.log('⚠️ AuthService: Lock clearing timed out, continuing anyway...');
       }
+      
+      // Additional wait to ensure locks are cleared
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Ensure we're in a clean state before attempting login
       if (this.currentUserValue) {
@@ -715,9 +731,42 @@ export class AuthService {
     }
     
     // Wait a bit for locks to clear
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     console.log('✅ AuthService: Supabase locks cleared');
+  }
+
+  /**
+   * Emergency reset to resolve NavigatorLockAcquireTimeoutError
+   */
+  public async emergencyReset(): Promise<void> {
+    console.log('🚨 AuthService: Performing emergency reset...');
+    
+    try {
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear current user state
+      this.currentUserSubject.next(null);
+      
+      // Clear session timer
+      if (this.sessionTimer) {
+        clearInterval(this.sessionTimer);
+        this.sessionTimer = null;
+      }
+      
+      // Force enable Supabase
+      this.useSupabase = true;
+      localStorage.setItem(STORAGE_KEYS.USE_SUPABASE, 'true');
+      
+      // Wait for locks to clear
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('✅ AuthService: Emergency reset complete');
+    } catch (error) {
+      console.error('❌ AuthService: Emergency reset failed:', error);
+    }
   }
 
   /**
@@ -761,6 +810,49 @@ export class AuthService {
     } catch (err) {
       console.error('Error setting Supabase session:', err);
       return false;
+    }
+  }
+
+  /**
+   * Handle automatic navigation after session restoration
+   * This method should be called when the app starts and finds an existing session
+   */
+  async handleSessionRestoration(): Promise<void> {
+    if (!this.useSupabase) {
+      return;
+    }
+
+    try {
+      const user = this.supabaseService.currentUser;
+      const profile = this.supabaseService.currentProfile;
+      
+      if (user && profile) {
+        console.log('🔄 AuthService: Handling session restoration navigation', {
+          userId: user.id,
+          role: profile.role,
+          firstLogin: profile.first_login
+        });
+        
+        // The navigation will be handled by the guards and routing system
+        // We just need to ensure the AuthService state is properly set
+        const authResponse: AuthResponse = {
+          token: 'supabase-session-token',
+          user: {
+            id: profile.id,
+            email: profile.email,
+            role: profile.role,
+            firstName: profile.first_name,
+            lastName: profile.last_name,
+          }
+        };
+        
+        this.currentUserSubject.next(authResponse);
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
+        
+        console.log('✅ AuthService: Session restoration complete');
+      }
+    } catch (error) {
+      console.error('❌ AuthService: Error during session restoration:', error);
     }
   }
 
