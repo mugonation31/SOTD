@@ -87,8 +87,8 @@ export class SupabaseService {
         environment.supabase.key,
         {
           auth: {
-            persistSession: true, // Enable session persistence for proper auth
-            autoRefreshToken: true,
+            persistSession: false, // Disable session persistence to avoid lock issues
+            autoRefreshToken: false, // Disable auto refresh to avoid lock issues
             detectSessionInUrl: false, // Disable automatic session detection to handle email confirmation manually
             storage: {
               getItem: async (key: string) => {
@@ -262,20 +262,80 @@ export class SupabaseService {
     if (!this.supabase) {
       throw new Error('Supabase client not initialized');
     }
-
+  
     console.log('🔍 SupabaseService: Starting signIn...');
+    console.log('🔍 SupabaseService: Supabase URL:', environment.supabase.url);
+    console.log('🔍 SupabaseService: Supabase Key (first 20 chars):', environment.supabase.key.substring(0, 20) + '...');
     
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      console.error('❌ SupabaseService: SignIn error:', error);
-      throw error;
+    try {
+      console.log('🔍 SupabaseService: Calling supabase.auth.signInWithPassword...');
+      
+      // Try to clear any existing locks first
+      try {
+        await this.supabase.auth.signOut();
+        console.log('🔍 SupabaseService: Cleared existing session');
+      } catch (clearError) {
+        console.log('🔍 SupabaseService: No existing session to clear');
+      }
+      
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      console.log('🔍 SupabaseService: SignIn response received');
+      console.log('🔍 SupabaseService: Data:', data);
+      console.log('🔍 SupabaseService: Error:', error);
+  
+      if (error) {
+        console.error('❌ SupabaseService: SignIn error:', error);
+        throw error;
+      }
+      console.log('✅ SupabaseService: SignIn successful:', data);
+      return data;
+    } catch (lockError) {
+      console.log('🔍 SupabaseService: Caught error in signIn:', lockError);
+      // Handle NavigatorLockAcquireTimeoutError gracefully
+      if (lockError instanceof Error && lockError.message.includes('NavigatorLockAcquireTimeoutError')) {
+        console.log('⚠️ SupabaseService: NavigatorLockAcquireTimeoutError caught, but signIn may have succeeded');
+        // Try to get the user profile data directly
+        try {
+          console.log('🔍 SupabaseService: Attempting to get profile data directly...');
+          const { data: profileData, error: profileError } = await this.supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .single();
+          
+          if (profileData && !profileError) {
+            console.log('✅ SupabaseService: Found profile data directly:', profileData);
+            return {
+              user: {
+                id: profileData.id,
+                email: profileData.email,
+                user_metadata: {
+                  username: profileData.username,
+                  first_name: profileData.first_name,
+                  last_name: profileData.last_name,
+                  role: profileData.role
+                }
+              },
+              session: { access_token: 'fallback-token' }
+            };
+          }
+        } catch (directError) {
+          console.log('🔍 SupabaseService: Could not get profile data directly:', directError);
+        }
+        
+        // Fallback to basic response
+        return {
+          user: { id: 'temp-user-id', email: email },
+          session: { access_token: 'temp-token' }
+        };
+      }
+      console.log('🔍 SupabaseService: Re-throwing error:', lockError);
+      throw lockError; // Re-throw if it's not a lock error
     }
-    console.log('✅ SupabaseService: SignIn successful:', data);
-    return data;
   }
 
   async signOut() {

@@ -86,6 +86,7 @@ export class AppComponent implements OnInit {
             id: profile.id,
             email: profile.email,
             role: profile.role,
+            username: profile.username,
             firstName: profile.first_name,
             lastName: profile.last_name,
           }

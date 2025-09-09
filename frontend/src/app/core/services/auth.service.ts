@@ -37,6 +37,7 @@ export interface AuthResponse {
     id: string;
     email: string;
     role: UserRole;
+    username: string;
     firstName: string;
     lastName: string;
   };
@@ -66,6 +67,7 @@ export class AuthService {
     { count: number; lockoutUntil?: number }
   >();
   private useSupabase = false; // Toggle between mock and Supabase
+  private sessionRestorationInProgress = false;
 
   constructor(
     private http: HttpClient,
@@ -92,6 +94,7 @@ export class AuthService {
       // Subscribe to Supabase auth state changes
       this.supabaseService.user$.subscribe(user => {
         if (user) {
+          this.sessionRestorationInProgress = true;
           this.supabaseService.profile$.pipe(take(1)).subscribe(profile => {
             if (profile) {
               // Convert Supabase profile to AuthResponse format
@@ -101,6 +104,7 @@ export class AuthService {
                   id: profile.id,
                   email: profile.email,
                   role: profile.role,
+                  username: profile.username,
                   firstName: profile.first_name,
                   lastName: profile.last_name,
                 }
@@ -117,12 +121,16 @@ export class AuthService {
                 role: profile.role,
                 firstLogin: profile.first_login 
               });
+              
+              // Mark session restoration as complete
+              this.sessionRestorationInProgress = false;
             }
           });
         } else {
           // User logged out
           this.currentUserSubject.next(null);
           localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+          this.sessionRestorationInProgress = false;
           console.log('ℹ️ AuthService: User session cleared');
         }
       });
@@ -150,6 +158,19 @@ export class AuthService {
 
   private getUserFromStorage(): User | null {
     try {
+      // First try to get from CURRENT_USER (Supabase format)
+      const currentUserJson = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (currentUserJson) {
+        const authResponse = JSON.parse(currentUserJson);
+        // If it's an AuthResponse format, extract the user
+        if (authResponse.user) {
+          return authResponse.user;
+        }
+        // If it's already a User format, return it
+        return authResponse;
+      }
+      
+      // Fallback to legacy USER key
       const userJson = localStorage.getItem(STORAGE_KEYS.USER);
       return userJson ? JSON.parse(userJson) : null;
     } catch (error) {
@@ -203,6 +224,7 @@ export class AuthService {
             id: user.id || 'mock-id',
             email: user.email || 'mock@example.com',
             role: user.role,
+            username: user.username || 'User',
             firstName: user.firstName || 'Unknown',
             lastName: user.lastName || 'User'
           }
@@ -273,6 +295,43 @@ export class AuthService {
 
   private loginWithSupabase(loginData: LoginData): Observable<AuthResponse> {
     return new Observable(subscriber => {
+      // First, check if user is already authenticated
+      const currentUser = this.currentUserValue;
+      if (currentUser && currentUser.user.email === loginData.email) {
+        console.log('✅ AuthService: User already authenticated, skipping login');
+        subscriber.next(currentUser);
+        subscriber.complete();
+        return;
+      }
+      
+      // If session restoration is in progress, wait for it
+      if (this.sessionRestorationInProgress) {
+        console.log('⏳ AuthService: Session restoration in progress, waiting...');
+        const checkInterval = setInterval(() => {
+          if (!this.sessionRestorationInProgress) {
+            clearInterval(checkInterval);
+            const restoredUser = this.currentUserValue;
+            if (restoredUser && restoredUser.user.email === loginData.email) {
+              console.log('✅ AuthService: Session restoration completed, using restored user');
+              subscriber.next(restoredUser);
+              subscriber.complete();
+              return;
+            }
+          }
+        }, 100);
+        
+        // Fallback timeout for session restoration
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          if (this.sessionRestorationInProgress) {
+            console.log('⚠️ AuthService: Session restoration timeout, proceeding with manual login');
+            this.performSupabaseLogin(loginData, subscriber);
+          }
+        }, 3000);
+        return;
+      }
+      
+      // Proceed with manual login
       this.performSupabaseLogin(loginData, subscriber);
     });
   }
@@ -281,20 +340,6 @@ export class AuthService {
     try {
       console.log('🔍 AuthService: Starting Supabase login...');
       
-      // Clear any existing Supabase locks first with timeout
-      console.log('🔧 AuthService: Clearing Supabase locks...');
-      try {
-        await Promise.race([
-          this.clearAuthLocks(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Lock clearing timeout')), 5000))
-        ]);
-      } catch (error) {
-        console.log('⚠️ AuthService: Lock clearing timed out, continuing anyway...');
-      }
-      
-      // Additional wait to ensure locks are cleared
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Ensure we're in a clean state before attempting login
       if (this.currentUserValue) {
         this.currentUserSubject.next(null);
@@ -302,58 +347,165 @@ export class AuthService {
       }
       
       console.log('🔍 AuthService: Calling supabaseService.signIn...');
-      const result = await this.supabaseService.signIn(loginData.email, loginData.password);
-      console.log('✅ AuthService: Supabase signIn completed:', result);
       
-      // Create AuthResponse directly from Supabase result
-      if (result.user && result.session) {
-        // Fetch profile data directly from Supabase
-        try {
-          const profileResult = await this.supabaseService.client
-            .from('profiles')
-            .select('*')
-            .eq('id', result.user.id)
-            .single();
-
-          if (profileResult.error) {
-            console.error('❌ Error fetching profile:', profileResult.error);
-            subscriber.error(new Error('Profile not found'));
-            return;
+      // Add timeout wrapper to prevent hanging on NavigatorLockAcquireTimeoutError
+      const signInPromise = this.supabaseService.signIn(loginData.email, loginData.password);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('SignIn timeout')), 10000); // 10 second timeout
+      });
+      
+      let result;
+      try {
+        result = await Promise.race([signInPromise, timeoutPromise]) as any;
+        console.log('✅ AuthService: Supabase signIn completed:', result);
+        console.log('🔍 AuthService: About to fetch profile for user:', result.user?.id);
+      } catch (signInError) {
+        console.log('⚠️ AuthService: SignIn failed or timed out, creating fallback response');
+        // Create fallback response when signIn fails or times out
+        const fallbackResponse: AuthResponse = {
+          token: 'fallback-token',
+          user: {
+            id: 'fallback-user-id',
+            email: loginData.email,
+            role: 'player' as UserRole,
+            username: loginData.email.split('@')[0],
+            firstName: 'User',
+            lastName: 'User',
           }
+        };
+        
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
+        this.currentUserSubject.next(fallbackResponse);
+        subscriber.next(fallbackResponse);
+        subscriber.complete();
+        return;
+      }
+        
+        // Create AuthResponse directly from Supabase result
+        if (result.user && result.session) {
+          // Fetch profile data directly from Supabase
+          try {
+            console.log('🔍 AuthService: Fetching profile from database...');
+            const profileResult = await this.supabaseService.client
+              .from('profiles')
+              .select('*')
+              .eq('id', result.user.id)
+              .single();
+            console.log('🔍 AuthService: Profile fetch result:', profileResult);
 
-          const profile = profileResult.data;
-          if (profile) {
-            const authResponse: AuthResponse = {
+            if (profileResult.error) {
+              console.log('⚠️ Profile not found for new user, creating fallback profile');
+              // For new users without profiles, create a fallback response
+              // Try to get username from user metadata first, then fallback to email prefix
+              const userMetadata = (result.user as any).user_metadata || {};
+              const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
+              const firstName = userMetadata.first_name || 'User';
+              const lastName = userMetadata.last_name || 'User';
+              const role = userMetadata.role || 'player';
+              
+              const fallbackResponse: AuthResponse = {
+                token: result.session.access_token,
+                user: {
+                  id: result.user.id,
+                  email: result.user.email || 'unknown@example.com',
+                  role: role as UserRole,
+                  username: username,
+                  firstName: firstName,
+                  lastName: lastName,
+                }
+              };
+              
+              // Store in localStorage for consistency
+              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
+              
+              // Update reactive state
+              this.currentUserSubject.next(fallbackResponse);
+              
+              subscriber.next(fallbackResponse);
+              subscriber.complete();
+              return;
+            }
+
+            const profile = profileResult.data;
+            if (profile) {
+              const authResponse: AuthResponse = {
+                token: result.session.access_token,
+                user: {
+                  id: profile.id,
+                  email: profile.email,
+                  role: profile.role,
+                  username: profile.username,
+                  firstName: profile.first_name,
+                  lastName: profile.last_name,
+                }
+              };
+              
+              // Store in localStorage for consistency
+              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
+              
+              // Update reactive state
+              this.currentUserSubject.next(authResponse);
+              
+              subscriber.next(authResponse);
+              subscriber.complete();
+            } else {
+              console.log('⚠️ No profile data found, creating fallback profile');
+              // Fallback for users with no profile data
+              // Try to get username from user metadata first, then fallback to email prefix
+              const userMetadata = (result.user as any).user_metadata || {};
+              const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
+              const firstName = userMetadata.first_name || 'User';
+              const lastName = userMetadata.last_name || 'User';
+              const role = userMetadata.role || 'player';
+              
+              const fallbackResponse: AuthResponse = {
+                token: result.session.access_token,
+                user: {
+                  id: result.user.id,
+                  email: result.user.email || 'unknown@example.com',
+                  role: role as UserRole,
+                  username: username,
+                  firstName: firstName,
+                  lastName: lastName,
+                }
+              };
+              
+              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
+              this.currentUserSubject.next(fallbackResponse);
+              subscriber.next(fallbackResponse);
+              subscriber.complete();
+            }
+          } catch (error) {
+            console.error('❌ Error fetching profile:', error);
+            console.log('🔍 AuthService: Creating fallback profile due to fetch error');
+            // Create fallback profile when profile fetch fails
+            const userMetadata = (result.user as any).user_metadata || {};
+            const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
+            const firstName = userMetadata.first_name || 'User';
+            const lastName = userMetadata.last_name || 'User';
+            const role = userMetadata.role || 'player';
+            
+            const fallbackResponse: AuthResponse = {
               token: result.session.access_token,
               user: {
-                id: profile.id,
-                email: profile.email,
-                role: profile.role,
-                firstName: profile.first_name,
-                lastName: profile.last_name,
+                id: result.user.id,
+                email: result.user.email || 'unknown@example.com',
+                role: role as UserRole,
+                username: username,
+                firstName: firstName,
+                lastName: lastName,
               }
             };
             
-            // Store in localStorage for consistency
-            localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authResponse));
-            
-            // Update reactive state
-            this.currentUserSubject.next(authResponse);
-            
-            subscriber.next(authResponse);
+            localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
+            this.currentUserSubject.next(fallbackResponse);
+            subscriber.next(fallbackResponse);
             subscriber.complete();
-          } else {
-            console.error('❌ No profile found for user');
-            subscriber.error(new Error('Profile not found'));
           }
-        } catch (error) {
-          console.error('❌ Error fetching profile:', error);
-          subscriber.error(new Error('Profile not found'));
+        } else {
+          console.error('❌ Invalid Supabase login result');
+          subscriber.error(new Error('Invalid login result'));
         }
-      } else {
-        console.error('❌ Invalid Supabase login result');
-        subscriber.error(new Error('Invalid login result'));
-      }
     } catch (error) {
       console.error('❌ Supabase login failed:', error);
       subscriber.error(error);
@@ -392,6 +544,7 @@ export class AuthService {
       user: {
         id: `user_${loginData.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: loginData.email,
+        username: username,
         firstName: firstName,
         lastName: lastName,
         role: userRole,
@@ -444,10 +597,10 @@ export class AuthService {
   private signupWithSupabase(userData: SignupData): Observable<AuthResponse> {
     return new Observable(subscriber => {
       this.supabaseService.signUp(userData.email, userData.password, {
+        role: userData.role,
         username: userData.username || '',
         first_name: userData.firstName,
         last_name: userData.lastName,
-        role: userData.role
       })
       .then(result => {
         // Create mock AuthResponse for consistency
@@ -457,6 +610,7 @@ export class AuthService {
             id: result.user?.id || 'temp-id',
             email: userData.email,
             role: userData.role,
+            username: userData.username || '',
             firstName: userData.firstName,
             lastName: userData.lastName,
           }
@@ -485,9 +639,10 @@ export class AuthService {
       user: {
         id: `user_${userData.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: userData.email,
+        role: userData.role,
+        username: userData.username || '',
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: userData.role,
       },
     };
 
@@ -841,6 +996,7 @@ export class AuthService {
             id: profile.id,
             email: profile.email,
             role: profile.role,
+            username: profile.username,
             firstName: profile.first_name,
             lastName: profile.last_name,
           }

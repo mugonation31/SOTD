@@ -139,7 +139,10 @@ export class LoginPage implements OnInit {
     this.validateEmail();
     this.validatePassword();
 
-    if (!this.canSubmit || this.isLoading) return;
+    if (!this.canSubmit || this.isLoading) {
+      console.log('⚠️ Login: Already in progress or form invalid, ignoring duplicate submission');
+      return;
+    }
 
     this.isLoading = true;
     console.log('🔍 Login: Starting login process...');
@@ -148,24 +151,15 @@ export class LoginPage implements OnInit {
     this.loginData.securityQuestion = 'What is your favorite color?';
     this.loginData.securityAnswer = 'blue';
 
-    // Add timeout to prevent infinite hanging
-    const timeoutId = setTimeout(() => {
-      if (this.isLoading) {
-        console.error('⏰ Login: Timeout - login taking too long');
-        this.isLoading = false;
-        alert('Login is taking longer than expected. Please try again.');
-      }
-    }, 30000); // 30 second timeout
+ 
 
     this.authService.login(this.loginData).subscribe({
       next: (response) => {
         console.log('✅ Login: Success response received:', response);
-        clearTimeout(timeoutId);
         this.handleSuccessfulLogin();
       },
       error: (error) => {
         console.error('❌ Login: Error occurred:', error);
-        clearTimeout(timeoutId);
         this.isLoading = false;
         
         // TODO: Replace with proper toast service when available
