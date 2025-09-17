@@ -102,7 +102,9 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], {
         queryParams: {
           returnUrl: '/welcome',
-          role: 'group-admin'
+          role: 'group-admin',
+          email: 'test@example.com',
+          pendingConfirmation: 'true'
         }
       });
 
@@ -211,7 +213,9 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], {
         queryParams: {
           returnUrl: '/welcome',
-          role: 'player'
+          role: 'player',
+          email: 'player@example.com',
+          pendingConfirmation: 'true'
         }
       });
 
@@ -440,7 +444,9 @@ describe('SignupPage Integration Testing: End-to-End User Flows', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], {
         queryParams: {
           returnUrl: '/welcome',
-          role: 'player'
+          role: 'player',
+          email: 'player@example.com',
+          pendingConfirmation: 'true'
         }
       });
     });

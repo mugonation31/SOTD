@@ -149,6 +149,14 @@ export class WelcomePage implements OnInit {
   }
 
   login() {
-    this.router.navigate(['/auth/login']);
+    // Clear any existing session to allow fresh login
+    // This ensures users can login as different users from welcome page
+    console.log('🔄 Welcome: Clearing session before login');
+    this.authService.clearSession();
+
+    // Add a small delay to ensure session is cleared before navigation
+    setTimeout(() => {
+      this.router.navigate(['/auth/login']);
+    }, 100);
   }
 } 

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
-import { AuthService } from './auth.service';
+import { AuthService, UserRole } from './auth.service';
 import { ToastService } from './toast.service';
 import { SupabaseService } from '../../services/supabase.service';
 import { createMockToastService } from '../../../testing/test-utils';
@@ -441,6 +441,83 @@ describe('AuthService', () => {
       const result = await service.setSessionFromFragment();
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('markFirstLoginComplete', () => {
+    it('should mark first login as complete for Supabase users', async () => {
+      // Mock current user
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'test@example.com',
+          role: 'player' as UserRole,
+          username: 'testuser',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+      service['useSupabase'] = true;
+
+      // Mock Supabase user
+      mockSupabaseService.currentUser = { id: 'user-123' };
+
+      // Mock Supabase service method
+      mockSupabaseService.markFirstLoginComplete = jest.fn().mockResolvedValue({});
+
+      await service.markFirstLoginComplete();
+
+      expect(mockSupabaseService.markFirstLoginComplete).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should mark first login as complete for mock users', async () => {
+      // Mock user in storage
+      const mockUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'player' as UserRole,
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+        firstLogin: true
+      };
+      
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      service['useSupabase'] = false;
+
+      await service.markFirstLoginComplete();
+
+      // Check the new isFirstLogin localStorage key
+      expect(localStorage.getItem('isFirstLogin')).toBe('false');
+    });
+
+    it('should handle errors gracefully', async () => {
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'test@example.com',
+          role: 'player' as UserRole,
+          username: 'testuser',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+      service['useSupabase'] = true;
+
+      // Mock Supabase user
+      mockSupabaseService.currentUser = { id: 'user-123' };
+
+      // Mock Supabase service method to throw error
+      mockSupabaseService.markFirstLoginComplete = jest.fn().mockRejectedValue(new Error('Database error'));
+
+      // Should not throw
+      await expect(service.markFirstLoginComplete()).resolves.not.toThrow();
     });
   });
 }); 

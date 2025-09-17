@@ -87,9 +87,9 @@ export class SupabaseService {
         environment.supabase.key,
         {
           auth: {
-            persistSession: false, // Disable session persistence to avoid lock issues
-            autoRefreshToken: false, // Disable auto refresh to avoid lock issues
-            detectSessionInUrl: false, // Disable automatic session detection to handle email confirmation manually
+            persistSession: true, // Enable session persistence for proper auth state
+            autoRefreshToken: true, // Enable auto refresh for seamless experience
+            detectSessionInUrl: true, // Enable automatic session detection
             storage: {
               getItem: async (key: string) => {
                 try {
@@ -258,84 +258,158 @@ export class SupabaseService {
     }
   }
 
+  /**
+   * Clear any existing Navigator LockManager locks for Supabase auth
+   * This helps prevent NavigatorLockAcquireTimeoutError
+   */
+  private async clearAuthLocks(): Promise<void> {
+    try {
+      console.log('🔧 SupabaseService: Clearing existing auth locks...');
+
+      // Check if Navigator LockManager is available
+      if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+        // Get currently held locks
+        const lockState = await navigator.locks.query();
+
+        // Look for Supabase auth-related locks
+        const authLocks = lockState.held?.filter(lock =>
+          lock.name && (
+            lock.name.includes('auth-token') ||
+            lock.name.includes('supabase') ||
+            lock.name.includes('sb-')
+          )
+        );
+
+        if (authLocks && authLocks.length > 0) {
+          console.log('🔧 SupabaseService: Found existing auth locks:', authLocks.map(l => l.name));
+
+          // Wait a bit for any ongoing operations to complete
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Sign out to release any existing locks
+          try {
+            await this.supabase.auth.signOut({ scope: 'local' });
+            console.log('🔧 SupabaseService: Local signOut completed to release locks');
+          } catch (signOutError) {
+            console.log('🔧 SupabaseService: SignOut error (expected):', signOutError);
+          }
+
+          // Wait a bit more for locks to be released
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } else {
+          console.log('🔧 SupabaseService: No auth locks found');
+        }
+      } else {
+        console.log('🔧 SupabaseService: Navigator LockManager not available');
+      }
+    } catch (error) {
+      console.error('❌ SupabaseService: Error clearing auth locks:', error);
+      // Don't throw - continue with sign in attempt
+    }
+  }
+
   async signIn(email: string, password: string) {
     if (!this.supabase) {
       throw new Error('Supabase client not initialized');
     }
-  
+
     console.log('🔍 SupabaseService: Starting signIn...');
     console.log('🔍 SupabaseService: Supabase URL:', environment.supabase.url);
     console.log('🔍 SupabaseService: Supabase Key (first 20 chars):', environment.supabase.key.substring(0, 20) + '...');
-    
-    try {
-      console.log('🔍 SupabaseService: Calling supabase.auth.signInWithPassword...');
-      
-      // Try to clear any existing locks first
+
+    // Retry mechanism for NavigatorLockAcquireTimeoutError
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await this.supabase.auth.signOut();
-        console.log('🔍 SupabaseService: Cleared existing session');
-      } catch (clearError) {
-        console.log('🔍 SupabaseService: No existing session to clear');
-      }
-      
-      const { data, error } = await this.supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      console.log('🔍 SupabaseService: SignIn response received');
-      console.log('🔍 SupabaseService: Data:', data);
-      console.log('🔍 SupabaseService: Error:', error);
-  
-      if (error) {
-        console.error('❌ SupabaseService: SignIn error:', error);
-        throw error;
-      }
-      console.log('✅ SupabaseService: SignIn successful:', data);
-      return data;
-    } catch (lockError) {
-      console.log('🔍 SupabaseService: Caught error in signIn:', lockError);
-      // Handle NavigatorLockAcquireTimeoutError gracefully
-      if (lockError instanceof Error && lockError.message.includes('NavigatorLockAcquireTimeoutError')) {
-        console.log('⚠️ SupabaseService: NavigatorLockAcquireTimeoutError caught, but signIn may have succeeded');
-        // Try to get the user profile data directly
-        try {
-          console.log('🔍 SupabaseService: Attempting to get profile data directly...');
-          const { data: profileData, error: profileError } = await this.supabase
-            .from('profiles')
-            .select('*')
-            .eq('email', email)
-            .single();
-          
-          if (profileData && !profileError) {
-            console.log('✅ SupabaseService: Found profile data directly:', profileData);
-            return {
-              user: {
-                id: profileData.id,
-                email: profileData.email,
-                user_metadata: {
-                  username: profileData.username,
-                  first_name: profileData.first_name,
-                  last_name: profileData.last_name,
-                  role: profileData.role
-                }
-              },
-              session: { access_token: 'fallback-token' }
-            };
-          }
-        } catch (directError) {
-          console.log('🔍 SupabaseService: Could not get profile data directly:', directError);
+        console.log(`🔍 SupabaseService: Sign-in attempt ${attempt}/${maxRetries}`);
+
+        if (attempt > 1) {
+          // Clear any existing auth locks before retry
+          await this.clearAuthLocks();
+          // Wait between retries with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, attempt - 2), 5000); // 1s, 2s, 4s max
+          console.log(`⏳ SupabaseService: Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-        
-        // Fallback to basic response
-        return {
-          user: { id: 'temp-user-id', email: email },
-          session: { access_token: 'temp-token' }
-        };
+
+        console.log('🔍 SupabaseService: Calling supabase.auth.signInWithPassword...');
+
+        // Don't clear existing session - let Supabase handle session management
+        const { data, error } = await this.supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        console.log('🔍 SupabaseService: SignIn response received');
+        console.log('🔍 SupabaseService: Data:', data);
+        console.log('🔍 SupabaseService: Error:', error);
+
+        if (error) {
+          console.error('❌ SupabaseService: SignIn error:', error);
+          throw error;
+        }
+
+        console.log('✅ SupabaseService: SignIn successful:', data);
+        return data;
+
+      } catch (attemptError) {
+        console.log(`🔍 SupabaseService: Attempt ${attempt} failed:`, attemptError);
+        lastError = attemptError;
+
+        // Check if this is a NavigatorLockAcquireTimeoutError
+        const isLockError = attemptError instanceof Error &&
+          (attemptError.message.includes('NavigatorLockAcquireTimeoutError') ||
+           attemptError.message.includes('lock'));
+
+        if (isLockError && attempt < maxRetries) {
+          console.log(`⚠️ SupabaseService: Lock error on attempt ${attempt}, will retry...`);
+          continue; // Try again
+        }
+
+        // If it's not a lock error, or we've exhausted retries, handle differently
+        if (!isLockError || attempt === maxRetries) {
+          // For lock errors on final attempt, try to get profile data directly
+          if (isLockError) {
+            console.log('⚠️ SupabaseService: Final attempt failed with lock error, trying direct profile fetch...');
+            try {
+              const { data: profileData, error: profileError } = await this.supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', email)
+                .single();
+
+              if (profileData && !profileError) {
+                console.log('✅ SupabaseService: Found profile data directly:', profileData);
+                return {
+                  user: {
+                    id: profileData.id,
+                    email: profileData.email,
+                    user_metadata: {
+                      username: profileData.username,
+                      first_name: profileData.first_name,
+                      last_name: profileData.last_name,
+                      role: profileData.role
+                    }
+                  },
+                  session: { access_token: 'fallback-token' }
+                };
+              }
+            } catch (directError) {
+              console.log('🔍 SupabaseService: Could not get profile data directly:', directError);
+            }
+          }
+
+          // Re-throw the original error for non-lock errors or final attempt
+          throw attemptError;
+        }
       }
-      console.log('🔍 SupabaseService: Re-throwing error:', lockError);
-      throw lockError; // Re-throw if it's not a lock error
     }
+
+    // If we get here, all retries failed
+    console.error('❌ SupabaseService: All sign-in attempts failed');
+    throw lastError;
   }
 
   async signOut() {
@@ -403,6 +477,49 @@ export class SupabaseService {
 
     if (error) throw error;
     return data;
+  }
+
+  // Mark first login as complete
+  async markFirstLoginComplete(userId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('profiles')
+        .update({
+          first_login: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error marking first login complete:', error);
+        throw error;
+      }
+
+      // Update the current profile in memory
+      if (this.currentProfile$.value) {
+        this.currentProfile$.next({
+          ...this.currentProfile$.value,
+          first_login: false
+        });
+      }
+
+      console.log('✅ First login marked as complete for user:', userId);
+      return data;
+    } catch (error) {
+      console.error('Failed to mark first login complete:', error);
+      throw error;
+    }
+  }
+
+  // Public method to refresh current user profile
+  async refreshCurrentUserProfile(): Promise<void> {
+    const currentUser = this.currentUser;
+    if (currentUser?.id) {
+      await this.loadUserProfile(currentUser.id);
+      console.log('🔄 SupabaseService: Current user profile refreshed');
+    }
   }
 
   // Group Management
@@ -620,8 +737,9 @@ export class SupabaseService {
     if (!this.hasAuthTokensInUrl()) {
       return false;
     }
-    
+
     const url = window.location.href;
     return await this.handleDeepLinkSession(url);
   }
+
 }

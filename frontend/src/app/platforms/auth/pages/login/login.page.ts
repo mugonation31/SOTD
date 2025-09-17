@@ -147,6 +147,17 @@ export class LoginPage implements OnInit {
     this.isLoading = true;
     console.log('🔍 Login: Starting login process...');
 
+    // Check if user is already authenticated with the same email
+    const currentUser = this.authService.currentUserValue;
+    if (currentUser && currentUser.user.email === this.loginData.email) {
+      console.log('✅ Login: User already authenticated, redirecting...');
+      this.handleSuccessfulLogin();
+      return;
+    }
+
+    // Only clear session if user is different or not authenticated
+    this.authService.clearSession();
+
     // Set default security question and answer for development
     this.loginData.securityQuestion = 'What is your favorite color?';
     this.loginData.securityAnswer = 'blue';
@@ -189,8 +200,11 @@ export class LoginPage implements OnInit {
 
     // Check if this is a first login - redirect to appropriate first-time route
     const isFirstLogin = this.authService.isFirstTimeUser();
-    
+
+    console.log('🔍 Login: Redirecting user with role:', role, 'isFirstLogin:', isFirstLogin);
+
     if (isFirstLogin) {
+      console.log('🆕 Login: First-time user - redirecting to onboarding flow');
       switch (role) {
         case 'group-admin':
           targetRoute = '/group-admin/groups';
@@ -205,6 +219,7 @@ export class LoginPage implements OnInit {
           targetRoute = '/welcome';
       }
     } else {
+      console.log('🔄 Login: Returning user - redirecting to dashboard');
       // Returning user - redirect to dashboard
       switch (role) {
         case 'group-admin':
@@ -221,6 +236,7 @@ export class LoginPage implements OnInit {
       }
     }
 
+    console.log('🎯 Login: Navigating to:', targetRoute);
     this.router.navigate([targetRoute], { replaceUrl: true });
   }
 

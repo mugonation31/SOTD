@@ -124,7 +124,10 @@ export class JoinGroupPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadMyGroups();
-    
+
+    // Check if this is a first-time player and mark first login complete
+    this.handleFirstTimeUser();
+
     // Subscribe to group updates for real-time UI updates
     this.groupsSubscription = this.groupService.groups$.subscribe(() => {
       this.loadMyGroups();
@@ -134,6 +137,19 @@ export class JoinGroupPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.groupsSubscription) {
       this.groupsSubscription.unsubscribe();
+    }
+  }
+
+  private async handleFirstTimeUser() {
+    // Check if this is a first-time user
+    if (this.authService.isFirstTimeUser()) {
+      console.log('🆕 JoinGroupPage: First-time player detected - marking login as complete');
+      try {
+        await this.authService.markFirstLoginComplete();
+        console.log('✅ JoinGroupPage: First login marked complete for player');
+      } catch (error) {
+        console.error('❌ JoinGroupPage: Error marking first login complete:', error);
+      }
     }
   }
 
@@ -259,7 +275,6 @@ export class JoinGroupPage implements OnInit, OnDestroy {
 
 
       if (updatedGroup) {
-
         // Close dialog immediately
         this.showGroupDetails = false;
         this.foundGroup = null;

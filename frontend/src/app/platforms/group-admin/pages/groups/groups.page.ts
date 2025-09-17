@@ -211,7 +211,10 @@ export class GroupsPage implements OnInit, OnDestroy {
     this.initCurrentAdmin();
     this.initForm();
     this.loadGroups();
-    
+
+    // Check if this is a first-time group admin and mark first login complete
+    this.handleFirstTimeUser();
+
     // Subscribe to group updates for real-time member changes
     this.subscription = this.groupService.groups$.subscribe(() => {
       this.loadGroups();
@@ -229,6 +232,19 @@ export class GroupsPage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscription?.unsubscribe();
+  }
+
+  private async handleFirstTimeUser() {
+    // Check if this is a first-time user
+    if (this.authService.isFirstTimeUser()) {
+      console.log('🆕 GroupsPage: First-time group admin detected - marking login as complete');
+      try {
+        await this.authService.markFirstLoginComplete();
+        console.log('✅ GroupsPage: First login marked complete for group admin');
+      } catch (error) {
+        console.error('❌ GroupsPage: Error marking first login complete:', error);
+      }
+    }
   }
 
   private initCurrentAdmin() {
@@ -312,7 +328,7 @@ export class GroupsPage implements OnInit, OnDestroy {
 
         // Create group using GroupService
         this.groupService.createGroup(createGroupData).subscribe({
-          next: (newGroup) => {
+          next: async (newGroup) => {
             // Show success message and close modal
             this.toastService.showToast(
               `Group "${newGroup.name}" created successfully! Code: ${newGroup.code}`,

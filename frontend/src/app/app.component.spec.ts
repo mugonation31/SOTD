@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
 import { AppComponent } from './app.component';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 // These testing functions are already provided by Angular's TestBed
@@ -9,7 +10,10 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent, IonApp, IonRouterOutlet],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        provideHttpClient()
+      ],
     }).compileComponents();
   });
 

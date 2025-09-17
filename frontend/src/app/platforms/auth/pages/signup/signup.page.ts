@@ -187,8 +187,8 @@ export class SignupPage implements OnInit {
       }
     });
     
-    // Trigger initial validation to clear any default errors
-    this.validateAllFields();
+    // Don't trigger validation on init - let users fill fields first
+    // this.validateAllFields();
   }
   
   validateAllFields() {
@@ -345,3 +345,4 @@ export class SignupPage implements OnInit {
     this.router.navigate(['/welcome']);
   }
 }
+

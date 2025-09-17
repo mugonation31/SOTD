@@ -281,16 +281,24 @@ describe('SignupPage', () => {
 
       mockAuthService.signup.mockReturnValue({
         subscribe: jest.fn().mockImplementation(({ next }) => {
-          if (next) next();
+          if (next) {
+            // Simulate the setTimeout delay in the actual implementation
+            setTimeout(() => next(), 600); // Slightly longer than the 500ms in the component
+          }
         })
       });
 
       await component.onSignup();
 
+      // Wait for the setTimeout delay in the component
+      await new Promise(resolve => setTimeout(resolve, 700));
+
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], {
         queryParams: {
           returnUrl: '/welcome',
-          role: 'player'
+          role: 'player',
+          email: 'test@example.com',
+          pendingConfirmation: 'true'
         }
       });
     });
