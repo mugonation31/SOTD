@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/155</span>
+                <span class='fraction'>0/150</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/154</span>
+                <span class='fraction'>0/149</span>
             </div>
         
             
@@ -1082,11 +1082,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1317,13 +1317,13 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1479,7 +1479,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1820,10 +1820,10 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
     private <span class="cstat-no" title="statement not covered" >router: Router</span>
   ) {
 <span class="cstat-no" title="statement not covered" >    addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,});</span>
-&nbsp;
+    
     // Initialize current gameweek from MockDataService
 <span class="cstat-no" title="statement not covered" >    this.currentGameweek = this.mockDataService.getCurrentGameweek();</span>
-&nbsp;
+    
 <span class="cstat-no" title="statement not covered" >    this.gameweeks = this.getSampleGameweeks();</span>
 <span class="cstat-no" title="statement not covered" >    this.selectedGameweek = this.gameweeks[0];</span>
 <span class="cstat-no" title="statement not covered" >    this.allPredictions = [];</span>
@@ -1876,8 +1876,8 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
     }
 &nbsp;
     // For debugging
-<span class="cstat-no" title="statement not covered" >    console.log('Valid predictions:', validPredictions);</span>
-<span class="cstat-no" title="statement not covered" >    console.log('Show warning:', this.showTooManyPredictionsWarning);</span>
+&nbsp;
+&nbsp;
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >getSampleCurrentGameWeek(</span>): GameWeek {
@@ -2112,8 +2112,8 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
 &nbsp;
     // Force UI update
 <span class="cstat-no" title="statement not covered" >    this.filterPredictions();</span>
-<span class="cstat-no" title="statement not covered" >    console.log('Current predictions:', this.allPredictions);</span>
-<span class="cstat-no" title="statement not covered" >    console.log('Filtered predictions:', this.filteredPredictions);</span>
+&nbsp;
+&nbsp;
   }
 &nbsp;
 <span class="fstat-no" title="function not covered" >  resetPredictions(</span>) {
@@ -2273,7 +2273,7 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
 &nbsp;
 <span class="fstat-no" title="function not covered" >  loadGameweekMatches(</span>gameweek: number) {
     // TODO: Implement service call to load matches for the gameweek
-<span class="cstat-no" title="statement not covered" >    console.log('Loading matches for gameweek:', gameweek);</span>
+&nbsp;
   }
 &nbsp;
 <span class="fstat-no" title="function not covered" >  ionViewWillEnter(</span>) {
@@ -2323,7 +2323,7 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
 <span class="fstat-no" title="function not covered" >  updateLiveScores(</span>) {
     // Update live scores using MockDataService
 <span class="cstat-no" title="statement not covered" >    this.mockDataService.updateLiveScores();</span>
-&nbsp;
+    
     // Reload current matches with updated live scores
 <span class="cstat-no" title="statement not covered" >    this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);</span>
   }
@@ -2452,7 +2452,7 @@ export class <span class="cstat-no" title="statement not covered" >PredictionsPa
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-28T15:52:32.850Z
+                at 2025-09-17T14:08:56.323Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

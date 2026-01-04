@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/29</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/11</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/28</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
@@ -207,14 +207,7 @@
 <a name='L142'></a><a href='#L142'>142</a>
 <a name='L143'></a><a href='#L143'>143</a>
 <a name='L144'></a><a href='#L144'>144</a>
-<a name='L145'></a><a href='#L145'>145</a>
-<a name='L146'></a><a href='#L146'>146</a>
-<a name='L147'></a><a href='#L147'>147</a>
-<a name='L148'></a><a href='#L148'>148</a>
-<a name='L149'></a><a href='#L149'>149</a>
-<a name='L150'></a><a href='#L150'>150</a>
-<a name='L151'></a><a href='#L151'>151</a>
-<a name='L152'></a><a href='#L152'>152</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L145'></a><a href='#L145'>145</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -297,19 +290,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -318,9 +305,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -330,18 +316,18 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -448,13 +434,13 @@ export class <span class="cstat-no" title="statement not covered" >LeaderboardPa
   }
 &nbsp;
 <span class="fstat-no" title="function not covered" >  ngOnInit(</span>) {
-<span class="cstat-no" title="statement not covered" >    console.log('🚀 Leaderboard: Initializing...');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    this.currentUserId = this.authService.getCurrentUser()?.id || null;</span>
 <span class="cstat-no" title="statement not covered" >    this.loadGroupStandings();</span>
     
     // Subscribe to group updates for real-time member count and standings updates
 <span class="cstat-no" title="statement not covered" >    this.groupsSubscription = this.groupService.groups$.subscribe(<span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      console.log('🔄 Leaderboard: Received group update, reloading standings...');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >      this.loadGroupStandings();</span>
     });
   }
@@ -466,7 +452,7 @@ export class <span class="cstat-no" title="statement not covered" >LeaderboardPa
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >loadGroupStandings(</span>) {
-<span class="cstat-no" title="statement not covered" >    console.log('📊 Leaderboard: Loading group standings...');</span>
+&nbsp;
     const groupsWithLeaderboards = <span class="cstat-no" title="statement not covered" >this.groupService.getAdminGroupsWithLeaderboards();</span>
     
 <span class="cstat-no" title="statement not covered" >    this.groupStandings = groupsWithLeaderboards.map(<span class="fstat-no" title="function not covered" >item </span>=&gt; {</span>
@@ -476,7 +462,7 @@ export class <span class="cstat-no" title="statement not covered" >LeaderboardPa
       // Ensure member count is synced with actual members
       const actualMemberCount = <span class="cstat-no" title="statement not covered" >item.group.members.length;</span>
       
-<span class="cstat-no" title="statement not covered" >      console.log(`📋 Group "${item.group.name}": memberCount=${item.group.memberCount}, actualMembers=${actualMemberCount}`);</span>
+&nbsp;
       
 <span class="cstat-no" title="statement not covered" >      return {</span>
         group: {
@@ -490,13 +476,6 @@ export class <span class="cstat-no" title="statement not covered" >LeaderboardPa
         adminPosition: item.adminPosition
       };
     });
-    
-<span class="cstat-no" title="statement not covered" >    console.log('✅ Leaderboard: Loaded standings for', this.groupStandings.length, 'groups');</span>
-<span class="cstat-no" title="statement not covered" >    console.log('📊 Member counts:', this.groupStandings.map(<span class="fstat-no" title="function not covered" >gs </span>=&gt; (<span class="cstat-no" title="statement not covered" >{ </span></span>
-      name: gs.group.name, 
-      memberCount: gs.group.memberCount,
-      leaderboardEntries: gs.leaderboard.length
-    })));
   }
 &nbsp;
   // Track by function for better performance when rendering groups
@@ -523,7 +502,7 @@ export class <span class="cstat-no" title="statement not covered" >LeaderboardPa
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-28T15:52:32.764Z
+                at 2025-09-17T14:08:56.142Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/88</span>
+                <span class='fraction'>0/81</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/83</span>
+                <span class='fraction'>0/76</span>
             </div>
         
             
@@ -482,16 +482,16 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -517,9 +517,9 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -531,9 +531,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -543,7 +543,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -590,7 +590,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -679,7 +679,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -792,14 +792,14 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
 <span class="cstat-no" title="statement not covered" >      this.superAdminExists = existingSuperAdmin === 'true';</span>
       
 <span class="cstat-no" title="statement not covered" >      if (this.superAdminExists) {</span>
-<span class="cstat-no" title="statement not covered" >        console.log('ℹ️ Super admin already exists (dummy data), redirecting to login');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >        this.toastService.showToast('Super admin already exists. Please login instead.', 'warning');</span>
         // Wait a moment then redirect
 <span class="cstat-no" title="statement not covered" >        setTimeout(<span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
 <span class="cstat-no" title="statement not covered" >          this.router.navigate(['/super-admin/login']);</span>
         }, 2000);
       } else {
-<span class="cstat-no" title="statement not covered" >        console.log('✅ No super admin found, registration available');</span>
+&nbsp;
       }
     } catch (error) {
 <span class="cstat-no" title="statement not covered" >      console.error('Error checking super admin existence:', error);</span>
@@ -827,7 +827,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
 <span class="cstat-no" title="statement not covered" >      try {</span>
         const formData = <span class="cstat-no" title="statement not covered" >this.registrationForm.value;</span>
         
-<span class="cstat-no" title="statement not covered" >        console.log('🚀 Starting Super Admin Registration for Predict 3...');</span>
+&nbsp;
         
         // Use AuthService signup (which defaults to mock mode for development)
         const signupData: SignupData = <span class="cstat-no" title="statement not covered" >{</span>
@@ -841,7 +841,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        this.authService.signup(signupData).subscribe({</span>
           next: <span class="fstat-no" title="function not covered" >(r</span>esponse) =&gt; {
-<span class="cstat-no" title="statement not covered" >            console.log('✅ Super Admin Registration successful:', response);</span>
+&nbsp;
             
             // Mark super admin as created (for dummy data mode)
 <span class="cstat-no" title="statement not covered" >            localStorage.setItem('superAdminCreated', 'true');</span>
@@ -853,7 +853,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
             );
 &nbsp;
             // Auto-login after registration
-<span class="cstat-no" title="statement not covered" >            console.log('🔄 Auto-logging in super admin...');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >            this.autoLoginAfterRegistration(formData.email, formData.password);</span>
           },
           error: <span class="fstat-no" title="function not covered" >(e</span>rror) =&gt; {
@@ -900,7 +900,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
       // Login through AuthService
 <span class="cstat-no" title="statement not covered" >      this.authService.login(loginData).subscribe({</span>
         next: <span class="fstat-no" title="function not covered" >(r</span>esponse) =&gt; {
-<span class="cstat-no" title="statement not covered" >          console.log('✅ Auto-login successful:', response);</span>
+&nbsp;
           
           // Navigate to super-admin dashboard
 <span class="cstat-no" title="statement not covered" >          this.router.navigate(['/super-admin/dashboard']);</span>
@@ -989,7 +989,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
   // Development helper - reset registration state
 <span class="fstat-no" title="function not covered" >  resetRegistrationState(</span>) {
 <span class="cstat-no" title="statement not covered" >    localStorage.removeItem('superAdminCreated');</span>
-<span class="cstat-no" title="statement not covered" >    console.log('🔄 Registration state reset - super admin can be created again');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    this.checkExistingSuperAdmin();</span>
   }
 }
@@ -1000,7 +1000,7 @@ export class <span class="cstat-no" title="statement not covered" >SuperAdminReg
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-28T15:52:32.764Z
+                at 2025-09-17T14:08:56.142Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

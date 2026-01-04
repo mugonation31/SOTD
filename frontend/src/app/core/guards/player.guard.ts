@@ -43,6 +43,7 @@ export class PlayerGuard {
           
           const playerHasJoinedGroup = hasJoinedGroup || legacyHasJoinedGroup;
 
+          console.log('PlayerGuard: Player group check', {
             userEmail: user.email,
             userGroupsCount: userGroups.length,
             hasJoinedGroup,

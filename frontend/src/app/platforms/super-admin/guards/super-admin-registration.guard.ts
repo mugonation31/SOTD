@@ -13,7 +13,8 @@ export class SuperAdminRegistrationGuard implements CanActivate {
       // This guard specifically checks for super-admin registration status
       // which is separate from user authentication state
       const hasRegisteredSuperAdmin = localStorage.getItem('superAdminRegistered');
-      
+
+      console.log('SuperAdminRegistrationGuard check:', {
         hasRegisteredSuperAdmin
       });
 

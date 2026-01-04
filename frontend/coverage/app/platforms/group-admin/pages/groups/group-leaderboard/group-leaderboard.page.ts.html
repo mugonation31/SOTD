@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/40</span>
+                <span class='fraction'>0/35</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/37</span>
+                <span class='fraction'>0/32</span>
             </div>
         
             
@@ -551,33 +551,14 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -588,6 +569,25 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -828,7 +828,7 @@ export class <span class="cstat-no" title="statement not covered" >GroupLeaderbo
     
     // Subscribe to group updates for real-time leaderboard updates
 <span class="cstat-no" title="statement not covered" >    this.groupsSubscription = this.groupService.groups$.subscribe(<span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      console.log('🔄 Group Leaderboard: Received group update, reloading data...');</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >      this.loadGroupData();</span>
     });
   }
@@ -840,14 +840,14 @@ export class <span class="cstat-no" title="statement not covered" >GroupLeaderbo
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >loadGroupData(</span>) {
-<span class="cstat-no" title="statement not covered" >    console.log('📊 Group Leaderboard: Loading data for group:', this.groupId);</span>
+&nbsp;
     // Get the group data from GroupService
     const allGroups = <span class="cstat-no" title="statement not covered" >this.groupService.getAllGroups();</span>
     const group = <span class="cstat-no" title="statement not covered" >allGroups.find(<span class="fstat-no" title="function not covered" >g </span>=&gt; <span class="cstat-no" title="statement not covered" >g.id === this.groupId)</span>;</span>
     
 <span class="cstat-no" title="statement not covered" >    if (group) {</span>
 <span class="cstat-no" title="statement not covered" >      this.groupName = group.name;</span>
-<span class="cstat-no" title="statement not covered" >      console.log(`📋 Group "${group.name}": ${group.members.length} members`);</span>
+&nbsp;
       
       // Get the leaderboard for this group
       const groupLeaderboard = <span class="cstat-no" title="statement not covered" >this.groupService.getGroupLeaderboard(this.groupId);</span>
@@ -861,10 +861,10 @@ export class <span class="cstat-no" title="statement not covered" >GroupLeaderbo
         totalPoints: entry.totalPoints
       }));
       
-<span class="cstat-no" title="statement not covered" >      console.log('📊 Leaderboard entries:', this.leaderboard.length);</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >      this.sortLeaderboard();</span>
     } else {
-<span class="cstat-no" title="statement not covered" >      console.log('❌ Group not found, navigating back');</span>
+&nbsp;
       // Group not found, navigate back
 <span class="cstat-no" title="statement not covered" >      this.router.navigate(['/group-admin/groups']);</span>
     }
@@ -901,7 +901,7 @@ export class <span class="cstat-no" title="statement not covered" >GroupLeaderbo
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-28T15:52:32.764Z
+                at 2025-09-17T14:08:56.142Z
             </div>
         <script src="../../../../../../prettify.js"></script>
         <script>

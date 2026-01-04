@@ -22,6 +22,7 @@ export class SuperAdminAuthGuard implements CanActivate {
         const isAuthenticated = this.authService.isAuthenticated();
         const isSuperAdmin = this.authService.isSuperAdmin();
 
+        console.log('SuperAdminAuthGuard check:', {
           isAuthenticated,
           isSuperAdmin,
           userRole: user?.role
