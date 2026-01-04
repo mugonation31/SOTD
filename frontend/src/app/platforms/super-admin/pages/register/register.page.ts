@@ -163,7 +163,7 @@ export class SuperAdminRegisterPage implements OnInit {
             
             // Show success message
             this.toastService.showToast(
-              `Welcome to Predict 3! Super Admin account created successfully.`,
+              `Welcome to Predict3! Super Admin account created successfully.`,
               'success'
             );
 
@@ -221,7 +221,7 @@ export class SuperAdminRegisterPage implements OnInit {
           this.router.navigate(['/super-admin/dashboard']);
           
           this.toastService.showToast(
-            'Welcome to Predict 3! You are now logged in as Super Admin.',
+            'Welcome to Predict3! You are now logged in as Super Admin.',
             'success'
           );
         },

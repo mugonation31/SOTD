@@ -5,7 +5,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { UserRole } from '../core/services/auth.service';
 import { CrossPlatformStorageService } from '../core/services/cross-platform-storage.service';
 
-// Predict 3 Database Types
+// Predict3 Database Types
 export interface Profile {
   id: string;
   email: string;

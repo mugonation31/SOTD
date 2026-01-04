@@ -61,7 +61,7 @@ interface GameWeek {
           <ion-icon name="football-outline" class="football-icon"></ion-icon>
           <div class="logo-text">
             <span class="logo-predict3">Predict3</span>
-            <span class="logo-subtitle">Predict 3</span>
+            <span class="logo-subtitle">Predict3</span>
           </div>
         </div>
         <ion-buttons slot="end">
@@ -93,7 +93,7 @@ interface GameWeek {
               <div class="gameweek-title">
                 <h2>Game Week {{ currentGameweek.number }}</h2>
                 <ion-badge color="primary" class="prediction-badge"
-                  >Predict 3</ion-badge
+                  >Predict3</ion-badge
                 >
               </div>
 
