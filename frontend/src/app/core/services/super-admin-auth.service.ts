@@ -7,7 +7,7 @@ import {
   encryptSensitiveData,
   hashSecurityAnswer,
 } from '../utils/encryption.utils';
-import { validatePassword } from '../utils/validation.utils';
+import { getPasswordErrors } from '../utils/validation.utils';
 
 interface SuperAdminRegistrationData {
   firstName: string;
@@ -37,7 +37,7 @@ export class SuperAdminAuthService {
 
   register(data: SuperAdminRegistrationData): Observable<any> {
     // Validate password complexity
-    const passwordErrors = validatePassword(data.password);
+    const passwordErrors = getPasswordErrors(data.password);
     if (passwordErrors.length > 0) {
       return throwError(() => new Error(passwordErrors.join(', ')));
     }
