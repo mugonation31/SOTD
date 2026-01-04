@@ -33,6 +33,87 @@
 
 ---
 
+## Phase 1.5: Application Rebrand (SOTD → Predict3)
+
+**Status:** 🟡 In Progress - Analysis Complete
+**Goal:** Systematically rename application from "SOTD" to "Predict3" across all files without breaking functionality
+**Priority:** 🟡 HIGH - Branding prerequisite before MVP V1 launch
+**Complexity:** Medium
+**Risk:** Medium-High (requires systematic approach)
+**Analysis Doc:** `docs/analysis/app-rename-sotd-to-predict3.md`
+
+### Preparation
+- [x] Analyze all SOTD occurrences in codebase (1,870+ found)
+- [x] Create comprehensive implementation plan
+- [x] Document risks and mitigations
+- [ ] Create backup branch: `backup/pre-rename-$(date +%Y%m%d)`
+- [ ] Create feature branch: `feature/rename-sotd-to-predict3`
+- [ ] Run pre-rename test suite
+
+### Configuration Files
+- [ ] Update `frontend/ionic.config.json`: `"name": "SOTD"` → `"name": "Predict3"`
+- [ ] Verify `frontend/package.json` (likely no change needed)
+- [ ] Update `.vscode/settings.json` if SOTD references exist
+- [ ] Update `.claude/prompts/01-analyze.md` project name
+
+### CSS Classes (19 SCSS files)
+- [ ] Replace `.logo-sotd` → `.logo-predict3` in `auth/styles/auth.shared.scss`
+- [ ] Replace in `auth/pages/login/login.page.scss`
+- [ ] Replace in `auth/pages/signup/signup.page.scss`
+- [ ] Replace in `auth/pages/forgot-password/forgot-password.page.scss`
+- [ ] Replace in `auth/pages/reset-password/reset-password.page.scss`
+- [ ] Replace in `auth/pages/otp/otp.page.scss`
+- [ ] Replace in `auth/pages/email-confirmed/email-confirmed.page.scss`
+- [ ] Replace in `welcome/welcome.page.scss`
+- [ ] Replace in `player/pages/dashboard/dashboard.page.scss`
+- [ ] Replace in `player/pages/matches/matches.page.scss`
+- [ ] Replace in `player/pages/predictions/predictions.page.scss`
+- [ ] Replace in `player/pages/standings/standings.page.scss`
+- [ ] Replace in `player/pages/group-standings/group-standings.page.scss`
+- [ ] Replace in `player/pages/join-group/join-group.page.scss`
+- [ ] Replace in `player/pages/settings/settings.page.scss`
+- [ ] Replace in `group-admin/layout/group-admin-layout.page.scss`
+- [ ] Replace in `group-admin/pages/leaderboard/leaderboard.page.scss`
+- [ ] Replace in `group-admin/pages/predictions/predictions.page.scss`
+- [ ] Replace in `super-admin/layout/super-admin-layout.page.scss`
+
+### HTML Templates (Synchronized with CSS)
+- [ ] Update all HTML files with `class="logo-sotd"` → `class="logo-predict3"`
+- [ ] Update all `<span class="logo-sotd">SOTD</span>` → `<span class="logo-predict3">Predict3</span>`
+- [ ] Replace remaining display text "SOTD" → "Predict3" in ~20 HTML files
+- [ ] Visual test: Check all affected pages render correctly
+
+### TypeScript Files
+- [ ] Search for "SOTD" string literals in .ts files
+- [ ] Update display text references
+- [ ] Update comments (optional)
+- [ ] Verify TypeScript compilation succeeds: `npx tsc --noEmit`
+
+### Documentation (32 files)
+- [ ] Update `CLAUDE.md` title and project references
+- [ ] Update `TODO.md` title and references (this file)
+- [ ] Update `GLOSSARY.md` if "SOTD" term exists
+- [ ] Update all `docs/**/*.md` files (~28 files)
+- [ ] Update `.claude/prompts/` files (3 files)
+
+### Testing
+- [ ] Clear Angular cache: `rm -rf frontend/.angular/cache`
+- [ ] Full rebuild: `cd frontend && npm run build`
+- [ ] Run test suite: `npm test`
+- [ ] Visual QA: Test all platforms (auth, player, group-admin, super-admin, welcome)
+- [ ] Search verification: No remaining "SOTD" except in git history
+- [ ] Cross-browser test: Chrome, Safari, Firefox
+
+### Deployment
+- [ ] Commit all changes with clear message
+- [ ] Create PR for review
+- [ ] Merge to main after tests pass
+- [ ] Tag release: `git tag v0.1-renamed-to-predict3`
+- [ ] Rebuild production bundle
+- [ ] Deploy and verify
+
+---
+
 ## Phase 1: Project Setup & Documentation
 
 **Status:** 🟢 Completed
