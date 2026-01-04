@@ -1,1 +1,7 @@
 src/environments/environment.ts
+
+# Build output
+/www
+
+# Test coverage reports
+/coverage
