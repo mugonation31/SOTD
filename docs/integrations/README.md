@@ -129,7 +129,7 @@ const { data, error } = await this.supabase
 // capacitor.config.ts
 const config: CapacitorConfig = {
   appId: 'io.ionic.starter',
-  appName: 'SOTD',
+  appName: 'Predict3',
   webDir: 'www',
   bundledWebRuntime: false
 };

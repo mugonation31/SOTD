@@ -1,6 +1,6 @@
 # Features Documentation
 
-Detailed specifications for all SOTD features.
+Detailed specifications for all Predict3 features.
 
 ## Active Features
 

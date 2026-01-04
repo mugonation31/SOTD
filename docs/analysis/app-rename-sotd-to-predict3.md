@@ -1,4 +1,4 @@
-# Feature: Application Rename from SOTD to Predict3
+# Feature: Application Rename from Predict3 to Predict3
 
 **Date:** 2026-01-04
 **Status:** Analysis Complete
@@ -9,11 +9,11 @@
 
 ## Problem Statement
 
-The application needs to be completely rebranded from "SOTD" (Song of the Day) to "Predict3" across all files, configurations, code, documentation, and UI without breaking functionality, imports, or build processes.
+The application needs to be completely rebranded from "Predict3" (Song of the Day) to "Predict3" across all files, configurations, code, documentation, and UI without breaking functionality, imports, or build processes.
 
 ### Current State
-- Application name: "SOTD" (Song of the Day)
-- **1,870 occurrences** of "SOTD" in codebase
+- Application name: "Predict3" (Song of the Day)
+- **1,870 occurrences** of "Predict3" in codebase
 - **63 occurrences** of "sotd" in source code (CSS classes, variables)
 - **2,494 files** to consider (TypeScript, HTML, SCSS, JSON, Markdown)
 - Used in: config files, UI text, CSS classes, documentation, comments
@@ -54,9 +54,9 @@ The application needs to be completely rebranded from "SOTD" (Song of the Day) t
 ### 1. File Categories to Update
 
 #### **A. Configuration Files** (Priority 1 - Critical)
-- `frontend/ionic.config.json` - `"name": "SOTD"` → `"name": "Predict3"`
+- `frontend/ionic.config.json` - `"name": "Predict3"` → `"name": "Predict3"`
 - `frontend/package.json` - Check if app name needs update (currently "frontend")
-- `.vscode/settings.json` - If any SOTD references
+- `.vscode/settings.json` - If any Predict3 references
 - `.claude/` files - Update project references
 
 **Impact:** Low risk, high importance
@@ -91,14 +91,14 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 **Impact:** Medium risk - will break styling if HTML not updated simultaneously
 
 #### **C. HTML Templates** (Priority 2 - Must Match CSS)
-- Update `<span class="logo-sotd">SOTD</span>` → `<span class="logo-predict3">Predict3</span>`
+- Update `<span class="logo-sotd">Predict3</span>` → `<span class="logo-predict3">Predict3</span>`
 - Affects: **~20 HTML files** with logo references
-- Text content "SOTD" → "Predict3"
+- Text content "Predict3" → "Predict3"
 
 **Impact:** Medium risk - must be synchronized with CSS changes
 
 #### **D. TypeScript Files** (Priority 3 - Limited Impact)
-- Update string literals with "SOTD" where used as display text
+- Update string literals with "Predict3" where used as display text
 - Minimal occurrences in actual TypeScript logic
 - Mostly in comments or template strings
 
@@ -114,7 +114,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 **Impact:** No functional risk, important for consistency
 
 #### **F. Project Directory** (Priority 5 - Optional, High Risk)
-- Current: `/home/simbamugoz/workspace/SOTD`
+- Current: `/home/simbamugoz/workspace/Predict3`
 - Potential: `/home/simbamugoz/workspace/Predict3`
 
 **Risks:**
@@ -123,7 +123,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 - ⚠️ Absolute paths might break
 - ⚠️ CI/CD configs might break
 
-**Recommendation:** **NOT recommended** - Keep directory as SOTD, or do as separate final step with extreme caution
+**Recommendation:** **NOT recommended** - Keep directory as Predict3, or do as separate final step with extreme caution
 
 ---
 
@@ -170,7 +170,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 - [ ] **Visual Test:** Check all affected pages render correctly
 - [ ] **Functional Test:** Test auth flows (login, signup, password reset)
 - [ ] **Cross-Platform:** Test on web, check no broken native references
-- [ ] **Search Test:** Search codebase for any remaining "SOTD" references
+- [ ] **Search Test:** Search codebase for any remaining "Predict3" references
 
 ### 4. Regression Testing Checklist
 - [ ] Login page displays "Predict3" correctly
@@ -195,9 +195,9 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 5. Run pre-rename tests
 
 ### Phase 2: Configuration Files
-1. Update `frontend/ionic.config.json`: `"name": "SOTD"` → `"name": "Predict3"`
+1. Update `frontend/ionic.config.json`: `"name": "Predict3"` → `"name": "Predict3"`
 2. Check `frontend/package.json` (likely no change needed)
-3. Update any SOTD references in `.vscode/settings.json`
+3. Update any Predict3 references in `.vscode/settings.json`
 4. Test: Build succeeds
 
 ### Phase 3: CSS Classes (Synchronized with HTML)
@@ -205,16 +205,16 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 2. **Replace** `.logo-sotd` → `.logo-predict3` in all SCSS files (~19 files)
 3. **Simultaneously replace** in corresponding HTML templates:
    - `class="logo-sotd"` → `class="logo-predict3"`
-   - `<span class="logo-sotd">SOTD</span>` → `<span class="logo-predict3">Predict3</span>`
+   - `<span class="logo-sotd">Predict3</span>` → `<span class="logo-predict3">Predict3</span>`
 4. Test: Visual inspection of all affected pages
 
 ### Phase 4: Remaining HTML Text
-1. Search for remaining "SOTD" in HTML files
-2. Replace display text "SOTD" → "Predict3"
+1. Search for remaining "Predict3" in HTML files
+2. Replace display text "Predict3" → "Predict3"
 3. Test: Visual inspection
 
 ### Phase 5: TypeScript Files
-1. Search for "SOTD" in .ts files
+1. Search for "Predict3" in .ts files
 2. Update string literals where used as display text
 3. Update comments if desired
 4. Test: TypeScript compilation succeeds
@@ -223,7 +223,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 1. Update `.claude/prompts/01-analyze.md` (line 3, line 10)
 2. Update all `docs/**/*.md` files
 3. Update [TODO.md](../../TODO.md) references
-4. Update [GLOSSARY.md](../../GLOSSARY.md) if "SOTD" appears
+4. Update [GLOSSARY.md](../../GLOSSARY.md) if "Predict3" appears
 5. Update [CLAUDE.md](../../CLAUDE.md) title and references
 6. Test: Documentation reads correctly
 
@@ -232,7 +232,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 2. Clear coverage and www: Already gitignored
 3. Full rebuild: `cd frontend && npm run build`
 4. Run tests: `npm test`
-5. Search for any remaining "SOTD": `grep -r "SOTD" --exclude-dir=node_modules --exclude-dir=.git .`
+5. Search for any remaining "Predict3": `grep -r "Predict3" --exclude-dir=node_modules --exclude-dir=.git .`
 
 ### Phase 8: Commit & Test
 1. Stage all changes
@@ -243,7 +243,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 
 ### Phase 9: Optional - Directory Rename
 **⚠️ Only if absolutely necessary:**
-1. Rename directory: `mv ~/workspace/SOTD ~/workspace/Predict3`
+1. Rename directory: `mv ~/workspace/Predict3 ~/workspace/Predict3`
 2. Update git remote if needed
 3. Update IDE workspace settings
 4. Update any CI/CD references
@@ -301,7 +301,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 **Likelihood:** High if attempted
 **Impact:** High (everything could break)
 **Mitigation:**
-- **Don't do it** - keep directory as SOTD
+- **Don't do it** - keep directory as Predict3
 - If must rename, do as separate final step
 - Test exhaustively after directory rename
 
@@ -309,7 +309,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 
 ## Success Criteria
 
-- ✅ All 1,870+ "SOTD" references updated to "Predict3" or appropriate variant
+- ✅ All 1,870+ "Predict3" references updated to "Predict3" or appropriate variant
 - ✅ All CSS classes `.logo-sotd` renamed to `.logo-predict3`
 - ✅ All HTML displays "Predict3" in UI
 - ✅ All tests pass (`npm test`)
@@ -354,7 +354,7 @@ frontend/src/app/platforms/super-admin/layout/super-admin-layout.page.scss
 
 ## Notes
 
-- The term "SOTD" may still appear in git history - this is normal and expected
+- The term "Predict3" may still appear in git history - this is normal and expected
 - Some compiled files in `.angular/cache/` may have old references - will be regenerated on build
 - Focus on source files, not generated/compiled files
 - Keep communication clear about what "Predict3" means to avoid confusion

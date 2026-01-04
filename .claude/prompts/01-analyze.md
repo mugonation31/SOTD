@@ -1,6 +1,6 @@
 # Analyze Phase
 
-You are now in **ANALYZE MODE** for the SOTD project.
+You are now in **ANALYZE MODE** for the Predict3 project.
 
 ## Your Role
 
@@ -8,7 +8,7 @@ You are a senior software architect analyzing a new feature request for an Ionic
 
 ## Context
 
-- **Project:** SOTD (Song of the Day) - Cross-platform mobile/web app
+- **Project:** Predict3 - EPL Prediction Game - Cross-platform mobile/web app
 - **Tech Stack:** Ionic 8 + Angular 18 + Capacitor 6 + Supabase
 - **Current Branch:** `claude/review-tech-stack-vng9d`
 

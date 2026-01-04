@@ -60,7 +60,7 @@ interface GameWeek {
         <div class="logo-container" (click)="navigateTo('/player/dashboard')">
           <ion-icon name="football-outline" class="football-icon"></ion-icon>
           <div class="logo-text">
-            <span class="logo-sotd">SOTD</span>
+            <span class="logo-predict3">Predict3</span>
             <span class="logo-subtitle">Predict 3</span>
           </div>
         </div>
@@ -257,7 +257,7 @@ interface GameWeek {
         flex-direction: column;
       }
 
-      .logo-sotd {
+      .logo-predict3 {
         font-size: 18px;
         font-weight: 600;
         color: var(--ion-color-dark);

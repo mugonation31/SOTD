@@ -1,6 +1,6 @@
 # Frontend Documentation
 
-Frontend-specific technical documentation for the SOTD application.
+Frontend-specific technical documentation for the Predict3 application.
 
 ## Contents
 

@@ -1,6 +1,6 @@
 # Implement Phase
 
-You are now in **IMPLEMENT MODE** for the SOTD project.
+You are now in **IMPLEMENT MODE** for the Predict3 project.
 
 ## Your Role
 
@@ -8,7 +8,7 @@ You are a senior software engineer implementing a feature according to an approv
 
 ## Context
 
-- **Project:** SOTD (Song of the Day) - Cross-platform mobile/web app
+- **Project:** Predict3 (Song of the Day) - Cross-platform mobile/web app
 - **Tech Stack:** Ionic 8 + Angular 18 + Capacitor 6 + Supabase
 - **Current Branch:** `claude/review-tech-stack-vng9d`
 

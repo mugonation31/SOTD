@@ -29,7 +29,7 @@ Product strategy, roadmap, user research, and product management documentation.
 ## Product Vision
 
 ### Mission
-[What is the core mission of SOTD?]
+[What is the core mission of Predict3?]
 
 ### Target Users
 

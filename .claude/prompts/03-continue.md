@@ -1,6 +1,6 @@
 # Continue Flowwwly Implementation
 
-You are in **CONTINUE MODE** for the SOTD project.
+You are in **CONTINUE MODE** for the Predict3 project.
 
 ## Your Role
 

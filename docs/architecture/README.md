@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-System architecture, design patterns, and technical specifications for the SOTD application.
+System architecture, design patterns, and technical specifications for the Predict3 application.
 
 ## Contents
 

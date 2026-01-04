@@ -1,6 +1,6 @@
 # DevOps Documentation
 
-Deployment, infrastructure, and operational procedures for SOTD.
+Deployment, infrastructure, and operational procedures for Predict3.
 
 ## Contents
 

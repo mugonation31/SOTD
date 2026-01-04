@@ -1,4 +1,4 @@
-# SOTD - Task Tracking
+# Predict3 - Task Tracking
 
 > **Last Updated:** 2026-01-04
 > **Current Phase:** MVP V1 Alignment - Critical Features Implementation
@@ -33,17 +33,17 @@
 
 ---
 
-## Phase 1.5: Application Rebrand (SOTD → Predict3)
+## Phase 1.5: Application Rebrand (Predict3 → Predict3)
 
 **Status:** 🟡 In Progress - Analysis Complete
-**Goal:** Systematically rename application from "SOTD" to "Predict3" across all files without breaking functionality
+**Goal:** Systematically rename application from "Predict3" to "Predict3" across all files without breaking functionality
 **Priority:** 🟡 HIGH - Branding prerequisite before MVP V1 launch
 **Complexity:** Medium
 **Risk:** Medium-High (requires systematic approach)
 **Analysis Doc:** `docs/analysis/app-rename-sotd-to-predict3.md`
 
 ### Preparation
-- [x] Analyze all SOTD occurrences in codebase (1,870+ found)
+- [x] Analyze all Predict3 occurrences in codebase (1,870+ found)
 - [x] Create comprehensive implementation plan
 - [x] Document risks and mitigations
 - [ ] Create backup branch: `backup/pre-rename-$(date +%Y%m%d)`
@@ -51,9 +51,9 @@
 - [ ] Run pre-rename test suite
 
 ### Configuration Files
-- [ ] Update `frontend/ionic.config.json`: `"name": "SOTD"` → `"name": "Predict3"`
+- [ ] Update `frontend/ionic.config.json`: `"name": "Predict3"` → `"name": "Predict3"`
 - [ ] Verify `frontend/package.json` (likely no change needed)
-- [ ] Update `.vscode/settings.json` if SOTD references exist
+- [ ] Update `.vscode/settings.json` if Predict3 references exist
 - [ ] Update `.claude/prompts/01-analyze.md` project name
 
 ### CSS Classes (19 SCSS files)
@@ -79,12 +79,12 @@
 
 ### HTML Templates (Synchronized with CSS)
 - [ ] Update all HTML files with `class="logo-sotd"` → `class="logo-predict3"`
-- [ ] Update all `<span class="logo-sotd">SOTD</span>` → `<span class="logo-predict3">Predict3</span>`
-- [ ] Replace remaining display text "SOTD" → "Predict3" in ~20 HTML files
+- [ ] Update all `<span class="logo-sotd">Predict3</span>` → `<span class="logo-predict3">Predict3</span>`
+- [ ] Replace remaining display text "Predict3" → "Predict3" in ~20 HTML files
 - [ ] Visual test: Check all affected pages render correctly
 
 ### TypeScript Files
-- [ ] Search for "SOTD" string literals in .ts files
+- [ ] Search for "Predict3" string literals in .ts files
 - [ ] Update display text references
 - [ ] Update comments (optional)
 - [ ] Verify TypeScript compilation succeeds: `npx tsc --noEmit`
@@ -92,7 +92,7 @@
 ### Documentation (32 files)
 - [ ] Update `CLAUDE.md` title and project references
 - [ ] Update `TODO.md` title and references (this file)
-- [ ] Update `GLOSSARY.md` if "SOTD" term exists
+- [ ] Update `GLOSSARY.md` if "Predict3" term exists
 - [ ] Update all `docs/**/*.md` files (~28 files)
 - [ ] Update `.claude/prompts/` files (3 files)
 
@@ -101,7 +101,7 @@
 - [ ] Full rebuild: `cd frontend && npm run build`
 - [ ] Run test suite: `npm test`
 - [ ] Visual QA: Test all platforms (auth, player, group-admin, super-admin, welcome)
-- [ ] Search verification: No remaining "SOTD" except in git history
+- [ ] Search verification: No remaining "Predict3" except in git history
 - [ ] Cross-browser test: Chrome, Safari, Firefox
 
 ### Deployment
@@ -440,7 +440,7 @@
 - [ ] Create scheduled job to import upcoming fixtures
 - [ ] Create scheduled job to fetch live scores (every 60 seconds)
 - [ ] Create scheduled job to import final results
-- [ ] Map API data to SOTD match format
+- [ ] Map API data to Predict3 match format
 - [ ] Handle API rate limits and errors
 - [ ] Add caching layer for API responses
 - **Files:** `match-data.service.ts`, backend scheduled functions
@@ -586,7 +586,7 @@
 ## Phase 8: Public Launch & Go-Live
 
 **Status:** ⚪ Not Started
-**Goal:** Launch SOTD to the public and onboard first users
+**Goal:** Launch Predict3 to the public and onboard first users
 **Priority:** 🟢 LAUNCH - Final phase
 
 ### Pre-Launch Preparation

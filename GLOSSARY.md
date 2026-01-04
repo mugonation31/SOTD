@@ -1,12 +1,12 @@
-# SOTD - Project Glossary
+# Predict3 - Project Glossary
 
-> Comprehensive terminology and definitions for the SOTD (Song of the Day) project.
+> Comprehensive terminology and definitions for the Predict3 (Song of the Day) project.
 
 ---
 
 ## Project Overview
 
-**SOTD (Song of the Day):** A cross-platform mobile and web application for managing predictions, group competitions, and leaderboards.
+**Predict3 (Song of the Day):** A cross-platform mobile and web application for managing predictions, group competitions, and leaderboards.
 
 ---
 
