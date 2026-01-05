@@ -244,19 +244,21 @@
 **Priority:** 🔴 CRITICAL - Blocks MVP V1 Launch
 
 ### 0. Legal Pages (Terms & Privacy) - PREREQUISITE
-**Status:** ⚪ Not Started | **Impact:** Legal requirement & user trust
-- [ ] Create Terms and Conditions page component
-- [ ] Create Privacy Policy page component
-- [ ] Write comprehensive Terms and Conditions content (use agreement, liability, user conduct)
-- [ ] Write comprehensive Privacy Policy content (GDPR compliant, data collection, cookies)
-- [ ] Add routes to auth.routes.ts for /terms and /privacy
-- [ ] Wire up links in signup.page.ts (openTerms and openPrivacy methods)
-- [ ] Wire up links in super-admin register.page.ts
-- [ ] Add navigation with back button to return to signup
-- [ ] Style pages professionally with proper formatting
-- [ ] Test links from all signup forms (player, super-admin)
-- [ ] Add "Last Updated" date to both pages
+**Status:** 🟢 Completed | **Impact:** Legal requirement & user trust
+- [x] Create Terms and Conditions page component
+- [x] Create Privacy Policy page component
+- [x] Write comprehensive Terms and Conditions content (use agreement, liability, user conduct)
+- [x] Write comprehensive Privacy Policy content (GDPR compliant, data collection, cookies)
+- [x] Add routes to auth.routes.ts for /terms and /privacy
+- [x] Wire up links in signup.page.ts (openTerms and openPrivacy methods)
+- [x] Wire up links in super-admin register.page.ts (not needed - simple checkbox)
+- [x] Add navigation with back button to return to signup
+- [x] Style pages professionally with proper formatting
+- [x] Test links from all signup forms (player, super-admin)
+- [x] Add "Last Updated" date to both pages
 - **Files:** `auth/pages/terms/`, `auth/pages/privacy/`, `signup.page.ts`, `auth.routes.ts`
+- **Completed:** 2026-01-05
+- **Notes:** All payment/prize references removed. GDPR compliant. 16 unit tests passing.
 
 ### 1. Deadline Enforcement System
 **Status:** ⚪ Not Started | **Impact:** Game-breaking without this
