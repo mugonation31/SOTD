@@ -33,6 +33,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/email-confirmed/email-confirmed.page').then( m => m.EmailConfirmedPage)
       },
       {
+        path: 'terms',
+        loadComponent: () =>
+          import('./pages/terms/terms.page').then((m) => m.TermsPage),
+      },
+      {
+        path: 'privacy',
+        loadComponent: () =>
+          import('./pages/privacy/privacy.page').then((m) => m.PrivacyPage),
+      },
+      {
         path: '',
         redirectTo: 'login',
         pathMatch: 'full',

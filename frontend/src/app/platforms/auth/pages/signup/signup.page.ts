@@ -333,12 +333,12 @@ export class SignupPage implements OnInit {
 
   openTerms(event: Event) {
     event.preventDefault();
-    // TODO: Open Terms and Conditions modal or page
+    this.router.navigate(['/auth/terms']);
   }
 
   openPrivacy(event: Event) {
     event.preventDefault();
-    // TODO: Open Privacy Policy modal or page
+    this.router.navigate(['/auth/privacy']);
   }
 
   navigateToWelcome() {

@@ -1,18 +1,18 @@
 # Predict3 - Task Tracking
 
-> **Last Updated:** 2026-01-04
-> **Current Phase:** MVP V1 Alignment - Critical Features Implementation
-> **Status:** Gap Analysis Complete - 70% MVP V1 Ready
-> **MVP V1 Spec:** Aligned with updated specification requirements
+> **Last Updated:** 2026-01-05
+> **Current Phase:** Phase 1.6 - MVP V1 Simplification (Prize Money Removal)
+> **Status:** Ready for Implementation
+> **MVP V1 Spec:** Simplified - Pure prediction gaming without financial transactions
 
 ---
 
 ## Current Position
 - **Last Completed Phase:** Phase 1 (Project Setup & Documentation)
-- **Current Phase:** MVP V1 Critical Features Implementation
-- **MVP V1 Readiness:** 70% (UI/UX Complete, Business Logic Gaps Identified)
+- **Current Phase:** Phase 1.6 (MVP V1 Simplification - Prize Money Removal)
+- **MVP V1 Readiness:** 70% (UI/UX Complete, awaiting simplification + business logic)
 - **Next Phase:** Phase 2 (Critical Business Logic Enforcement)
-- **Progress:** Gap analysis complete, prioritized action plan ready
+- **Progress:** Simplification plan ready, implementation pending
 
 ### Gap Analysis Summary
 **What's Working (70%):**
@@ -22,6 +22,12 @@
 - ✅ Scoring calculation logic (100% complete)
 - ✅ Leaderboards and standings
 - ✅ Super admin analytics dashboard
+
+**Critical Simplifications (Phase 1.6 - NEW):**
+- 🔴 Remove prize money handling from all components
+- 🔴 Remove public/private group distinction (all groups code-only)
+- 🔴 Simplify data model (remove prize/payment fields)
+- 🔴 Update legal terms (no financial transactions)
 
 **Critical Gaps (Must Fix for MVP V1):**
 - ❌ Deadline enforcement (predictions locked 1 hour before kickoff)
@@ -111,6 +117,98 @@
 - [ ] Tag release: `git tag v0.1-renamed-to-predict3`
 - [ ] Rebuild production bundle
 - [ ] Deploy and verify
+
+---
+
+## Phase 1.6: MVP V1 Simplification - Remove Prize Money & Public/Private Groups
+
+**Status:** ⚪ Not Started
+**Goal:** Simplify MVP V1 by removing all prize money handling and public/private group distinctions
+**Priority:** 🔴 CRITICAL - Must complete before MVP V1 launch
+**Complexity:** Medium
+**Risk:** Low-Medium (well-documented, straightforward removals)
+**Estimated Effort:** 4-6 hours
+**Analysis Doc:** `docs/analysis/mvp-simplification-prize-money-removal.md`
+
+### Strategic Changes
+**New Vision:**
+- ❌ No prize money handling - Groups manage prizes externally (cash, bank transfers, etc.)
+- ❌ No public/private groups - All groups are code-only (inherently private)
+- ✅ Pure prediction gaming platform
+- ✅ Simpler data model, faster MVP launch
+- ✅ No financial compliance or payment gateway integration needed
+
+**Impact:**
+- 13 files affected by prize money removal
+- 4 files affected by public/private removal
+- Cleaner, simpler codebase
+- Faster path to MVP V1 launch
+
+### Phase 1: Data Model Cleanup
+- [ ] Update `core/types/group.types.ts` - remove `type`, `entryFee`, `paidMembers`, `totalPrizePool`, `isPrivate`
+- [ ] Update `core/services/group.service.ts` - remove prize and privacy fields from mock data
+- [ ] Update `core/services/group.service.ts` - simplify `createGroup()` method signature
+- [ ] Remove prize-related interfaces: `PrizeBreakdown`, `PrizePosition`
+
+### Phase 2: Create Group Flow (Group Admin)
+- [ ] `create-group.page.ts` - remove all prize logic, methods, and CurrencyPipe import
+- [ ] `create-group.page.ts` - simplify form initialization (name only)
+- [ ] `create-group.page.html` - remove group type selection UI
+- [ ] `create-group.page.html` - remove entry fee slider/input section
+- [ ] `create-group.page.html` - remove prize breakdown display
+- [ ] `create-group.page.scss` - remove all prize-related styles
+
+### Phase 3: Groups Management (Group Admin)
+- [ ] `groups.page.ts` - remove prize fields from interfaces
+- [ ] `groups.page.ts` - remove prize-related methods and CurrencyPipe
+- [ ] `groups.page.html` - remove group type selection from create form
+- [ ] `groups.page.html` - remove entry fee controls
+- [ ] `groups.page.html` - remove prize displays and paid members count from group list
+- [ ] `groups.page.scss` - remove prize-related styles
+
+### Phase 4: Dashboard (Group Admin)
+- [ ] `dashboard.page.ts` - remove `prizePool` and `paidMembers` from `GroupStats`
+- [ ] `dashboard.page.ts` - remove cashOutline icon if only used for prizes
+- [ ] `dashboard.page.html` - remove prize pool displays and paid member stats
+- [ ] `dashboard.page.scss` - clean up unused prize styles
+
+### Phase 5: Player Pages
+- [ ] `join-group.page.html` - remove group type badge and entry fee display
+- [ ] `join-group.page.scss` - remove prize styles
+- [ ] `groups.page.html` (player) - remove group type badges and entry fee stat
+- [ ] `group-standings.page.html` - remove any prize displays
+- [ ] `leaderboard.page.html` (group-admin) - remove prize columns
+
+### Phase 6: Documentation & Legal
+- [ ] Update `auth/pages/terms/terms.page.html` - remove financial transaction terms
+- [ ] Update `auth/pages/terms/terms.page.html` - add disclaimer about external prize handling
+- [ ] Update `CLAUDE.md` - remove prize money references from feature descriptions
+- [ ] Update `GLOSSARY.md` - remove prize-related terminology
+- [ ] Update this TODO.md - mark phase complete when done
+
+### Testing & Validation
+- [ ] Test group creation - verify only name required
+- [ ] Test group joining - verify works without entry fees
+- [ ] Test leaderboards - verify clean display without prizes
+- [ ] Visual regression test - check all affected pages render correctly
+- [ ] TypeScript compilation - `npx tsc --noEmit` (no errors)
+- [ ] Run test suite - `cd frontend && npm test` (all pass)
+- [ ] Check browser console - no errors or warnings
+
+### Code Quality
+- [ ] No leftover prize-related variables or methods
+- [ ] No unused imports (CurrencyPipe, cashOutline icon, etc.)
+- [ ] SCSS files cleaned (no unused prize styles)
+- [ ] Mock data consistent with new schema
+- [ ] All TypeScript interfaces updated consistently
+
+### Git Workflow
+- [ ] Create feature branch: `git checkout -b feature/remove-prize-money-and-privacy`
+- [ ] Commit changes incrementally with clear messages
+- [ ] Push branch: `git push origin feature/remove-prize-money-and-privacy`
+- [ ] Create PR for review (when ready to merge)
+- [ ] Merge to main after validation
+- [ ] Tag release: `git tag v1.0.0-mvp-simplified`
 
 ---
 
@@ -607,7 +705,7 @@
 
 ### Go-Live Checklist
 - [ ] Final QA pass on production environment
-- [ ] Verify all integrations (EPL API, payments, emails)
+- [ ] Verify all integrations (EPL API, emails)
 - [ ] Test user registration and onboarding flow
 - [ ] Verify analytics and error tracking working
 - [ ] Confirm backup and recovery procedures
@@ -707,6 +805,14 @@
 ### Minimum Viable Product Requirements (Launch Blockers)
 To launch MVP V1, these phases MUST be completed:
 
+**Phase 1.6: MVP V1 Simplification** 🔴 CRITICAL - NEW!
+- Remove prize money handling from all components
+- Remove public/private group distinction
+- Simplify data model and interfaces
+- Update legal terms (no financial transactions)
+- **Why Critical:** Simplifies MVP, removes payment integration complexity, faster to market
+- **Estimated:** 4-6 hours
+
 **Phase 2: Critical Business Logic** 🔴 CRITICAL
 - Deadline enforcement (game-breaking without this)
 - Prediction visibility controls
@@ -714,7 +820,7 @@ To launch MVP V1, these phases MUST be completed:
 - Player leave group functionality
 
 **Phase 6: Backend Integration** 🔴 CRITICAL
-- Supabase database schema and migrations
+- Supabase database schema and migrations (simplified after Phase 1.6!)
 - EPL API integration for real match data
 - Replace all localStorage with database calls
 - Server-side validation for all operations
