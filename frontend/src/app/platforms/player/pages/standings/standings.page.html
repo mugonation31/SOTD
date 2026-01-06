@@ -48,9 +48,6 @@
           <h3 class="group-name">{{ groupStanding.group.name }}</h3>
           <div class="group-details">
             <span class="member-count">{{ groupStanding.group.memberCount }} members</span>
-            <span class="group-type" [class.prize]="groupStanding.group.type === 'prize'">
-              {{ groupStanding.group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
-            </span>
           </div>
           <p class="group-code">Code: {{ groupStanding.group.code }}</p>
         </div>

@@ -53,10 +53,6 @@ interface Group {
   createdAt: Date;
   members: GroupMember[];
   settings: GroupSettings;
-  type: 'casual' | 'prize';
-  entryFee?: number;
-  paidMembers: number;
-  totalPrizePool?: number;
   adminName: string;
   leaderboard: GroupLeaderboardEntry[];
 }
@@ -64,8 +60,6 @@ interface Group {
 interface CreateGroupDto {
   name: string;
   description: string;
-  entryFee: number;
-  isPrivate: boolean;
 }
 
 // Standardized group with standings interface
@@ -75,7 +69,6 @@ export interface GroupWithStandings {
     name: string;
     code: string;
     memberCount: number;
-    type: 'casual' | 'prize';
   };
   leaderboard: Standing[];
   userPosition: number | null;
@@ -440,10 +433,6 @@ export class GroupService {
         showLeaderboard: true,
         allowMemberChat: true,
       },
-      type: data.entryFee > 0 ? 'prize' : 'casual',
-      entryFee: data.entryFee,
-      paidMembers: 0,
-      totalPrizePool: 0,
       adminName: adminMember.name,
       leaderboard: [],
     };
@@ -545,8 +534,7 @@ export class GroupService {
           id: group.id,
           name: group.name,
           code: group.code,
-          memberCount: group.memberCount,
-          type: group.type
+          memberCount: group.memberCount
         },
         leaderboard: standings,
         userPosition: userPosition || null
@@ -571,8 +559,7 @@ export class GroupService {
         id: group.id,
         name: group.name,
         code: group.code,
-        memberCount: group.memberCount,
-        type: group.type
+        memberCount: group.memberCount
       },
       leaderboard: standings,
       userPosition: userPosition || null
@@ -666,10 +653,6 @@ export class GroupService {
         showLeaderboard: true,
         allowMemberChat: true,
       },
-      type: 'casual',
-      entryFee: 0,
-      paidMembers: 0,
-      totalPrizePool: 0,
       adminName: 'John Admin',
       leaderboard: [],
     };
@@ -702,10 +685,6 @@ export class GroupService {
         showLeaderboard: true,
         allowMemberChat: true,
       },
-      type: 'casual',
-      entryFee: 0,
-      paidMembers: 0,
-      totalPrizePool: 0,
       adminName: 'Test Admin',
       leaderboard: [],
     };

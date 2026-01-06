@@ -78,16 +78,6 @@
               <p class="admin">Admin: {{ group.adminName }}</p>
               <p class="members">{{ group.memberCount }} Members</p>
             </div>
-            <div class="group-type">
-              <ion-badge
-                [color]="group.type === 'prize' ? 'primary' : 'secondary'"
-              >
-                {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
-              </ion-badge>
-              <span *ngIf="group.type === 'prize'" class="entry-fee">
-                Entry Fee: £{{ group.entryFee }}
-              </span>
-            </div>
           </div>
           <ion-icon name="chevron-forward-outline" slot="end" color="medium"></ion-icon>
         </ion-item>

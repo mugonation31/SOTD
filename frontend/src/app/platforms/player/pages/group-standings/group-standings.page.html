@@ -23,9 +23,6 @@
       </ion-card-title>
       <div class="group-details">
         <ion-badge color="medium">{{ group.memberCount }} members</ion-badge>
-        <ion-badge [color]="group.type === 'prize' ? 'primary' : 'secondary'">
-          {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
-        </ion-badge>
         <span class="group-code">Code: {{ group.code }}</span>
       </div>
     </ion-card-header>

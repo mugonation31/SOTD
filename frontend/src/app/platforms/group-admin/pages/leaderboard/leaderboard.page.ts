@@ -33,7 +33,6 @@ interface GroupStanding {
     name: string;
     code: string;
     memberCount: number;
-    type: 'casual' | 'prize';
   };
   leaderboard: Standing[];
   adminPosition: number | null;
@@ -116,8 +115,7 @@ export class LeaderboardPage implements OnInit, OnDestroy {
           id: item.group.id,
           name: item.group.name,
           code: item.group.code,
-          memberCount: actualMemberCount, // Use actual member count
-          type: item.group.type
+          memberCount: actualMemberCount // Use actual member count
         },
         leaderboard: convertedLeaderboard,
         adminPosition: item.adminPosition

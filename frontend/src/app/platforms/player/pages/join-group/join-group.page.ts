@@ -43,10 +43,6 @@ interface Group {
   createdAt: Date;
   members: any[];
   settings: any;
-  type: 'casual' | 'prize';
-  entryFee?: number;
-  paidMembers: number;
-  totalPrizePool?: number;
   adminName: string;
   leaderboard: any[];
 }
@@ -228,14 +224,6 @@ export class JoinGroupPage implements OnInit, OnDestroy {
       let message = `Group Name: ${this.foundGroup.name}\n`;
       message += `Admin: ${this.foundGroup.adminName}\n`;
       message += `Members: ${this.foundGroup.memberCount}\n`;
-      message += `Type: ${
-        this.foundGroup.type === 'prize' ? 'Prize Pool' : 'Casual'
-      }\n`;
-
-      if (this.foundGroup.type === 'prize') {
-        message += `Entry Fee: £${this.foundGroup.entryFee}\n`;
-      }
-
       message += '\nDo you want to join this group?';
 
       return message;

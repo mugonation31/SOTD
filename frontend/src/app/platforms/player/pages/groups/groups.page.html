@@ -38,11 +38,6 @@
                 Admin: {{ group.adminName }}
               </p>
             </div>
-            <div class="group-type">
-              <ion-badge [color]="group.type === 'prize' ? 'warning' : 'primary'">
-                {{ group.type === 'prize' ? 'Prize Pool' : 'Casual' }}
-              </ion-badge>
-            </div>
           </div>
 
           <div class="group-stats">
@@ -59,14 +54,6 @@
               <div class="stat-info">
                 <span class="stat-value">#{{ getUserPosition(group) }}</span>
                 <span class="stat-label">Your Rank</span>
-              </div>
-            </div>
-
-            <div class="stat-item" *ngIf="group.type === 'prize'">
-              <ion-icon name="cash-outline" color="success"></ion-icon>
-              <div class="stat-info">
-                <span class="stat-value">£{{ group.entryFee }}</span>
-                <span class="stat-label">Entry Fee</span>
               </div>
             </div>
           </div>

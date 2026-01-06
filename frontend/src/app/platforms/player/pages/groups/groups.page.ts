@@ -48,8 +48,6 @@ interface Group {
   code: string;
   adminName: string;
   memberCount: number;
-  type: 'casual' | 'prize';
-  entryFee?: number;
   members: any[];
   createdAt: Date;
 }

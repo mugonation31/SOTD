@@ -13,116 +13,27 @@
 
     <ion-card-content>
       <form [formGroup]="groupForm" (ngSubmit)="onCreateGroup()">
-        <!-- Group Type Selection -->
-        <div class="group-type-selection">
-          <ion-segment formControlName="type" (ionChange)="onGroupTypeChange()">
-            <ion-segment-button value="casual">
-              <ion-label>
-                <div class="segment-content">
-                  <ion-icon name="trophy-outline"></ion-icon>
-                  <div class="segment-text">
-                    <h3>Casual Group</h3>
-                    <p>Play for bragging rights</p>
-                  </div>
-                </div>
-              </ion-label>
-            </ion-segment-button>
-
-            <ion-segment-button value="prize">
-              <ion-label>
-                <div class="segment-content">
-                  <ion-icon name="cash-outline"></ion-icon>
-                  <div class="segment-text">
-                    <h3>Prize Group</h3>
-                    <p>Play for cash prizes</p>
-                  </div>
-                </div>
-              </ion-label>
-            </ion-segment-button>
-          </ion-segment>
-        </div>
-
-        <!-- Entry Fee Selection -->
-        <div class="entry-fee-section" *ngIf="groupForm.get('type')?.value === 'prize'">
-          <ion-item lines="none">
-            <ion-label position="stacked">Entry Fee</ion-label>
-
-            <div class="fee-selector">
-              <!-- Range Slider -->
-              <div class="range-container">
-                <ion-range class="fee-range" [min]="1" [max]="100" [step]="1" [pin]="true" [ticks]="true" [snaps]="true"
-                  formControlName="entryFee" (ionChange)="onEntryFeeChange($event)">
-                  <div slot="start" class="range-label">£1</div>
-                  <div slot="end" class="range-label">£100</div>
-                </ion-range>
-              </div>
-
-              <!-- Manual Input -->
-              <div class="manual-fee-input">
-                <div class="currency-symbol">£</div>
-                <ion-input type="number" [min]="1" [max]="100" formControlName="entryFee"
-                  (ionInput)="onManualFeeInput($event)" class="fee-input" clearInput="true" placeholder="0">
-                </ion-input>
-              </div>
-            </div>
-
-            <ion-note>Set entry fee between £1 and £100</ion-note>
-          </ion-item>
-
-          <div class="prize-breakdown" *ngIf="groupForm.get('type')?.value === 'prize'">
-            <h4>Prize Breakdown</h4>
-
-            <!-- Show this when entry fee is set -->
-            <div class="prize-distribution" *ngIf="groupForm.get('entryFee')?.value">
-              <div class="current-pool">
-                <p>Entry Fee: {{ groupForm.get('entryFee')?.value | currency:'GBP' }}</p>
-                <p>Current Members: {{ currentMemberCount }}</p>
-                <p class="pool-total">Potential Prize Pool: {{ calculateTotalPool() | currency:'GBP' }}</p>
-              </div>
-
-              <div class="prize-items">
-                <div class="prize-item">
-                  <ion-badge color="gold">1st</ion-badge>
-                  <span>{{ calculatePrize(1) | currency:'GBP' }}</span>
-                </div>
-                <div class="prize-item">
-                  <ion-badge color="silver">2nd</ion-badge>
-                  <span>{{ calculatePrize(2) | currency:'GBP' }}</span>
-                </div>
-                <div class="prize-item">
-                  <ion-badge color="bronze">3rd</ion-badge>
-                  <span>{{ calculatePrize(3) | currency:'GBP' }}</span>
-                </div>
-              </div>
-
-              <div class="prize-note">
-                <ion-note>* Prize amounts will be finalized once all members have joined and paid</ion-note>
-              </div>
-            </div>
-
-            <!-- Show this when no entry fee is set -->
-            <div class="prize-info" *ngIf="!groupForm.get('entryFee')?.value">
-              <p>Set an entry fee (£1 - £100) to see potential prize distribution</p>
-              <p class="prize-note">
-                Prize breakdown adjusts based on number of members:
-                <br />• 3-5 members: Winner takes all
-                <br />• 6-10 members: 1st (70%), 2nd (30%)
-                <br />• 11-20 members: 1st (50%), 2nd (30%), 3rd (20%)
-                <br />• 21+ members: 1st (45%), 2nd (35%), 3rd (20%)
-              </p>
-            </div>
-          </div>
-        </div>
-
         <!-- Group Name -->
         <ion-item class="group-name-input">
           <ion-label position="stacked">Group Name</ion-label>
-          <ion-input formControlName="name" placeholder="Enter a memorable name for your group"
-            [clearInput]="true"></ion-input>
+          <ion-input
+            formControlName="name"
+            placeholder="Enter a memorable name for your group"
+            [clearInput]="true">
+          </ion-input>
         </ion-item>
 
+        <ion-note class="group-info-note">
+          <ion-icon name="people-outline"></ion-icon>
+          Your group will get a unique code that members can use to join
+        </ion-note>
+
         <div class="form-actions">
-          <ion-button expand="block" type="submit" [disabled]="!groupForm.valid || isLoading" class="create-button">
+          <ion-button
+            expand="block"
+            type="submit"
+            [disabled]="!groupForm.valid || isLoading"
+            class="create-button">
             <ion-spinner *ngIf="isLoading"></ion-spinner>
             <span *ngIf="!isLoading">
               <ion-icon name="add-circle-outline"></ion-icon>

@@ -28,74 +28,13 @@
           <div class="form-field">
             <ion-item lines="none" class="name-input">
           <ion-label position="stacked">Group Name</ion-label>
-          <ion-input 
-            formControlName="name" 
+          <ion-input
+            formControlName="name"
             placeholder="Enter a memorable name for your group"
             [clearInput]="true"
           ></ion-input>
         </ion-item>
           </div>
-
-        <!-- Group Type Selection -->
-          <div class="form-field">
-            <div class="group-type-selection">
-              <div class="type-option" 
-                   [class.selected]="groupForm.get('type')?.value === 'casual'" 
-                   (click)="selectGroupType('casual')">
-                <div class="type-content">
-                  <h3>CASUAL GROUP</h3>
-                  <p>PLAY FOR BRAGGING RIGHTS</p>
-                </div>
-              </div>
-              <div class="type-option prize-option" 
-                   [class.selected]="groupForm.get('type')?.value === 'prize'" 
-                   (click)="selectGroupType('prize')">
-                <div class="type-content">
-                  <ion-icon name="cash-outline" class="prize-icon"></ion-icon>
-                  <h3>PRIZE GROUP</h3>
-                  <p>PLAY FOR CASH PRIZES</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        <!-- Entry Fee (only for prize groups) -->
-          <div *ngIf="groupForm.get('type')?.value === 'prize'" class="form-field entry-fee-section">
-            <div class="entry-fee-header">
-              <h4>Entry Fee</h4>
-            </div>
-            
-            <div class="fee-controls">
-              <div class="fee-range">
-                <span class="fee-label">£1</span>
-                <ion-range 
-                  formControlName="entryFee"
-                  [min]="1" 
-                  [max]="100" 
-                  [step]="1"
-                  [snaps]="true"
-                  class="fee-slider"
-                  (ionChange)="onEntryFeeChange($event)">
-                </ion-range>
-                <span class="fee-label">£100</span>
-              </div>
-              
-              <div class="fee-input-container">
-                <span class="currency-symbol">£</span>
-            <ion-input
-              type="number"
-              formControlName="entryFee"
-              [min]="1"
-              [max]="100"
-                  class="fee-input"
-                  (ionInput)="onManualFeeInput($event)"
-            ></ion-input>
-              </div>
-            </div>
-            
-            <p class="fee-description">Set entry fee between £1 and £100</p>
-            <p class="prize-note">Prize breakdown can be configured after group creation when you know the final member count.</p>
-        </div>
 
         <!-- Submit Button -->
           <div class="form-actions">
@@ -133,12 +72,9 @@
     </ion-card-header>
     <ion-card-content>
       <div class="group-list-item" *ngFor="let group of groups">
-        <!-- Group Name and Type -->
+        <!-- Group Name -->
         <div class="group-info">
           <h2>{{ group.name }}</h2>
-          <ion-badge [color]="group.type === 'prize' ? 'primary' : 'medium'" class="group-type-badge">
-            {{ group.type === 'prize' ? 'Prize Group' : 'Casual Group' }}
-          </ion-badge>
         </div>
 
         <!-- Group Details -->
@@ -150,10 +86,6 @@
           <span>
             <ion-icon name="calendar-outline"></ion-icon>
             Created: {{ group.createdAt | date:'medium' }}
-          </span>
-          <span *ngIf="group.type === 'prize'">
-            <ion-icon name="cash-outline"></ion-icon>
-            Entry Fee: {{ group.entryFee | currency:'GBP' }}
           </span>
         </div>
 
@@ -169,10 +101,6 @@
             <span>
               <ion-icon name="people-outline"></ion-icon>
               {{ group.memberCount }} Members
-            </span>
-            <span *ngIf="group.type === 'prize'">
-              <ion-icon name="checkmark-circle-outline"></ion-icon>
-              {{ group.paidMembers }}/{{ group.memberCount }} Paid
             </span>
           </div>
         </div>
@@ -213,10 +141,6 @@
             <ion-segment-button value="members">
               <ion-icon name="people-outline"></ion-icon>
               <ion-label>Members</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="prizes" *ngIf="selectedGroup?.type === 'prize'">
-              <ion-icon name="trophy-outline"></ion-icon>
-              <ion-label>Prizes</ion-label>
             </ion-segment-button>
             <ion-segment-button value="settings">
               <ion-icon name="settings-outline"></ion-icon>
@@ -261,180 +185,6 @@
               </ion-buttons>
             </ion-item>
           </ion-list>
-        </div>
-
-        <!-- Prize Management Tab -->
-        <div *ngIf="selectedTab === 'prizes' && selectedGroup?.type === 'prize'" class="prize-management">
-          <div class="prize-overview">
-            <h3>Prize Pool Overview</h3>
-            <div class="pool-stats">
-              <div class="stat-item">
-                <span class="label">Entry Fee:</span>
-                <span class="value">{{ selectedGroup?.entryFee | currency:'GBP' }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="label">Total Members:</span>
-                <span class="value">{{ selectedGroup?.memberCount }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="label">Paid Members:</span>
-                <span class="value">{{ selectedGroup?.paidMembers }}/{{ selectedGroup?.memberCount }}</span>
-              </div>
-              <div class="stat-item total-pool">
-                <span class="label">Total Prize Pool:</span>
-                <span class="value">{{ calculateTotalPrizePool() | currency:'GBP' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="prize-breakdown-config">
-            <div class="config-header">
-              <h3>Prize Breakdown Configuration</h3>
-              <div class="config-status" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
-                <ion-icon name="lock-closed-outline" color="success"></ion-icon>
-                <span class="status-text">Configuration Locked</span>
-                <ion-button 
-                  fill="clear" 
-                  size="small" 
-                  (click)="editLockedPrizeBreakdown()"
-                  class="edit-locked-btn"
-                >
-                  <ion-icon slot="start" name="create-outline"></ion-icon>
-                  Edit
-                </ion-button>
-              </div>
-            </div>
-            <p class="config-description" *ngIf="!isPrizeBreakdownLocked() || isEditingLockedBreakdown">
-              Set percentage distribution for prize positions. Total must equal 100%.
-            </p>
-            <p class="config-description locked-description" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
-              Prize breakdown is configured and locked. Click "Edit" to make changes.
-            </p>
-            
-            <div class="prize-positions" *ngIf="canEditPrizeBreakdown()">
-              <div class="position-config" *ngFor="let position of prizePositions; let i = index">
-                <div class="position-header">
-                  <span class="position-number">{{ getPositionLabel(i + 1) }} Place</span>
-                  <ion-button 
-                    fill="clear" 
-                    color="danger" 
-                    size="small"
-                    (click)="removePrizePosition(i)"
-                    *ngIf="prizePositions.length > 1"
-                  >
-                    <ion-icon name="trash-outline"></ion-icon>
-                  </ion-button>
-                </div>
-                
-                <div class="position-inputs">
-                  <div class="percentage-input">
-                    <ion-input
-                      type="number"
-                      [(ngModel)]="position.percentage"
-                      [min]="1"
-                      [max]="100"
-                      placeholder="0"
-                      (ionInput)="onPercentageChange()"
-                    ></ion-input>
-                    <span class="percentage-symbol">%</span>
-                  </div>
-                  
-                  <div class="prize-amount">
-                    <span class="amount-label">Prize:</span>
-                    <span class="amount-value">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Locked View -->
-            <div class="prize-positions-locked" *ngIf="isPrizeBreakdownLocked() && !isEditingLockedBreakdown">
-              <div class="locked-position" *ngFor="let position of prizePositions; let i = index">
-                <div class="position-info">
-                  <span class="position-label">{{ getPositionLabel(i + 1) }} Place</span>
-                  <div class="position-details">
-                    <span class="percentage">{{ position.percentage }}%</span>
-                    <span class="amount">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="config-actions" *ngIf="canEditPrizeBreakdown()">
-              <ion-button 
-                fill="outline" 
-                (click)="addPrizePosition()"
-                [disabled]="prizePositions.length >= 10"
-              >
-                <ion-icon slot="start" name="add-outline"></ion-icon>
-                Add Position
-              </ion-button>
-              
-              <div class="percentage-total" [class.invalid]="getTotalPercentage() !== 100">
-                <span>Total: {{ getTotalPercentage() }}%</span>
-                <ion-icon 
-                  [name]="getTotalPercentage() === 100 ? 'checkmark-circle-outline' : 'warning-outline'"
-                  [color]="getTotalPercentage() === 100 ? 'success' : 'warning'"
-                ></ion-icon>
-              </div>
-            </div>
-
-            <div class="quick-presets" *ngIf="canEditPrizeBreakdown()">
-              <h4>Quick Presets</h4>
-              <div class="preset-buttons">
-                <ion-button fill="outline" size="small" (click)="applyPreset('winner-takes-all')">
-                  Winner Takes All
-                </ion-button>
-                <ion-button fill="outline" size="small" (click)="applyPreset('70-30')">
-                  70% / 30%
-                </ion-button>
-                <ion-button fill="outline" size="small" (click)="applyPreset('50-30-20')">
-                  50% / 30% / 20%
-                </ion-button>
-                <ion-button fill="outline" size="small" (click)="applyPreset('equal-split')">
-                  Equal Split
-                </ion-button>
-              </div>
-            </div>
-
-            <div class="save-actions" *ngIf="canEditPrizeBreakdown()">
-              <ion-button 
-                expand="block" 
-                [disabled]="getTotalPercentage() !== 100"
-                (click)="savePrizeBreakdown()"
-              >
-                <ion-icon slot="start" name="checkmark-outline"></ion-icon>
-                Save Prize Breakdown
-              </ion-button>
-              
-              <!-- Cancel button for editing locked breakdown -->
-              <ion-button 
-                expand="block" 
-                fill="outline" 
-                color="medium"
-                (click)="cancelEditLockedBreakdown()"
-                *ngIf="isEditingLockedBreakdown"
-              >
-                <ion-icon slot="start" name="close-outline"></ion-icon>
-                Cancel Changes
-              </ion-button>
-            </div>
-          </div>
-
-          <div class="prize-preview" *ngIf="getTotalPercentage() === 100">
-            <h3>Prize Distribution Preview</h3>
-            <div class="preview-cards">
-              <div 
-                class="preview-card" 
-                *ngFor="let position of prizePositions; let i = index"
-                [class]="getPositionClass(i + 1)"
-              >
-                <div class="position-label">{{ getPositionLabel(i + 1) }}</div>
-                <div class="position-percentage">{{ position.percentage }}%</div>
-                <div class="position-prize">{{ calculatePositionPrize(position.percentage) | currency:'GBP' }}</div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Settings Tab -->

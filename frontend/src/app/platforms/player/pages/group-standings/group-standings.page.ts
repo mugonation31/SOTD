@@ -37,7 +37,6 @@ interface GroupDetails {
   name: string;
   code: string;
   memberCount: number;
-  type: 'casual' | 'prize';
 }
 
 @Component({
