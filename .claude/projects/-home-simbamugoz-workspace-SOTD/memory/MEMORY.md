@@ -1,0 +1,3 @@
+- [User Profile](user_role.md) — App owner, wants minimum MVP, prefers plain English
+- [MVP Decisions](project_mvp_decisions.md) — Scoring rules, prediction model, API choice, joker rules, super admin scope
+- [Deployment](reference_deployment.md) — Live on Cloudflare Pages at sotd-bl7.pages.dev
