@@ -114,13 +114,26 @@ export class SupabaseDataService {
   async leaveGroup(groupId: string): Promise<void> {
     const userId = await this.getCurrentUserId();
 
-    const { error } = await this.client
+    // Prevent admin from leaving their own group
+    const { data: group } = await this.client
+      .from('groups')
+      .select('admin_id')
+      .eq('id', groupId)
+      .single();
+
+    if (group && group.admin_id === userId) {
+      throw new Error('Group admins cannot leave their own group');
+    }
+
+    const { data, error } = await this.client
       .from('group_members')
       .delete()
       .eq('group_id', groupId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select();
 
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error('You are not a member of this group');
   }
 
   async getGroupMembers(groupId: string): Promise<any[]> {

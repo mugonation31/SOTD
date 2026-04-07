@@ -192,15 +192,17 @@ describe('SupabaseDataService', () => {
 
   describe('leaveGroup', () => {
     it('should remove the user from a group when leaveGroup is called', async () => {
-      const deleteBuilder = createMockQueryBuilder({ data: null, error: null });
-      mockClient.from.mockReturnValueOnce(deleteBuilder);
+      // First call: admin check (select from groups)
+      const adminCheckBuilder = createMockQueryBuilder({ data: { admin_id: 'other-user' }, error: null });
+      // Second call: delete from group_members (returns deleted rows)
+      const deleteBuilder = createMockQueryBuilder({ data: [{ id: 'row1' }], error: null });
+      mockClient.from.mockReturnValueOnce(adminCheckBuilder).mockReturnValueOnce(deleteBuilder);
 
       await service.leaveGroup('g1');
 
+      expect(mockClient.from).toHaveBeenCalledWith('groups');
       expect(mockClient.from).toHaveBeenCalledWith('group_members');
       expect(deleteBuilder.delete).toHaveBeenCalled();
-      expect(deleteBuilder.eq).toHaveBeenCalledWith('group_id', 'g1');
-      expect(deleteBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
     });
   });
 

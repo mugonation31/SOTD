@@ -17,6 +17,7 @@ describe('GroupService', () => {
       joinGroup: jest.fn(),
       getGroupMembers: jest.fn(),
       getLeaderboard: jest.fn(),
+      leaveGroup: jest.fn(),
     };
 
     mockAuthService = {
@@ -184,6 +185,14 @@ describe('GroupService', () => {
     mockSupabaseDataService.joinGroup.mockRejectedValue(new Error('Group not found'));
 
     await expect(service.joinGroup('BADCODE')).rejects.toThrow('Group not found');
+  });
+
+  it('should call SupabaseDataService.leaveGroup() when leaveGroup() is called', async () => {
+    mockSupabaseDataService.leaveGroup.mockResolvedValue(undefined);
+
+    await service.leaveGroup('g1');
+
+    expect(mockSupabaseDataService.leaveGroup).toHaveBeenCalledWith('g1');
   });
 
   it('should not contain any localStorage calls', () => {

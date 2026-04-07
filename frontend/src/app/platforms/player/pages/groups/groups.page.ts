@@ -20,6 +20,7 @@ import {
   IonInput,
   IonNote,
   IonButtons,
+  AlertController,
 } from '@ionic/angular/standalone';
 import { NgFor, NgIf, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -37,14 +38,17 @@ import {
   eyeOutline,
   cashOutline,
   hourglassOutline,
+  logOutOutline,
 } from 'ionicons/icons';
 import { GroupService } from '@core/services/group.service';
 import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/services/auth.service';
 
 interface Group {
   id: string;
   name: string;
   code: string;
+  admin_id: string;
   adminName: string;
   memberCount: number;
   members: any[];
@@ -89,11 +93,14 @@ export class GroupsPage implements OnInit {
   isJoining = false;
   isLoading = false;
   myGroups: Group[] = [];
+  currentUserId: string | null = null;
 
   constructor(
     private router: Router,
     private groupService: GroupService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private alertController: AlertController,
+    private authService: AuthService
   ) {
     addIcons({
       peopleOutline,
@@ -107,10 +114,13 @@ export class GroupsPage implements OnInit {
       eyeOutline,
       cashOutline,
       hourglassOutline,
+      logOutOutline,
     });
   }
 
   ngOnInit() {
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.id || null;
     this.loadUserGroups();
   }
 
@@ -174,6 +184,28 @@ export class GroupsPage implements OnInit {
       await this.toastService.showToast(message, 'error');
     } finally {
       this.isJoining = false;
+    }
+  }
+
+  async leaveGroup(group: Group) {
+    const alert = await this.alertController.create({
+      header: 'Leave Group',
+      message: `Are you sure you want to leave "${group.name}"?`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Leave', role: 'confirm', cssClass: 'danger' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role === 'confirm') {
+      try {
+        await this.groupService.leaveGroup(group.id);
+        await this.toastService.showToast(`You have left "${group.name}"`, 'success');
+        await this.loadUserGroups();
+      } catch {
+        await this.toastService.showToast('Failed to leave group. Please try again.', 'error');
+      }
     }
   }
 

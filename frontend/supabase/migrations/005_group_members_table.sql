@@ -65,9 +65,15 @@ CREATE POLICY "Users can view group members" ON public.group_members
 CREATE POLICY "Users can join groups" ON public.group_members
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Users can leave groups (delete themselves)
+-- Users can leave groups (delete themselves), but admins cannot leave their own group
 CREATE POLICY "Users can leave groups" ON public.group_members
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING (
+        auth.uid() = user_id
+        AND NOT EXISTS (
+            SELECT 1 FROM public.groups
+            WHERE id = group_id AND admin_id = auth.uid()
+        )
+    );
 
 -- Group admins can update member stats (for scoring)
 CREATE POLICY "Group admins can update members" ON public.group_members

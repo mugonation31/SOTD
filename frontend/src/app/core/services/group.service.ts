@@ -69,6 +69,10 @@ export class GroupService {
     return this.supabaseDataService.joinGroup(code);
   }
 
+  async leaveGroup(groupId: string): Promise<void> {
+    return this.supabaseDataService.leaveGroup(groupId);
+  }
+
   async findGroupByCode(code: string): Promise<any> {
     return this.supabaseDataService.getGroupByCode(code);
   }

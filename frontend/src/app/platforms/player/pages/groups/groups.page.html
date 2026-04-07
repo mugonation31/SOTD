@@ -67,6 +67,10 @@
               <ion-icon name="eye-outline" slot="start"></ion-icon>
               Leaderboard
             </ion-button>
+            <ion-button *ngIf="group.admin_id !== currentUserId" fill="clear" size="small" color="danger" class="leave-group-btn" (click)="leaveGroup(group); $event.stopPropagation()">
+              <ion-icon name="log-out-outline" slot="start"></ion-icon>
+              Leave
+            </ion-button>
           </div>
         </div>
       </div>
