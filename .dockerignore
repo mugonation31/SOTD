@@ -1,0 +1,7 @@
+node_modules
+.angular/cache
+dist
+www
+.git
+*.md
+docs/
