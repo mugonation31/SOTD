@@ -31,6 +31,7 @@ import {
   personAddOutline
 } from 'ionicons/icons';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
+import { SupabaseService } from '../../../../services/supabase.service';
 import {
   validateEmail,
   validatePassword,
@@ -147,6 +148,7 @@ export class SignupPage implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private supabaseService: SupabaseService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -339,6 +341,10 @@ export class SignupPage implements OnInit {
   openPrivacy(event: Event) {
     event.preventDefault();
     this.router.navigate(['/auth/privacy']);
+  }
+
+  async signInWithGoogle() {
+    await this.supabaseService.signInWithGoogle();
   }
 
   navigateToWelcome() {

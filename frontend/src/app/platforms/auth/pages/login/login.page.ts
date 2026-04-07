@@ -23,6 +23,7 @@ import {
   eyeOff,
   footballOutline, mailOutline } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
+import { SupabaseService } from '../../../../services/supabase.service';
 import {
   validateEmail,
   validatePassword,
@@ -89,6 +90,7 @@ export class LoginPage implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private supabaseService: SupabaseService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -238,6 +240,10 @@ export class LoginPage implements OnInit {
 
     console.log('🎯 Login: Navigating to:', targetRoute);
     this.router.navigate([targetRoute], { replaceUrl: true });
+  }
+
+  async signInWithGoogle() {
+    await this.supabaseService.signInWithGoogle();
   }
 
   navigateToWelcome() {

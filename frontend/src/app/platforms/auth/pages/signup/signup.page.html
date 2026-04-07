@@ -18,6 +18,17 @@
         <p>Join us and start predicting matches</p>
       </div>
 
+      <div class="google-signin">
+        <ion-button expand="block" fill="outline" class="google-button" (click)="signInWithGoogle()">
+          <img src="assets/icon/google.svg" alt="Google" class="google-icon" />
+          Continue with Google
+        </ion-button>
+      </div>
+
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
       <form (ngSubmit)="onSignup()">
         <ion-list class="auth-form">
           

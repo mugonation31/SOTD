@@ -18,6 +18,17 @@
         <p>Sign in to continue</p>
       </div>
 
+      <div class="google-signin">
+        <ion-button expand="block" fill="outline" class="google-button" (click)="signInWithGoogle()">
+          <img src="assets/icon/google.svg" alt="Google" class="google-icon" />
+          Continue with Google
+        </ion-button>
+      </div>
+
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
       <form (ngSubmit)="onLogin()">
         <ion-list class="auth-form">
           <ion-item>

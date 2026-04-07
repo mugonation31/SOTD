@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
+import { SupabaseService } from '../../../../services/supabase.service';
 import { SignupPage } from './signup.page';
 import { SignupTestConfig, SignupTestUtils } from './signup.test.config';
 
@@ -11,14 +12,20 @@ describe('SignupPage', () => {
   let mockRouter: any;
   let mockAuthService: any;
   let mockActivatedRoute: any;
+  let mockSupabaseService: any;
 
   beforeEach(async () => {
+    mockSupabaseService = {
+      signInWithGoogle: jest.fn().mockResolvedValue({ provider: 'google', url: 'https://accounts.google.com' })
+    };
+
     await TestBed.configureTestingModule({
       imports: [FormsModule],
       providers: [
         { provide: Router, useValue: SignupTestConfig.mockRouter },
         { provide: ActivatedRoute, useValue: SignupTestConfig.mockActivatedRoute },
-        { provide: AuthService, useValue: SignupTestConfig.mockAuthService }
+        { provide: AuthService, useValue: SignupTestConfig.mockAuthService },
+        { provide: SupabaseService, useValue: mockSupabaseService }
       ]
     }).compileComponents();
 
@@ -375,11 +382,24 @@ describe('SignupPage', () => {
     it('should not allow submission with validation errors', () => {
       // Set valid form data
       Object.assign(component.signupData, SignupTestUtils.createValidSignupData());
-      
+
       // Add validation error
       component.validationErrors.email = 'Invalid email';
 
       expect(component.canSubmit).toBe(false);
+    });
+  });
+
+  describe('Google Sign-In', () => {
+    it('should have a signInWithGoogle method', () => {
+      expect(component.signInWithGoogle).toBeDefined();
+      expect(typeof component.signInWithGoogle).toBe('function');
+    });
+
+    it('should call supabaseService.signInWithGoogle when Google button is clicked', async () => {
+      await component.signInWithGoogle();
+
+      expect(mockSupabaseService.signInWithGoogle).toHaveBeenCalled();
     });
   });
 });
