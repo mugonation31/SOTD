@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
@@ -30,7 +30,6 @@ import {
 } from 'ionicons/icons';
 import { GroupService, Standing } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 interface GroupDetails {
   id: string;
@@ -64,13 +63,13 @@ interface GroupDetails {
     CommonModule
   ],
 })
-export class GroupStandingsPage implements OnInit, OnDestroy {
+export class GroupStandingsPage implements OnInit {
   groupId: string = '';
   currentUserId: string | null = null;
+  isLoading = false;
   group: GroupDetails | null = null;
   standings: Standing[] = [];
   userPosition: number | null = null;
-  private groupsSubscription?: Subscription;
 
   constructor(
     private router: Router,
@@ -91,32 +90,28 @@ export class GroupStandingsPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.groupId = this.route.snapshot.paramMap.get('groupId') || '';
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
-    
+
     this.loadGroupStandings();
-    
-    // Subscribe to group updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-      this.loadGroupStandings();
-    });
   }
 
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
-    }
-  }
+  private async loadGroupStandings() {
+    this.isLoading = true;
+    try {
+      const groupWithStandings = await this.groupService.getGroupWithStandings(this.groupId);
 
-  private loadGroupStandings() {
-    // Use the new optimized method from group service
-    const groupWithStandings = this.groupService.getGroupWithStandings(this.groupId);
-    
-    if (groupWithStandings) {
-      this.group = groupWithStandings.group;
-      this.standings = groupWithStandings.leaderboard;
-      this.userPosition = groupWithStandings.userPosition;
-    } else {
-      // Group not found, navigate back
+      if (groupWithStandings) {
+        this.group = groupWithStandings.group;
+        this.standings = groupWithStandings.leaderboard;
+        this.userPosition = groupWithStandings.userPosition;
+      } else {
+        // Group not found, navigate back
+        this.router.navigate(['/player/standings']);
+      }
+    } catch (error) {
+      console.error('Error loading group standings:', error);
       this.router.navigate(['/player/standings']);
+    } finally {
+      this.isLoading = false;
     }
   }
 

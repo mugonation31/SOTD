@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
@@ -30,7 +30,6 @@ import {
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
 import { GroupService } from '@core/services/group.service';
-import { Subscription } from 'rxjs';
 
 interface GroupLeaderboardEntry {
   position: number;
@@ -177,12 +176,12 @@ interface GroupLeaderboardEntry {
     NgClass,
   ],
 })
-export class GroupLeaderboardPage implements OnInit, OnDestroy {
+export class GroupLeaderboardPage implements OnInit {
   groupId: string = '';
   groupName: string = '';
+  isLoading = false;
   leaderboard: GroupLeaderboardEntry[] = [];
   sortedLeaderboard: GroupLeaderboardEntry[] = [];
-  private groupsSubscription?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
@@ -206,48 +205,36 @@ export class GroupLeaderboardPage implements OnInit, OnDestroy {
       this.groupId = params['id'];
       this.loadGroupData();
     });
-    
-    // Subscribe to group updates for real-time leaderboard updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-
-      this.loadGroupData();
-    });
   }
 
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
-    }
-  }
-
-  private loadGroupData() {
-
-    // Get the group data from GroupService
-    const allGroups = this.groupService.getAllGroups();
-    const group = allGroups.find(g => g.id === this.groupId);
-    
-    if (group) {
-      this.groupName = group.name;
-
-      
+  private async loadGroupData() {
+    this.isLoading = true;
+    try {
       // Get the leaderboard for this group
-      const groupLeaderboard = this.groupService.getGroupLeaderboard(this.groupId);
-      
-      // Convert GroupLeaderboardEntry to our interface format
-      this.leaderboard = groupLeaderboard.map(entry => ({
-        position: entry.position,
-        name: entry.name,
-        played: entry.played,
-        jokerUsed: entry.jokerUsed,
-        totalPoints: entry.totalPoints
+      const rawLeaderboard = await this.groupService.getGroupLeaderboard(this.groupId);
+
+      // Set group name from admin groups if available
+      const adminGroups = await this.groupService.getAdminGroups();
+      const group = adminGroups.find((g: any) => g.id === this.groupId);
+      if (group) {
+        this.groupName = group.name;
+      }
+
+      // Convert raw leaderboard to our interface format
+      this.leaderboard = rawLeaderboard.map((entry: any, index: number) => ({
+        position: index + 1,
+        name: entry.profiles?.username || entry.name || 'Unknown',
+        played: entry.games_played || entry.played || 0,
+        jokerUsed: entry.jokers_used || entry.jokerUsed || 0,
+        totalPoints: entry.total_points || entry.totalPoints || 0,
       }));
-      
 
       this.sortLeaderboard();
-    } else {
-
-      // Group not found, navigate back
+    } catch (error) {
+      console.error('Error loading group leaderboard:', error);
       this.router.navigate(['/group-admin/groups']);
+    } finally {
+      this.isLoading = false;
     }
   }
 

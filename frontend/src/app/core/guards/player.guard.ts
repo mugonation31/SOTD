@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators';
 import { AuthService } from '@core/services/auth.service';
 import { GroupService } from '@core/services/group.service';
 
@@ -13,58 +11,35 @@ export class PlayerGuard {
     private groupService: GroupService
   ) {}
 
-  canActivate(): boolean | Promise<boolean> | Observable<boolean> {
-    return this.authService.currentUser.pipe(
-      take(1),
-      map(authResponse => {
-        try {
-          // First check if user is authenticated
-          const user = this.authService.getCurrentUser();
-          
-          if (!user) {
+  async canActivate(): Promise<boolean> {
+    try {
+      // First check if user is authenticated
+      const user = this.authService.getCurrentUser();
 
-            this.router.navigate(['/auth/login']);
-            return false;
-          }
+      if (!user) {
+        this.router.navigate(['/auth/login']);
+        return false;
+      }
 
-          // Check if user is a player
-          if (user.role !== 'player') {
+      // Check if user is a player
+      if (user.role !== 'player') {
+        this.router.navigate(['/auth/login']);
+        return false;
+      }
 
-            this.router.navigate(['/auth/login']);
-            return false;
-          }
+      // Check if player has joined any groups using GroupService
+      const userGroups = await this.groupService.getUserGroups();
 
-          // Check if player has joined any groups using GroupService
-          const userGroups = this.groupService.getUserGroups();
-          const hasJoinedGroup = userGroups.length > 0;
+      if (userGroups.length > 0) {
+        return true;
+      }
 
-          // Also check legacy localStorage as fallback
-          const legacyHasJoinedGroup = localStorage.getItem('hasJoinedGroup') === 'true';
-          
-          const playerHasJoinedGroup = hasJoinedGroup || legacyHasJoinedGroup;
-
-          console.log('PlayerGuard: Player group check', {
-            userEmail: user.email,
-            userGroupsCount: userGroups.length,
-            hasJoinedGroup,
-            legacyHasJoinedGroup,
-            playerHasJoinedGroup
-          });
-
-          if (playerHasJoinedGroup) {
-
-            return true;
-          }
-
-
-          this.router.navigate(['/player/join-group']);
-          return false;
-        } catch (error) {
-          console.error('❌ PlayerGuard: Error checking player status:', error);
-          this.router.navigate(['/player/join-group']);
-          return false;
-        }
-      })
-    );
+      this.router.navigate(['/player/join-group']);
+      return false;
+    } catch (error) {
+      console.error('PlayerGuard: Error checking player status:', error);
+      this.router.navigate(['/player/join-group']);
+      return false;
+    }
   }
 }

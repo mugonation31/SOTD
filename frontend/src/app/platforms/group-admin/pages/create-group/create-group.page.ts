@@ -90,44 +90,32 @@ export class CreateGroupPage {
     });
   }
 
-  onCreateGroup() {
+  async onCreateGroup() {
     if (this.groupForm.valid) {
       try {
         this.isLoading = true;
         const formValue = this.groupForm.value;
 
-        this.groupService
-          .createGroup({
-            name: formValue.name,
-            description: `${formValue.name} - A prediction group`,
-          })
-          .subscribe({
-            next: () => {
-              this.isLoading = false;
-              this.toastService.showToast(
-                'Group created successfully!',
-                'success'
-              );
-              this.router.navigate(['/group-admin/dashboard'], {
-                replaceUrl: true,
-              });
-            },
-            error: (error: unknown) => {
-              this.isLoading = false;
-              console.error('Error creating group:', error);
-              this.toastService.showToast(
-                'Failed to create group. Please try again.',
-                'danger'
-              );
-            },
-          });
+        await this.groupService.createGroup({
+          name: formValue.name,
+          description: `${formValue.name} - A prediction group`,
+        });
+
+        this.toastService.showToast(
+          'Group created successfully!',
+          'success'
+        );
+        this.router.navigate(['/group-admin/dashboard'], {
+          replaceUrl: true,
+        });
       } catch (error) {
-        this.isLoading = false;
         console.error('Error creating group:', error);
         this.toastService.showToast(
           'Failed to create group. Please try again.',
           'danger'
         );
+      } finally {
+        this.isLoading = false;
       }
     } else {
       this.toastService.showToast(

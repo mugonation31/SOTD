@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -33,7 +33,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import { GroupService, Standing, GroupWithStandings } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-standings',
@@ -65,10 +64,10 @@ import { Subscription } from 'rxjs';
     IonButton,
   ],
 })
-export class StandingsPage implements OnInit, OnDestroy {
+export class StandingsPage implements OnInit {
   currentUserId: string | null = null;
+  isLoading = false;
   groupStandings: GroupWithStandings[] = [];
-  private groupsSubscription?: Subscription;
 
   constructor(
     private router: Router,
@@ -81,22 +80,17 @@ export class StandingsPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
     this.loadGroupStandings();
-    
-    // Subscribe to group updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-      this.loadGroupStandings();
-    });
   }
 
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
+  private async loadGroupStandings() {
+    this.isLoading = true;
+    try {
+      this.groupStandings = await this.groupService.getUserGroupsWithStandings();
+    } catch (error) {
+      console.error('Error loading standings:', error);
+    } finally {
+      this.isLoading = false;
     }
-  }
-
-  private loadGroupStandings() {
-    // Use the new optimized method from group service
-    this.groupStandings = this.groupService.getUserGroupsWithStandings();
   }
 
   // Track by function for better performance when rendering groups

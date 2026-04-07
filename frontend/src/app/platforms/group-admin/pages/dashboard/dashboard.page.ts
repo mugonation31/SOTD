@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -50,7 +50,6 @@ import {
 import { ToastService } from '@core/services/toast.service';
 import { UserGreetingComponent } from '../../../../shared/components/user-greeting/user-greeting.component';
 import { GroupService } from '@core/services/group.service';
-import { Subscription } from 'rxjs';
 
 // Existing interfaces - keeping all current functionality
 interface TopPerformer {
@@ -176,7 +175,7 @@ interface CommunityMilestone {
     UserGreetingComponent,
   ],
 })
-export class DashboardPage implements OnInit, OnDestroy {
+export class DashboardPage implements OnInit {
   // Existing properties - keeping all current functionality
   topPerformers: TopPerformer[] = [];
 
@@ -216,7 +215,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   engagementInsights: EngagementInsight[] = [];
   communityMilestones: CommunityMilestone[] = [];
 
-  private subscription?: Subscription;
+  isLoading = false;
 
   constructor(
     private router: Router, 
@@ -250,39 +249,30 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-
     this.loadRealGroupData();
-    this.subscribeToGroupUpdates();
     // Initialize Community Intelligence data
     this.initializeCommunityIntelligence();
   }
 
-  ngOnDestroy() {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
+  private async loadRealGroupData() {
+    this.isLoading = true;
+    try {
+      const adminGroups = await this.groupService.getAdminGroups();
+
+      // Calculate real group statistics (existing functionality)
+      this.calculateGroupStats(adminGroups);
+      this.calculateTopPerformers(adminGroups);
+      this.calculateGameweekStatus(adminGroups);
+
+      // Calculate Community Intelligence data (new functionality)
+      this.calculateCommunityHealth(adminGroups);
+      this.generateMemberInsights(adminGroups);
+      this.generateCommunityAlerts(adminGroups);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      this.isLoading = false;
     }
-  }
-
-  private loadRealGroupData() {
-    const adminGroups = this.groupService.getAdminGroups();
-
-
-    // Calculate real group statistics (existing functionality)
-    this.calculateGroupStats(adminGroups);
-    this.calculateTopPerformers(adminGroups);
-    this.calculateGameweekStatus(adminGroups);
-    
-    // Calculate Community Intelligence data (new functionality)
-    this.calculateCommunityHealth(adminGroups);
-    this.generateMemberInsights(adminGroups);
-    this.generateCommunityAlerts(adminGroups);
-  }
-
-  private subscribeToGroupUpdates() {
-    this.subscription = this.groupService.groups$.subscribe(() => {
-
-      this.loadRealGroupData();
-    });
   }
 
   private calculateGroupStats(groups: any[]) {

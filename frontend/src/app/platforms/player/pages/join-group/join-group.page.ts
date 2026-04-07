@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -32,7 +32,6 @@ import {
 import { ToastService } from '@core/services/toast.service';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 // Use the Group interface that matches GroupService
 interface Group {
@@ -76,7 +75,7 @@ interface Group {
     NgFor,
   ],
 })
-export class JoinGroupPage implements OnInit, OnDestroy {
+export class JoinGroupPage implements OnInit {
   groupCode: string = '';
   isSearching: boolean = false;
   isJoining: boolean = false;
@@ -84,7 +83,7 @@ export class JoinGroupPage implements OnInit, OnDestroy {
   showGroupDetails: boolean = false;
   foundGroup: Group | null = null;
   myGroups: Group[] = [];
-  private groupsSubscription?: Subscription;
+  isLoading: boolean = false;
   groupDetailsMessage: string = '';
 
   currentPlayer = this.authService.getCurrentUser();
@@ -123,17 +122,6 @@ export class JoinGroupPage implements OnInit, OnDestroy {
 
     // Check if this is a first-time player and mark first login complete
     this.handleFirstTimeUser();
-
-    // Subscribe to group updates for real-time UI updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-      this.loadMyGroups();
-    });
-  }
-
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
-    }
   }
 
   private async handleFirstTimeUser() {
@@ -171,16 +159,8 @@ export class JoinGroupPage implements OnInit, OnDestroy {
     this.isSearching = true;
 
     try {
-
-      
-      // Debug: Check all available groups
-      const allGroups = this.groupService.getAllGroups();
-
-
-      
       // Find group by code
-      const group = this.groupService.findGroupByCode(this.groupCode);
-
+      const group = await this.groupService.findGroupByCode(this.groupCode);
 
       if (group) {
 
@@ -233,9 +213,15 @@ export class JoinGroupPage implements OnInit, OnDestroy {
     }
   }
 
-  private loadMyGroups() {
-    // Use enhanced group service to get user's groups
-    this.myGroups = this.groupService.getUserGroups();
+  private async loadMyGroups() {
+    this.isLoading = true;
+    try {
+      this.myGroups = await this.groupService.getUserGroups();
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   viewGroupStandings(groupId: string) {
@@ -258,8 +244,7 @@ export class JoinGroupPage implements OnInit, OnDestroy {
 
     try {
       // Use enhanced join method that automatically uses current user data
-
-      const updatedGroup = this.groupService.joinGroup(this.foundGroup.code);
+      const updatedGroup = await this.groupService.joinGroup(this.foundGroup.code);
 
 
       if (updatedGroup) {
@@ -270,14 +255,12 @@ export class JoinGroupPage implements OnInit, OnDestroy {
         
         // Show success message with enhanced feedback
         await this.toastService.showToast(
-          `🎉 Successfully joined ${groupName}! Check "My Groups" below.`,
+          `Successfully joined ${groupName}! Check "My Groups" below.`,
           'success'
         );
-        
-        // Note: My Groups list will automatically update via the groups$ subscription
-        
-        // Stay on the same page - no navigation redirect
-        // User can see their updated "My Groups" section and join more groups if needed
+
+        // Reload groups list
+        this.loadMyGroups();
       } else {
 
         throw new Error('Failed to join group');

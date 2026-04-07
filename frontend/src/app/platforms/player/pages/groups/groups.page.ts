@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -24,7 +24,6 @@ import {
 import { NgFor, NgIf, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
@@ -84,12 +83,12 @@ interface Group {
     FormsModule,
   ],
 })
-export class GroupsPage implements OnInit, OnDestroy {
+export class GroupsPage implements OnInit {
   isJoinModalOpen = false;
   joinCode = '';
   isJoining = false;
+  isLoading = false;
   myGroups: Group[] = [];
-  private groupsSubscription?: Subscription;
 
   constructor(
     private router: Router,
@@ -113,21 +112,17 @@ export class GroupsPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadUserGroups();
-    
-    // Subscribe to real-time group updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-      this.loadUserGroups();
-    });
   }
 
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
+  private async loadUserGroups() {
+    this.isLoading = true;
+    try {
+      this.myGroups = await this.groupService.getUserGroups();
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    } finally {
+      this.isLoading = false;
     }
-  }
-
-  private loadUserGroups() {
-    this.myGroups = this.groupService.getUserGroups();
   }
 
   openJoinModal() {
@@ -156,22 +151,21 @@ export class GroupsPage implements OnInit, OnDestroy {
     this.isJoining = true;
 
     try {
-      const group = this.groupService.findGroupByCode(this.joinCode);
-      
+      const group = await this.groupService.findGroupByCode(this.joinCode);
+
       if (!group) {
         await this.toastService.showToast('Group not found with that code', 'error');
         return;
       }
 
-      const updatedGroup = this.groupService.joinGroup(this.joinCode);
-      
-      if (updatedGroup) {
-        await this.toastService.showToast(
-          `Successfully joined ${updatedGroup.name}!`,
-          'success'
-        );
-        this.closeJoinModal();
-      }
+      await this.groupService.joinGroup(this.joinCode);
+
+      await this.toastService.showToast(
+        `Successfully joined ${group.name}!`,
+        'success'
+      );
+      this.closeJoinModal();
+      this.loadUserGroups();
     } catch (error) {
       let message = 'Error joining group';
       if (error instanceof Error) {

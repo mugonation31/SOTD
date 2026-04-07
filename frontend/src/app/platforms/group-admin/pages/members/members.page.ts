@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -55,7 +55,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 interface Member {
   id: string;
@@ -107,7 +106,7 @@ interface Member {
     FormsModule,
   ],
 })
-export class MembersPage implements OnInit, OnDestroy {
+export class MembersPage implements OnInit {
   selectedFilter = 'all';
   searchTerm = '';
   currentAdminId = '1';
@@ -115,8 +114,6 @@ export class MembersPage implements OnInit, OnDestroy {
 
   members: Member[] = [];
   filteredMembers: Member[] = [];
-
-  private subscription?: Subscription;
 
   constructor(
     private groupService: GroupService,
@@ -142,35 +139,32 @@ export class MembersPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-
     this.loadMembersFromGroups();
-    this.subscribeToGroupUpdates();
   }
 
-  ngOnDestroy() {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-    }
-  }
+  private async loadMembersFromGroups() {
+    this.isLoading = true;
+    try {
+      const adminGroups = await this.groupService.getAdminGroups();
 
-  private loadMembersFromGroups() {
-
-    const adminGroups = this.groupService.getAdminGroups();
-    
-    this.members = adminGroups.flatMap(group => 
-      group.members.map(member => ({
+      this.members = adminGroups.flatMap((group: any) =>
+        (group.members || []).map((member: any) => ({
           id: member.id,
           name: member.name,
           email: member.email,
           joinedAt: member.joinedAt,
           groupName: group.name,
           role: member.role,
-        status: member.status,
-      }))
-    );
-    
+          status: member.status,
+        }))
+      );
 
-    this.applyFilters();
+      this.applyFilters();
+    } catch (error) {
+      console.error('Error loading members:', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   getMemberCount(filter: string): number {
@@ -276,10 +270,4 @@ export class MembersPage implements OnInit, OnDestroy {
     }
   }
 
-  private subscribeToGroupUpdates() {
-    this.subscription = this.groupService.groups$.subscribe(() => {
-
-      this.loadMembersFromGroups();
-    });
-  }
 }

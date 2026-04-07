@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -25,7 +25,6 @@ import {
 } from 'ionicons/icons';
 import { GroupService, Standing } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 interface GroupStanding {
   group: {
@@ -60,10 +59,10 @@ interface GroupStanding {
     NgIf,
   ],
 })
-export class LeaderboardPage implements OnInit, OnDestroy {
+export class LeaderboardPage implements OnInit {
   currentUserId: string | null = null;
+  isLoading = false;
   groupStandings: GroupStanding[] = [];
-  private groupsSubscription?: Subscription;
 
   constructor(
     private router: Router,
@@ -80,47 +79,53 @@ export class LeaderboardPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
     this.loadGroupStandings();
-    
-    // Subscribe to group updates for real-time member count and standings updates
-    this.groupsSubscription = this.groupService.groups$.subscribe(() => {
-
-      this.loadGroupStandings();
-    });
   }
 
-  ngOnDestroy() {
-    if (this.groupsSubscription) {
-      this.groupsSubscription.unsubscribe();
+  private async loadGroupStandings() {
+    this.isLoading = true;
+    try {
+      const adminGroups = await this.groupService.getAdminGroups();
+
+      const results: GroupStanding[] = [];
+      for (const group of adminGroups) {
+        const leaderboard = await this.groupService.getGroupLeaderboard(group.id);
+
+        // Find admin position in leaderboard
+        const adminIndex = leaderboard.findIndex(
+          (entry: any) => entry.user_id === this.currentUserId
+        );
+
+        results.push({
+          group: {
+            id: group.id,
+            name: group.name,
+            code: group.code,
+            memberCount: group.current_members || 0,
+          },
+          leaderboard: leaderboard.map((entry: any, index: number) => ({
+            position: index + 1,
+            previousPosition: index + 1,
+            userId: entry.user_id,
+            name: entry.profiles?.username || 'Unknown',
+            avatar: entry.profiles?.avatar_url || undefined,
+            played: entry.games_played || 0,
+            points: entry.total_points || 0,
+            correctScores: entry.correct_scores || 0,
+            correctResults: entry.correct_results || 0,
+            jokerUsed: entry.jokers_used || 0,
+          })),
+          adminPosition: adminIndex >= 0 ? adminIndex + 1 : null,
+        });
+      }
+
+      this.groupStandings = results;
+    } catch (error) {
+      console.error('Error loading group standings:', error);
+    } finally {
+      this.isLoading = false;
     }
-  }
-
-  private loadGroupStandings() {
-
-    const groupsWithLeaderboards = this.groupService.getAdminGroupsWithLeaderboards();
-    
-    this.groupStandings = groupsWithLeaderboards.map(item => {
-      // Use the centralized conversion function from the service
-      const convertedLeaderboard = this.groupService.convertToStandings(item.leaderboard);
-      
-      // Ensure member count is synced with actual members
-      const actualMemberCount = item.group.members.length;
-      
-
-      
-      return {
-        group: {
-          id: item.group.id,
-          name: item.group.name,
-          code: item.group.code,
-          memberCount: actualMemberCount // Use actual member count
-        },
-        leaderboard: convertedLeaderboard,
-        adminPosition: item.adminPosition
-      };
-    });
   }
 
   // Track by function for better performance when rendering groups

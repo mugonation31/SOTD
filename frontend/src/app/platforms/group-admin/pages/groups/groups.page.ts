@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -68,7 +68,6 @@ import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
-import { Subscription } from 'rxjs';
 
 interface GroupMember {
   id: string;
@@ -155,7 +154,7 @@ interface CurrentAdmin {
     IonNote,
   ],
 })
-export class GroupsPage implements OnInit, OnDestroy {
+export class GroupsPage implements OnInit {
   groupForm!: FormGroup;
   isLoading = false;
   isCreateModalOpen = false;
@@ -170,7 +169,6 @@ export class GroupsPage implements OnInit, OnDestroy {
     email: '',
     members: []
   };
-  private subscription: Subscription | undefined;
 
   constructor(
     private fb: FormBuilder,
@@ -181,8 +179,6 @@ export class GroupsPage implements OnInit, OnDestroy {
     private authService: AuthService
   ) {
     addIcons({bugOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,trophyOutline,eyeOutline,trashOutline,closeOutline,settingsOutline,lockClosedOutline,createOutline,addOutline,checkmarkOutline,personAddOutline,personRemoveOutline,lockOpenOutline,removeOutline,warningOutline,});
-    this.initForm();
-    this.loadGroups();
   }
 
   ngOnInit() {
@@ -192,24 +188,6 @@ export class GroupsPage implements OnInit, OnDestroy {
 
     // Check if this is a first-time group admin and mark first login complete
     this.handleFirstTimeUser();
-
-    // Subscribe to group updates for real-time member changes
-    this.subscription = this.groupService.groups$.subscribe(() => {
-      this.loadGroups();
-      
-      // If a group is currently selected, refresh its data
-      if (this.selectedGroup) {
-        const updatedGroup = this.groups.find(g => g.id === this.selectedGroup!.id);
-        if (updatedGroup) {
-          this.selectedGroup = updatedGroup;
-          this.filteredMembers = [...updatedGroup.members];
-        }
-      }
-    });
-  }
-
-  ngOnDestroy() {
-    this.subscription?.unsubscribe();
   }
 
   private async handleFirstTimeUser() {
@@ -251,15 +229,17 @@ export class GroupsPage implements OnInit, OnDestroy {
     });
   }
 
-  private loadGroups() {
-    // Only load groups where the current user is an admin
-    this.groups = this.groupService.getAdminGroups();
-    
-    // Ensure memberCount is synced with actual members array length
-    this.groups = this.groups.map(group => ({
-      ...group,
-      memberCount: group.members.length
-    }));
+  private async loadGroups() {
+    this.isLoading = true;
+    try {
+      // Only load groups where the current user is an admin
+      const groups = await this.groupService.getAdminGroups();
+      this.groups = groups;
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   async createGroup() {
@@ -268,44 +248,26 @@ export class GroupsPage implements OnInit, OnDestroy {
         this.isLoading = true;
         const formValue = this.groupForm.value;
 
-        // Use GroupService createGroup method
-        const createGroupData = {
+        const newGroup = await this.groupService.createGroup({
           name: formValue.name,
-          description: '', // Add description if needed
-        };
-
-        // Create group using GroupService
-        this.groupService.createGroup(createGroupData).subscribe({
-          next: async (newGroup) => {
-            // Show success message and close modal
-            this.toastService.showToast(
-              `Group "${newGroup.name}" created successfully! Code: ${newGroup.code}`,
-              'success'
-            );
-
-            // Reset form to clean state and close create form
-            this.resetCreateForm();
-            this.isCreateModalOpen = false;
-
-            // Groups will be reloaded automatically via subscription
-          },
-          error: (error) => {
-            console.error('Error creating group:', error);
-            this.toastService.showToast(
-              'Failed to create group. Please try again.',
-              'danger'
-            );
-          },
-          complete: () => {
-            this.isLoading = false;
-          }
+          description: '',
         });
+
+        this.toastService.showToast(
+          `Group "${newGroup.name}" created successfully! Code: ${newGroup.code}`,
+          'success'
+        );
+
+        this.resetCreateForm();
+        this.isCreateModalOpen = false;
+        this.loadGroups();
       } catch (error) {
         console.error('Error creating group:', error);
         await this.toastService.showToast(
           'Failed to create group. Please try again.',
           'danger'
         );
+      } finally {
         this.isLoading = false;
       }
     } else {
@@ -314,15 +276,6 @@ export class GroupsPage implements OnInit, OnDestroy {
         'warning'
       );
     }
-  }
-
-  private generateGroupCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
   }
 
   async copyCode(event: Event, code: string) {
@@ -339,9 +292,7 @@ export class GroupsPage implements OnInit, OnDestroy {
   }
 
   async showGroupDetails(group: Group) {
-    // Get the latest group data from the service to ensure we have current members
-    const latestGroup = this.groupService.getAllGroups().find(g => g.id === group.id);
-    this.selectedGroup = latestGroup || group;
+    this.selectedGroup = group;
     this.filteredMembers = [...this.selectedGroup.members];
   }
 
@@ -481,8 +432,7 @@ export class GroupsPage implements OnInit, OnDestroy {
           role: 'destructive',
           handler: async () => {
             try {
-              // Delete group from storage
-              this.groupService.deleteGroup(group.id);
+              // TODO: Implement deleteGroup in GroupService when backend supports it
 
               // Update local groups array
               this.groups = this.groups.filter((g) => g.id !== group.id);
@@ -512,9 +462,7 @@ export class GroupsPage implements OnInit, OnDestroy {
   }
 
   viewGroupMembers(group: Group) {
-    // Get the latest group data from the service to ensure we have current members
-    const latestGroup = this.groupService.getAllGroups().find(g => g.id === group.id);
-    this.selectedGroup = latestGroup || group;
+    this.selectedGroup = group;
     this.selectedTab = 'members';
     this.filteredMembers = [...this.selectedGroup.members];
   }

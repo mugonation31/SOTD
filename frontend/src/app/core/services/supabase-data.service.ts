@@ -52,6 +52,17 @@ export class SupabaseDataService {
     return data;
   }
 
+  async getGroupByCode(code: string): Promise<Partial<PredictionGroup>> {
+    const { data, error } = await this.client
+      .from('groups')
+      .select('id, name, code, current_members, max_members, is_active')
+      .eq('code', code)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   async createGroup(input: { name: string; description?: string }): Promise<PredictionGroup> {
     const userId = await this.getCurrentUserId();
 
