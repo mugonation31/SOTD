@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, isDevMode } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, timer } from 'rxjs';
 import { map, catchError, tap, take } from 'rxjs/operators';
@@ -103,28 +103,21 @@ export class AuthService {
     window.removeEventListener('storage', this.handleStorageChange.bind(this));
   }
 
-  // Quick debug method to force complete first login for current user (callable from console)
+  // Debug method to force complete first login (dev mode only)
   async debugForceCompleteFirstLogin(): Promise<void> {
-    console.log('🔧 Debug: Force completing first login for current user...');
+    if (!isDevMode()) return;
     try {
       await this.markFirstLoginComplete();
       console.log('✅ Debug: First login completion attempted');
-
-      // Wait and check again
-      setTimeout(() => {
-        const isFirstTime = this.isFirstTimeUser();
-        console.log('🔍 Debug: After forced completion, isFirstTimeUser:', isFirstTime);
-      }, 2000);
     } catch (error) {
       console.error('❌ Debug: Error forcing first login completion:', error);
     }
   }
 
-  // Debug method to manually clear auth locks
+  // Debug method to manually clear auth locks (dev mode only)
   async debugClearAuthLocks(): Promise<void> {
-    console.log('🔧 Debug: Manually clearing auth locks...');
+    if (!isDevMode()) return;
     try {
-      // Access the private method through the supabase service
       await (this.supabaseService as any).clearAuthLocks();
       console.log('✅ Debug: Auth locks clearing attempted');
     } catch (error) {
@@ -595,25 +588,8 @@ export class AuthService {
         .single();
 
       if (profileResult.error) {
-        console.log('⚠️ Profile not found for existing user, creating fallback profile');
-        const userMetadata = supabaseUser.user_metadata || {};
-        const fallbackResponse: AuthResponse = {
-          token: 'existing-session-token',
-          user: {
-            id: supabaseUser.id,
-            email: supabaseUser.email || 'unknown@example.com',
-            role: userMetadata.role || 'player' as UserRole,
-            username: userMetadata.username || supabaseUser.email?.split('@')[0] || 'user',
-            firstName: userMetadata.first_name || 'User',
-            lastName: userMetadata.last_name || 'User',
-          }
-        };
-        
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
-        this.currentUserSubject.next(fallbackResponse);
-        subscriber.next(fallbackResponse);
-        subscriber.complete();
-        return;
+        console.error('❌ Profile not found for existing user. Role must come from profiles table.', profileResult.error);
+        throw new Error('Profile fetch failed: user role must come from the profiles table');
       }
 
       const profile = profileResult.data;
@@ -680,35 +656,9 @@ export class AuthService {
             console.log('🔍 AuthService: Profile fetch result:', profileResult);
 
             if (profileResult.error) {
-              console.log('⚠️ Profile not found for new user, creating fallback profile');
-              // For new users without profiles, create a fallback response
-              // Try to get username from user metadata first, then fallback to email prefix
-              const userMetadata = (result.user as any).user_metadata || {};
-              const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
-              const firstName = userMetadata.first_name || 'User';
-              const lastName = userMetadata.last_name || 'User';
-              const role = userMetadata.role || 'player';
-              
-              const fallbackResponse: AuthResponse = {
-                token: result.session.access_token,
-                user: {
-                  id: result.user.id,
-                  email: result.user.email || 'unknown@example.com',
-                  role: role as UserRole,
-                  username: username,
-                  firstName: firstName,
-                  lastName: lastName,
-                }
-              };
-              
-              // Store in localStorage for consistency
-              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
-              
-              // Update reactive state
-              this.currentUserSubject.next(fallbackResponse);
-              
-              subscriber.next(fallbackResponse);
-              subscriber.complete();
+              console.error('❌ Profile fetch failed:', profileResult.error);
+              this.loginInProgress = false;
+              subscriber.error(new Error('Profile not found. Please contact support.'));
               return;
             }
 
@@ -733,62 +683,14 @@ export class AuthService {
               subscriber.next(authResponse);
               subscriber.complete();
             } else {
-              console.log('⚠️ No profile data found, creating fallback profile');
-              // Fallback for users with no profile data
-              // Try to get username from user metadata first, then fallback to email prefix
-              const userMetadata = (result.user as any).user_metadata || {};
-              const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
-              const firstName = userMetadata.first_name || 'User';
-              const lastName = userMetadata.last_name || 'User';
-              const role = userMetadata.role || 'player';
-              
-              const fallbackResponse: AuthResponse = {
-                token: result.session.access_token,
-                user: {
-                  id: result.user.id,
-                  email: result.user.email || 'unknown@example.com',
-                  role: role as UserRole,
-                  username: username,
-                  firstName: firstName,
-                  lastName: lastName,
-                }
-              };
-              
-              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
-              this.currentUserSubject.next(fallbackResponse);
-
+              console.error('❌ No profile data found for user');
               this.loginInProgress = false;
-              subscriber.next(fallbackResponse);
-              subscriber.complete();
+              subscriber.error(new Error('Profile not found. Please contact support.'));
             }
           } catch (error) {
             console.error('❌ Error fetching profile:', error);
-            console.log('🔍 AuthService: Creating fallback profile due to fetch error');
-            // Create fallback profile when profile fetch fails
-            const userMetadata = (result.user as any).user_metadata || {};
-            const username = userMetadata.username || (result.user.email ? result.user.email.split('@')[0] : 'user');
-            const firstName = userMetadata.first_name || 'User';
-            const lastName = userMetadata.last_name || 'User';
-            const role = userMetadata.role || 'player';
-            
-            const fallbackResponse: AuthResponse = {
-              token: result.session.access_token,
-              user: {
-                id: result.user.id,
-                email: result.user.email || 'unknown@example.com',
-                role: role as UserRole,
-                username: username,
-                firstName: firstName,
-                lastName: lastName,
-              }
-            };
-            
-            localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(fallbackResponse));
-            this.currentUserSubject.next(fallbackResponse);
-
             this.loginInProgress = false;
-            subscriber.next(fallbackResponse);
-            subscriber.complete();
+            subscriber.error(new Error('Profile fetch failed. Please try again or contact support.'));
           }
         } else {
           console.error('❌ Invalid Supabase login result');
@@ -1141,6 +1043,14 @@ export class AuthService {
 
   isSuperAdmin(): boolean {
     return this.currentUserValue?.user.role === 'super-admin';
+  }
+
+  isGroupAdmin(): boolean {
+    return this.currentUserValue?.user.role === 'group-admin';
+  }
+
+  isPlayer(): boolean {
+    return this.currentUserValue?.user.role === 'player';
   }
 
   getToken(): string | null {

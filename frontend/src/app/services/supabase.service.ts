@@ -139,7 +139,7 @@ export class SupabaseService {
 
       // Load profile if user exists
       if (session?.user) {
-        await this.loadUserProfile(session.user.id);
+        await this.loadUserProfile(session.user.id, session.user);
       }
 
       // Listen for auth changes
@@ -148,7 +148,7 @@ export class SupabaseService {
         this.currentUser$.next(session?.user || null);
 
         if (session?.user) {
-          await this.loadUserProfile(session.user.id);
+          await this.loadUserProfile(session.user.id, session.user);
         } else {
           this.currentProfile$.next(null);
         }
@@ -158,7 +158,7 @@ export class SupabaseService {
     }
   }
 
-  private async loadUserProfile(userId: string) {
+  private async loadUserProfile(userId: string, user?: User) {
     if (!this.supabase) {
       console.error('❌ SupabaseService: Supabase client not initialized');
       return;
@@ -172,6 +172,25 @@ export class SupabaseService {
         .single();
 
       if (error) {
+        // If no profile found and we have a Google user, create one
+        if (user && user.app_metadata?.provider === 'google') {
+          const metadata = user.user_metadata || {};
+          const fullName = (metadata['full_name'] as string) || '';
+          const nameParts = fullName.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+          const username = user.email ? user.email.split('@')[0] : '';
+
+          await this.createProfile(userId, {
+            email: user.email || '',
+            username,
+            first_name: firstName,
+            last_name: lastName,
+            role: 'player' as UserRole,
+            first_login: true,
+          } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>);
+          return;
+        }
         console.error('Error loading user profile:', error);
         return;
       }
@@ -236,19 +255,13 @@ export class SupabaseService {
         throw error;
       }
 
-      // Create profile after successful signup (non-blocking)
+      // Create profile after successful signup
       if (data.user) {
-        // Don't await - let it run in background
-        this.createProfile(data.user.id, {
+        await this.createProfile(data.user.id, {
           email,
           ...metadata,
           first_login: true,
-          // the following will be set in createProfile() anyway:
-          // created_at / updated_at
-        } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>)
-        .catch((error) => {
-          console.error('Profile creation failed:', error);
-        });
+        } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>);
       }
 
       return data;
@@ -314,8 +327,6 @@ export class SupabaseService {
     }
 
     console.log('🔍 SupabaseService: Starting signIn...');
-    console.log('🔍 SupabaseService: Supabase URL:', environment.supabase.url);
-    console.log('🔍 SupabaseService: Supabase Key (first 20 chars):', environment.supabase.key.substring(0, 20) + '...');
 
     // Retry mechanism for NavigatorLockAcquireTimeoutError
     const maxRetries = 3;
@@ -368,40 +379,8 @@ export class SupabaseService {
           continue; // Try again
         }
 
-        // If it's not a lock error, or we've exhausted retries, handle differently
+        // If it's not a lock error, or we've exhausted retries, throw
         if (!isLockError || attempt === maxRetries) {
-          // For lock errors on final attempt, try to get profile data directly
-          if (isLockError) {
-            console.log('⚠️ SupabaseService: Final attempt failed with lock error, trying direct profile fetch...');
-            try {
-              const { data: profileData, error: profileError } = await this.supabase
-                .from('profiles')
-                .select('*')
-                .eq('email', email)
-                .single();
-
-              if (profileData && !profileError) {
-                console.log('✅ SupabaseService: Found profile data directly:', profileData);
-                return {
-                  user: {
-                    id: profileData.id,
-                    email: profileData.email,
-                    user_metadata: {
-                      username: profileData.username,
-                      first_name: profileData.first_name,
-                      last_name: profileData.last_name,
-                      role: profileData.role
-                    }
-                  },
-                  session: { access_token: 'fallback-token' }
-                };
-              }
-            } catch (directError) {
-              console.log('🔍 SupabaseService: Could not get profile data directly:', directError);
-            }
-          }
-
-          // Re-throw the original error for non-lock errors or final attempt
           throw attemptError;
         }
       }
@@ -665,6 +644,16 @@ export class SupabaseService {
         callback
       )
       .subscribe();
+  }
+
+  // Google Sign-In
+  async signInWithGoogle() {
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    return data;
   }
 
   /**

@@ -444,6 +444,82 @@ describe('AuthService', () => {
     });
   });
 
+  describe('isGroupAdmin', () => {
+    it('should return true from isGroupAdmin() when user role is group-admin', () => {
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'admin@example.com',
+          role: 'group-admin' as UserRole,
+          username: 'adminuser',
+          firstName: 'Admin',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+
+      expect(service.isGroupAdmin()).toBe(true);
+    });
+
+    it('should return false from isGroupAdmin() when user role is not group-admin', () => {
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'player@example.com',
+          role: 'player' as UserRole,
+          username: 'playeruser',
+          firstName: 'Player',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+
+      expect(service.isGroupAdmin()).toBe(false);
+    });
+  });
+
+  describe('isPlayer', () => {
+    it('should return true from isPlayer() when user role is player', () => {
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'player@example.com',
+          role: 'player' as UserRole,
+          username: 'playeruser',
+          firstName: 'Player',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+
+      expect(service.isPlayer()).toBe(true);
+    });
+
+    it('should return false from isPlayer() when user role is not player', () => {
+      const mockUser = {
+        token: 'test-token',
+        user: {
+          id: 'user-123',
+          email: 'admin@example.com',
+          role: 'group-admin' as UserRole,
+          username: 'adminuser',
+          firstName: 'Admin',
+          lastName: 'User'
+        }
+      };
+
+      service['currentUserSubject'].next(mockUser);
+
+      expect(service.isPlayer()).toBe(false);
+    });
+  });
+
   describe('markFirstLoginComplete', () => {
     it('should mark first login as complete for Supabase users', async () => {
       // Mock current user
