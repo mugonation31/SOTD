@@ -90,7 +90,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     3. Create Google Cloud project, enable OAuth, get client ID/secret
     4. Add Google provider in Supabase Dashboard
 
-- [ ] **1.3 Wire groups to Supabase** (Size: M)
+- [x] **1.3 Wire groups to Supabase** (Size: M)
   - **Description**: Replace all localStorage calls in `GroupService` with calls to `SupabaseDataService`. Groups are created, listed, joined, and viewed via Supabase.
   - **Depends on**: 1.1, 1.2
   - **Files**:
@@ -106,7 +106,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Group admin groups page shows administered groups from Supabase
     - No more localStorage usage for groups
 
-- [ ] **1.4 Player Leave Group** (Size: S)
+- [x] **1.4 Player Leave Group** (Size: S)
   - **Description**: Add a "Leave Group" button on the player groups page. Confirmation dialog, then delete from `group_members`. Prevent leaving if user is the group admin.
   - **Depends on**: 1.3
   - **Files**:

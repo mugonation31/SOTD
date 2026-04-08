@@ -1,3 +1,5 @@
 - [User Profile](user_role.md) — App owner, wants minimum MVP, prefers plain English
 - [MVP Decisions](project_mvp_decisions.md) — Scoring rules, prediction model, API choice, joker rules, super admin scope
 - [Deployment](reference_deployment.md) — Live on Cloudflare Pages at sotd-bl7.pages.dev
+- [Full Review Cycle](feedback_full_review_cycle.md) — Always run code review + security scan, never skip
+- [Football Data API](reference_football_api.md) — football-data.org free tier, key in Supabase secrets
