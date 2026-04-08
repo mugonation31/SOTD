@@ -87,33 +87,11 @@ export class SupabaseService {
         environment.supabase.key,
         {
           auth: {
-            persistSession: true, // Enable session persistence for proper auth state
-            autoRefreshToken: true, // Enable auto refresh for seamless experience
-            detectSessionInUrl: true, // Enable automatic session detection
-            storage: {
-              getItem: async (key: string) => {
-                try {
-                  return await this.storageService.get(key);
-                } catch (error) {
-                  console.warn(`⚠️ SupabaseService: Error getting item ${key}:`, error);
-                  return null;
-                }
-              },
-              setItem: async (key: string, value: string) => {
-                try {
-                  await this.storageService.set(key, value);
-                } catch (error) {
-                  console.warn(`⚠️ SupabaseService: Error setting item ${key}:`, error);
-                }
-              },
-              removeItem: async (key: string) => {
-                try {
-                  await this.storageService.remove(key);
-                } catch (error) {
-                  console.warn(`⚠️ SupabaseService: Error removing item ${key}:`, error);
-                }
-              }
-            }
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            flowType: 'pkce',
+            storage: localStorage,
           }
         }
       );

@@ -40,6 +40,17 @@ COMMENT ON COLUMN public.profiles.role IS 'User role: super-admin, group-admin, 
 COMMENT ON COLUMN public.profiles.first_login IS 'Flag to show welcome screen on first login';
 
 -- ----------------------------------------------------------------------------
+-- HELPER FUNCTION (bypasses RLS to check role without recursion)
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'super-admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ----------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS)
 -- ----------------------------------------------------------------------------
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -57,32 +68,17 @@ CREATE POLICY "Users can update own profile" ON public.profiles
 CREATE POLICY "Users can insert own profile" ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Super admins can view all profiles
+-- Super admins can view all profiles (uses SECURITY DEFINER function to avoid recursion)
 CREATE POLICY "Super admins can view all profiles" ON public.profiles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'super-admin'
-        )
-    );
+    FOR SELECT USING (public.is_super_admin());
 
 -- Super admins can update all profiles
 CREATE POLICY "Super admins can update all profiles" ON public.profiles
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'super-admin'
-        )
-    );
+    FOR UPDATE USING (public.is_super_admin());
 
 -- Super admins can delete profiles
 CREATE POLICY "Super admins can delete profiles" ON public.profiles
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role = 'super-admin'
-        )
-    );
+    FOR DELETE USING (public.is_super_admin());
 
 -- ----------------------------------------------------------------------------
 -- TRIGGERS

@@ -335,12 +335,12 @@ export class SignupPage implements OnInit {
 
   openTerms(event: Event) {
     event.preventDefault();
-    this.router.navigate(['/auth/terms']);
+    window.open('/auth/terms', '_blank');
   }
 
   openPrivacy(event: Event) {
     event.preventDefault();
-    this.router.navigate(['/auth/privacy']);
+    window.open('/auth/privacy', '_blank');
   }
 
   async signInWithGoogle() {

@@ -66,9 +66,25 @@ export class SupabaseDataService {
   async createGroup(input: { name: string; description?: string }): Promise<PredictionGroup> {
     const userId = await this.getCurrentUserId();
 
+    // Generate group code using DB function
+    const { data: codeData, error: codeError } = await this.client
+      .rpc('generate_group_code');
+    if (codeError) throw new Error(codeError.message);
+
+    const currentYear = new Date().getFullYear();
+    const seasonYear = new Date().getMonth() >= 7
+      ? `${currentYear}-${String(currentYear + 1).slice(2)}`
+      : `${currentYear - 1}-${String(currentYear).slice(2)}`;
+
     const { data: group, error: groupError } = await this.client
       .from('groups')
-      .insert([{ ...input, admin_id: userId, current_members: 1 }])
+      .insert([{
+        ...input,
+        admin_id: userId,
+        code: codeData,
+        season_year: seasonYear,
+        current_members: 1,
+      }])
       .select()
       .single();
 
