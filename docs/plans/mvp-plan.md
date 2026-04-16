@@ -215,7 +215,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
 
 ### Phase 3: Predictions and Game Rules
 
-- [ ] **3.1 Deadline Enforcement** (Size: M)
+- [x] **3.1 Deadline Enforcement** (Size: M)
   - **Description**: Add a countdown timer to the matches page showing time until the gameweek deadline. Lock the prediction form when the deadline passes. Prevent submission after deadline on both frontend and backend (RLS already handles backend).
   - **Depends on**: 2.2 (needs real gameweek deadlines)
   - **Files**:
