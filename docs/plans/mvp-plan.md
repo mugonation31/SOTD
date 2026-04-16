@@ -141,7 +141,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Boxing Day and Final Day gameweeks are marked as `is_special = true` with correct `special_type`
   - **Risks**: API rate limits on free tier; API may require approval. Fallback: manual data entry via super admin.
 
-- [ ] **2.2 Wire matches page to Supabase** (Size: M)
+- [x] **2.2 Wire matches page to Supabase** (Size: M)
   - **Description**: Replace `MockDataService` match data on the player matches page with real data from Supabase `matches` and `gameweeks` tables.
   - **Depends on**: 1.1, 2.1
   - **Files**:
