@@ -38,6 +38,37 @@ export class MatchesPage extends BasePage {
   /** "Submit Predictions" button */
   readonly submitButton: Locator;
 
+  /**
+   * Task 3.1 — the `<app-countdown-timer>` rendered inside the deadline card.
+   * Always present when the matches page renders; its inner text is either
+   * `Xd Yh Zm Ws` (deadline in the future) or `Predictions Locked` (past /
+   * missing deadline). Structural, not time-based.
+   */
+  readonly countdownTimer: Locator;
+
+  /**
+   * Task 3.1 — lock icon in the gameweek title. Only present when
+   * `isLocked === true` (deadline passed). Uses the component class rather
+   * than the generic `ion-icon[name="lock-closed-outline"]` to avoid
+   * matching the icon inside the locked banner.
+   */
+  readonly lockIcon: Locator;
+
+  /**
+   * Task 3.1 — "Predictions Locked" banner in the deadline card. Only
+   * rendered when `isLocked === true`.
+   */
+  readonly lockedBanner: Locator;
+
+  /**
+   * Task 3.1 — "RESET ALL" button. Present only when `isLocked === false`.
+   * Used to assert the form hides the reset affordance after lock.
+   */
+  readonly resetButton: Locator;
+
+  /** Score number inputs across all match cards (home + away). */
+  readonly scoreInputs: Locator;
+
   constructor(page: Page) {
     super(page);
     this.gameweekHeading = page.locator('.gameweek-title h2');
@@ -50,6 +81,11 @@ export class MatchesPage extends BasePage {
     this.homeTeamNames = page.locator('.match-card .team.home');
     this.awayTeamNames = page.locator('.match-card .team.away');
     this.submitButton = page.locator('.submit-button');
+    this.countdownTimer = page.locator('app-countdown-timer');
+    this.lockIcon = page.locator('.gameweek-title .lock-icon');
+    this.lockedBanner = page.locator('.locked-banner');
+    this.resetButton = page.locator('.reset-button');
+    this.scoreInputs = page.locator('.match-card .score-input');
   }
 
   async navigate(): Promise<void> {
@@ -90,6 +126,52 @@ export class MatchesPage extends BasePage {
       // Empty-state path: verify the Task 2.2 empty-state copy
       await expect(this.emptyStateMessage).toBeVisible();
       await expect(this.emptyStateMessage).toHaveText('No fixtures available for this gameweek');
+    }
+  }
+
+  /**
+   * Task 3.1 — assert the countdown timer element is present and rendering
+   * one of its two valid content shapes:
+   *   - running:  matches `/\d+d\s+\d+h\s+\d+m\s+\d+s/`
+   *   - locked:   contains "Predictions Locked"
+   * The assertion is deadline-agnostic so the test never has to know what
+   * the live DB has seeded.
+   */
+  async assertCountdownTimerVisible(): Promise<void> {
+    await expect(this.countdownTimer).toBeVisible();
+    await expect(this.countdownTimer).toHaveText(
+      /(\d+d\s+\d+h\s+\d+m\s+\d+s|Predictions Locked)/,
+    );
+  }
+
+  /**
+   * Task 3.1 — returns whether the page is currently rendering the locked
+   * state (lock icon OR locked banner present). Tests use this to branch
+   * between "unlocked expectations" and "locked expectations" without
+   * hard-coding a deadline value.
+   */
+  async isInLockedState(): Promise<boolean> {
+    const [iconCount, bannerCount] = await Promise.all([
+      this.lockIcon.count(),
+      this.lockedBanner.count(),
+    ]);
+    return iconCount > 0 || bannerCount > 0;
+  }
+
+  /**
+   * Task 3.1 — when the page renders in locked state, all score inputs
+   * must be `[disabled]` and the reset button must be hidden. Called only
+   * after `isInLockedState()` returns true.
+   */
+  async assertLockedStateDisablesInputs(): Promise<void> {
+    await expect(this.lockedBanner).toBeVisible();
+    await expect(this.lockedBanner).toContainText('Predictions Locked');
+    await expect(this.lockIcon).toBeVisible();
+    await expect(this.resetButton).toHaveCount(0);
+
+    const inputCount = await this.scoreInputs.count();
+    for (let i = 0; i < inputCount; i++) {
+      await expect(this.scoreInputs.nth(i)).toBeDisabled();
     }
   }
 }

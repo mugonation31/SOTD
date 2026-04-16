@@ -220,9 +220,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
   - **Depends on**: 2.2 (needs real gameweek deadlines)
   - **Files**:
     - Create `frontend/src/app/shared/components/countdown-timer/countdown-timer.component.ts`
-    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (add deadline checking, disable form)
-    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.html` (add timer, locked state UI)
-    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.scss` (locked state styling)
+    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (add deadline checking, disable form, inline template + styles)
   - **Acceptance criteria**:
     - Countdown timer shows days/hours/minutes until deadline
     - Timer updates every second
@@ -230,6 +228,59 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Locked icon displayed on the gameweek header after deadline
     - Page auto-detects deadline pass without requiring refresh
     - If user navigates to matches page after deadline, form is immediately locked
+
+  - [ ] **3.1.1 Countdown timer standalone component** (Size: S)
+    - **Description**: Build a reusable standalone `CountdownTimerComponent` that accepts a deadline input, ticks every second, emits a `deadlinePassed` event once when the deadline crosses zero, and cleans up its interval in `ngOnDestroy`. Renders days/hours/minutes/seconds while active and a passed-state when elapsed. TDD: write the spec first.
+    - **Depends on**: 2.2
+    - **Files**:
+      - Create `frontend/src/app/shared/components/countdown-timer/countdown-timer.component.ts`
+      - Create `frontend/src/app/shared/components/countdown-timer/countdown-timer.component.spec.ts`
+    - **Acceptance criteria**:
+      - Component is standalone, no NgModule
+      - `@Input() deadline: string | Date | null` and `@Output() deadlinePassed = new EventEmitter<void>()`
+      - Renders "Xd Yh Zm Ws" while counting down; renders a "Deadline passed" state once elapsed
+      - Emits `deadlinePassed` exactly once on zero-crossing (not repeatedly)
+      - `ngOnDestroy` clears the `setInterval` handle (verified by spec using `jest.useFakeTimers`)
+      - Handles null/empty/invalid deadline without throwing (renders placeholder dashes)
+
+  - [ ] **3.1.2 Wire gameweek deadline into matches page** (Size: S)
+    - **Description**: Populate `currentGameweek.deadline` and `currentGameweek.isSpecial` from Supabase whenever matches load. On init, pull the active gameweek; on prev/next navigation, fetch the gameweek row for the target number (via `getGameweeks()` filter) so the deadline updates too.
+    - **Depends on**: 3.1.1
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (fetch gameweek row in `loadMatchesForGameweek`, populate deadline + isSpecial)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (add new tests only — never modify the 36 existing)
+    - **Acceptance criteria**:
+      - `currentGameweek.deadline` holds the ISO string from the `gameweeks` table
+      - `currentGameweek.isSpecial` reflects the DB row flag (used later by lock + joker logic)
+      - Navigation refreshes deadline for the viewed gameweek
+      - On error fetching the gameweek row, deadline stays empty and the page does not crash
+      - All 36 existing matches page tests still pass; new tests cover the wiring
+
+  - [ ] **3.1.3 Lock-state logic on matches page** (Size: M)
+    - **Description**: Add an `isLocked` flag to the page. Compute it on load by comparing `currentGameweek.deadline` to `Date.now()`, and toggle it via an `onDeadlinePassed()` handler subscribed to the timer's output. Thread `isLocked` into `canSubmit()`, score input `[disabled]` bindings, and reset-button visibility. Re-evaluate when navigating to a different gameweek.
+    - **Depends on**: 3.1.1, 3.1.2
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (add `isLocked`, `onDeadlinePassed()`, update `canSubmit`, update disabled bindings)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only: locked on load if deadline past, transitions to locked via event, unlocks on future gameweek)
+    - **Acceptance criteria**:
+      - If the user navigates to the page after the deadline, `isLocked` is true before the first render tick
+      - Score inputs disabled when `isLocked` (in addition to existing `isLive` rule)
+      - `canSubmit()` returns false when `isLocked`
+      - `onDeadlinePassed()` flips `isLocked` to true without requiring a refresh
+      - Navigating to a future gameweek with a future deadline resets `isLocked` to false
+      - All 36 existing tests still pass
+
+  - [ ] **3.1.4 Locked-state UI (timer, banner, lock icon)** (Size: S)
+    - **Description**: Embed `<app-countdown-timer>` in the deadline card bound to `currentGameweek.deadline` with `(deadlinePassed)="onDeadlinePassed()"`. Add a "Predictions Locked" banner shown when `isLocked`, a lock icon next to the gameweek title when `isLocked`, and minimal styles for the banner. Register the `lockClosedOutline` icon via `addIcons`.
+    - **Depends on**: 3.1.3
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (inline template + styles + import `CountdownTimerComponent` into `imports` array, register lock icon)
+    - **Acceptance criteria**:
+      - Countdown timer visible in the deadline card while deadline is in the future
+      - "Predictions Locked" banner (styled like the existing warning banner but in neutral/dark tone) visible when `isLocked`
+      - Lock icon appears next to the gameweek title once `isLocked` is true
+      - No console errors on mount; no NgModule edits (standalone imports only)
+      - Reset button hidden or disabled when `isLocked`
 
 - [ ] **3.2 Wire predictions to Supabase** (Size: M)
   - **Description**: Submit, update, and read predictions from the Supabase `predictions` table instead of MockDataService/localStorage. Integrate with the matches page form submission.
@@ -354,6 +405,10 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - `SupabaseDataService` methods return typed interfaces, not `any`
     - `SeasonService` logs warnings when Supabase fetches fail (currently silent defaults)
     - `matches.page` brittle `toString()`-based test in `season.service.spec.ts:91-97` replaced with source-file regex (see `matches.page.spec.ts:157` for the pattern)
+    - `onSubmit()` in `matches.page.ts` adds an `isLocked` guard at the top (belt-and-braces — button is already hidden via `canSubmit()`, but direct callers should fail-closed)
+    - 3.1.4 lock-UI spec block in `matches.page.spec.ts` wrapped with `jest.useFakeTimers()` / `useRealTimers()` to prevent `CountdownTimerComponent` intervals leaking into the real clock between tests
+    - `countdown-timer.component.spec.ts` "clean up interval on destroy" test tightened: snapshot `clearInterval` call count before `fixture.destroy()` and assert it increments after (current assertion passes spuriously if deadline logic changes)
+    - Add an inline comment in `matches.page.ts` documenting that `CountdownTimerComponent.deadlinePassed` is the runtime source of truth for the `isLocked` transition (load-time is snapshot only) — prevents future readers from adding a second deadline-check that desyncs
 
 ---
 

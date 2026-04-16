@@ -44,3 +44,77 @@ test.describe('Player matches page (Task 2.2 smoke)', () => {
     expect(jsErrors, `Uncaught JS exceptions: ${jsErrors.join(' | ')}`).toHaveLength(0);
   });
 });
+
+/**
+ * Smoke tests for Task 3.1 — countdown timer + deadline lock UI.
+ *
+ * These are STRUCTURAL tests. They never manipulate `Date`, never demand a
+ * specific deadline value in Supabase, and never submit a prediction. They
+ * simply verify:
+ *   1. When the matches page renders, `<app-countdown-timer>` is visible
+ *      and displays one of its two valid text shapes (running OR locked).
+ *   2. IF the page happens to be in locked state (past deadline OR null
+ *      deadline), all score inputs are disabled and the reset button is
+ *      hidden. (Conditional — skipped when the page is in the unlocked
+ *      state, since we don't control seeded data.)
+ *   3. Rendering the timer does not introduce JS exceptions.
+ *
+ * Login redirect is tolerated with the same graceful pattern used by the
+ * Task 2.2 spec above.
+ */
+test.describe('Player matches page — countdown + lock (Task 3.1 smoke)', () => {
+  test('should render the countdown timer when matches page is reachable', async ({ page }) => {
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    if (await matchesPage.isRedirectedToLogin()) {
+      // Task 3.1 is gated on the matches page — if we can't reach it,
+      // assert the graceful redirect and exit. No seeded test user yet.
+      await expect(page).toHaveURL(/\/auth\/login/);
+      return;
+    }
+
+    await matchesPage.assertPageLoaded();
+    await matchesPage.assertCountdownTimerVisible();
+  });
+
+  test('should disable score inputs and hide reset when page is in locked state', async ({ page }) => {
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    if (await matchesPage.isRedirectedToLogin()) {
+      await expect(page).toHaveURL(/\/auth\/login/);
+      return;
+    }
+
+    // Conditional: we don't control Supabase's deadline values, so only
+    // assert the lock contract when the page is actually rendering locked.
+    // When unlocked, this test is a no-op (the unlocked path is implicitly
+    // covered by the Task 2.2 assertPageLoaded smoke).
+    if (!(await matchesPage.isInLockedState())) {
+      test.info().annotations.push({
+        type: 'skip-reason',
+        description: 'Matches page rendered in unlocked state; lock contract not asserted.',
+      });
+      return;
+    }
+
+    await matchesPage.assertLockedStateDisablesInputs();
+  });
+
+  test('should not log JS exceptions while the countdown timer is mounted', async ({ page }) => {
+    const jsErrors: string[] = [];
+    page.on('pageerror', (err) => jsErrors.push(err.message));
+
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    // Give the timer at least one tick (setInterval runs at 1s) plus a
+    // moment for network idle, so any throw inside tick() surfaces here
+    // rather than in a later, unrelated test.
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1_500);
+
+    expect(jsErrors, `Uncaught JS exceptions: ${jsErrors.join(' | ')}`).toHaveLength(0);
+  });
+});

@@ -723,3 +723,558 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
     });
   });
 });
+
+describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z',
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([
+        buildGameweekRow({ id: 'gw-id-7', number: 7, deadline: '2024-08-17T11:00:00Z' }),
+        buildGameweekRow({
+          id: 'gw-id-8',
+          number: 8,
+          deadline: '2024-08-24T11:00:00Z',
+          is_active: false,
+        }),
+      ]),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('should populate currentGameweek.deadline from the current gameweek row', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-09-01T12:30:00Z' }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(mockSupabaseDataService.getGameweeks).toHaveBeenCalled();
+    expect(component.currentGameweek.deadline).toBe('2024-09-01T12:30:00Z');
+  });
+
+  it('should set currentGameweek.isSpecial from the current gameweek is_special flag', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.currentGameweek.isSpecial).toBe(true);
+  });
+
+  it('should update currentGameweek.deadline when navigating to the next gameweek', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' })
+    );
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({
+        number: 8,
+        deadline: '2024-08-24T11:00:00Z',
+        is_special: false,
+      }),
+    ]);
+
+    await component.ngOnInit();
+    await component.navigateGameweek(1);
+
+    expect(component.currentGameweek.number).toBe(8);
+    expect(component.currentGameweek.deadline).toBe('2024-08-24T11:00:00Z');
+  });
+
+  it('should fall back to empty-string deadline when getGameweeks rejects during navigation', async () => {
+    await component.ngOnInit();
+
+    // Clear cached gameweeks so navigation re-fetches; rejection should be swallowed.
+    (component as any).allGameweeks = null;
+    mockSupabaseDataService.getGameweeks.mockRejectedValueOnce(
+      new Error('Network down')
+    );
+
+    await expect(component.navigateGameweek(1)).resolves.not.toThrow();
+
+    expect(component.currentGameweek.deadline).toBe('');
+  });
+
+  it('should default deadline to empty string when current gameweek has no deadline field', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: null }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.currentGameweek.deadline).toBe('');
+  });
+});
+
+describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const makeViewModel = (overrides: Partial<any> = {}) => ({
+    id: 'vm-1',
+    homeTeam: 'Arsenal',
+    awayTeam: 'Chelsea',
+    kickoff: '2024-08-17T14:00:00Z',
+    status: 'scheduled' as const,
+    homeScore: null,
+    awayScore: null,
+    gameweek: 7,
+    venue: '',
+    prediction: { homeScore: null, awayScore: null },
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([
+        buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+        buildGameweekRow({
+          number: 8,
+          deadline: '2024-08-24T11:00:00Z',
+          is_active: false,
+        }),
+      ]),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('isLocked defaults to false before init', () => {
+    expect(component.isLocked).toBe(false);
+  });
+
+  it('isLocked is false after init with a deadline in the future', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // 1 hour in future
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.isLocked).toBe(false);
+  });
+
+  it('isLocked is true after init with a deadline in the past', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // 1 hour in past
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.isLocked).toBe(true);
+  });
+
+  it('isLocked is false after init with an empty deadline (safe default)', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: null }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.isLocked).toBe(false);
+  });
+
+  it('navigateGameweek to a future-deadline gameweek sets isLocked=false; to a past-deadline gameweek sets isLocked=true', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' })
+    );
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 6, deadline: '2024-08-10T11:00:00Z' }), // past
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
+      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }), // future
+    ]);
+
+    await component.ngOnInit();
+    expect(component.isLocked).toBe(false);
+
+    await component.navigateGameweek(1); // -> GW 8, future deadline
+    expect(component.isLocked).toBe(false);
+
+    await component.navigateGameweek(-1); // -> GW 7, future
+    expect(component.isLocked).toBe(false);
+
+    await component.navigateGameweek(-1); // -> GW 6, past deadline
+    expect(component.isLocked).toBe(true);
+  });
+
+  it('onDeadlinePassed() sets isLocked=true', () => {
+    expect(component.isLocked).toBe(false);
+
+    component.onDeadlinePassed();
+
+    expect(component.isLocked).toBe(true);
+  });
+
+  it('canSubmit() returns false when isLocked=true, even if all other conditions pass', async () => {
+    // Set up a state where canSubmit would otherwise return true:
+    // - matches loaded, 3 predictions selected, not completed, not special.
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      {
+        id: 'm-1',
+        home_team: 'A',
+        away_team: 'B',
+        kickoff_time: '2024-08-17T14:00:00Z',
+        gameweek: 7,
+        season_id: 's',
+        status: 'scheduled',
+        home_score: null,
+        away_score: null,
+        created_at: '2024-08-01T00:00:00Z',
+        updated_at: '2024-08-01T00:00:00Z',
+      },
+      {
+        id: 'm-2',
+        home_team: 'C',
+        away_team: 'D',
+        kickoff_time: '2024-08-17T14:00:00Z',
+        gameweek: 7,
+        season_id: 's',
+        status: 'scheduled',
+        home_score: null,
+        away_score: null,
+        created_at: '2024-08-01T00:00:00Z',
+        updated_at: '2024-08-01T00:00:00Z',
+      },
+      {
+        id: 'm-3',
+        home_team: 'E',
+        away_team: 'F',
+        kickoff_time: '2024-08-17T14:00:00Z',
+        gameweek: 7,
+        season_id: 's',
+        status: 'scheduled',
+        home_score: null,
+        away_score: null,
+        created_at: '2024-08-01T00:00:00Z',
+        updated_at: '2024-08-01T00:00:00Z',
+      },
+    ]);
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
+    ]);
+
+    await component.ngOnInit();
+
+    // Fill in 3 valid predictions so selectedPredictionCount === 3
+    component.matches.forEach((m) => {
+      m.prediction.homeScore = 1;
+      m.prediction.awayScore = 0;
+    });
+    component.updatePredictionCount();
+
+    // Sanity: without lock, canSubmit() is true
+    expect(component.canSubmit()).toBe(true);
+
+    // Now lock
+    component.onDeadlinePassed();
+
+    expect(component.canSubmit()).toBe(false);
+  });
+
+  it('isInputDisabled(match) returns true when isLocked, regardless of match status', () => {
+    component.onDeadlinePassed();
+
+    expect(component.isInputDisabled(makeViewModel({ status: 'scheduled' }))).toBe(true);
+    expect(component.isInputDisabled(makeViewModel({ status: 'live' }))).toBe(true);
+    expect(component.isInputDisabled(makeViewModel({ status: 'completed' }))).toBe(true);
+  });
+
+  it('isInputDisabled(match) returns true when match is live (existing behaviour preserved)', () => {
+    expect(component.isLocked).toBe(false);
+
+    expect(component.isInputDisabled(makeViewModel({ status: 'live' }))).toBe(true);
+  });
+
+  it('isInputDisabled(match) returns false for a scheduled match when not locked', () => {
+    expect(component.isLocked).toBe(false);
+
+    expect(component.isInputDisabled(makeViewModel({ status: 'scheduled' }))).toBe(false);
+  });
+});
+
+describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // 1h in future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const buildSupabaseMatch = (overrides: Partial<any> = {}) => ({
+    id: 'match-1',
+    home_team: 'Arsenal',
+    away_team: 'Chelsea',
+    kickoff_time: '2024-08-17T14:00:00Z',
+    gameweek: 7,
+    season_id: 'season-1',
+    status: 'scheduled',
+    home_score: null,
+    away_score: null,
+    created_at: '2024-08-01T00:00:00Z',
+    updated_at: '2024-08-01T00:00:00Z',
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('renders <app-countdown-timer> inside the deadline card', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    const compiled: HTMLElement = fixture.nativeElement;
+    const card = compiled.querySelector('ion-card.deadline-card');
+    expect(card).not.toBeNull();
+    expect(card!.querySelector('app-countdown-timer')).not.toBeNull();
+  });
+
+  it('binds the countdown timer [deadline] to currentGameweek.deadline', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-09-01T12:30:00Z' }),
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    const timerEl = fixture.debugElement.nativeElement.querySelector(
+      'app-countdown-timer'
+    );
+    expect(timerEl).not.toBeNull();
+
+    // The Angular property binding sets the component @Input, which
+    // we can read via the DebugElement's componentInstance.
+    const timerDebug = fixture.debugElement.query(
+      (de) => de.nativeElement === timerEl
+    );
+    expect(timerDebug).toBeTruthy();
+    expect(timerDebug.componentInstance.deadline).toBe('2024-09-01T12:30:00Z');
+  });
+
+  it('does NOT render the lock icon when isLocked is false', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
+      buildGameweekRow({ deadline: '2024-08-17T11:00:00Z' }) // future
+    );
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(false);
+    const compiled: HTMLElement = fixture.nativeElement;
+    expect(compiled.querySelector('.lock-icon')).toBeNull();
+  });
+
+  it('renders the lock icon in the gameweek title when isLocked is true', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(true);
+    const compiled: HTMLElement = fixture.nativeElement;
+    const title = compiled.querySelector('.gameweek-title');
+    expect(title).not.toBeNull();
+    const lockIcon = title!.querySelector('.lock-icon');
+    expect(lockIcon).not.toBeNull();
+  });
+
+  it('does NOT render the "Predictions Locked" banner when isLocked is false', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
+      buildGameweekRow({ deadline: '2024-08-17T11:00:00Z' }) // future
+    );
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(false);
+    const compiled: HTMLElement = fixture.nativeElement;
+    expect(compiled.querySelector('.locked-banner')).toBeNull();
+  });
+
+  it('renders the "Predictions Locked" banner when isLocked is true', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(true);
+    const compiled: HTMLElement = fixture.nativeElement;
+    const banner = compiled.querySelector('.locked-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('Predictions Locked');
+  });
+
+  it('disables score inputs when isLocked is true (even for a scheduled match)', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+    ]);
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1', status: 'scheduled' }),
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(true);
+    const compiled: HTMLElement = fixture.nativeElement;
+    const inputs = compiled.querySelectorAll('input.score-input');
+    expect(inputs.length).toBe(2);
+    inputs.forEach((input) => {
+      expect((input as HTMLInputElement).disabled).toBe(true);
+    });
+  });
+
+  it('hides the RESET ALL button when isLocked is true', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+    ]);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLocked).toBe(true);
+    const compiled: HTMLElement = fixture.nativeElement;
+    expect(compiled.querySelector('.reset-button')).toBeNull();
+  });
+});

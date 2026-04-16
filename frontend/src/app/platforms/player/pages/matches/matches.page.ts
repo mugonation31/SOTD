@@ -31,12 +31,14 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   personOutline,
+  lockClosedOutline,
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
 import {
   SupabaseDataService,
 } from '@core/services/supabase-data.service';
 import { Match as SupabaseMatch } from '../../../../services/supabase.service';
+import { CountdownTimerComponent } from '../../../../shared/components/countdown-timer/countdown-timer.component';
 
 /**
  * View model for a single match row in this page's template.
@@ -108,6 +110,12 @@ interface GameWeek {
 
               <div class="gameweek-title">
                 <h2>Game Week {{ currentGameweek.number }}</h2>
+                <ion-icon
+                  *ngIf="isLocked"
+                  name="lock-closed-outline"
+                  class="lock-icon"
+                  aria-label="Predictions locked"
+                ></ion-icon>
                 <ion-badge color="primary" class="prediction-badge"
                   >Predict3</ion-badge
                 >
@@ -138,11 +146,16 @@ interface GameWeek {
                         currentGameweek.deadline | date : 'MMM d, yyyy, h:mm a'
                       }}
                     </p>
+                    <app-countdown-timer
+                      [deadline]="currentGameweek.deadline"
+                      (deadlinePassed)="onDeadlinePassed()"
+                    ></app-countdown-timer>
                     <p class="selection-info">
                       Make any 3 predictions for this game week
                     </p>
                   </div>
                   <ion-button
+                    *ngIf="!isLocked"
                     fill="clear"
                     class="reset-button"
                     (click)="resetPredictions()"
@@ -167,6 +180,11 @@ interface GameWeek {
                       week</span
                     >
                   </div>
+                </div>
+
+                <div class="locked-banner" *ngIf="isLocked">
+                  <ion-icon name="lock-closed-outline"></ion-icon>
+                  <span>Predictions Locked</span>
                 </div>
               </ion-card-content>
             </ion-card>
@@ -216,7 +234,7 @@ interface GameWeek {
                       class="score-input"
                       [(ngModel)]="match.prediction.homeScore"
                       (ngModelChange)="onScoreChange(match)"
-                      [disabled]="isLive(match)"
+                      [disabled]="isInputDisabled(match)"
                       min="0"
                       max="99"
                       placeholder="-"
@@ -227,7 +245,7 @@ interface GameWeek {
                       class="score-input"
                       [(ngModel)]="match.prediction.awayScore"
                       (ngModelChange)="onScoreChange(match)"
-                      [disabled]="isLive(match)"
+                      [disabled]="isInputDisabled(match)"
                       min="0"
                       max="99"
                       placeholder="-"
@@ -650,6 +668,7 @@ interface GameWeek {
     DatePipe,
     FormsModule,
     IonToast,
+    CountdownTimerComponent,
   ],
 })
 export class MatchesPage implements OnInit {
@@ -670,6 +689,27 @@ export class MatchesPage implements OnInit {
   showSuccessToast = false;
   predictionsCompleted = false;
 
+  /**
+   * True when the prediction form is locked because the gameweek deadline
+   * has passed. Computed in `setGameweekMeta` on every init / navigation,
+   * and flipped to true by `onDeadlinePassed()` when the countdown timer
+   * emits its `deadlinePassed` event. Gates `canSubmit()` and
+   * `isInputDisabled()`. When the deadline is unknown (null/empty) we
+   * intentionally do NOT block — safer default than a false positive.
+   */
+  isLocked: boolean = false;
+
+  /**
+   * Cache of all gameweek rows fetched once from Supabase, used by
+   * `navigateGameweek` to look up the `deadline` and `is_special` flags
+   * for a target gameweek number without re-fetching on every nav.
+   */
+  private allGameweeks: Array<{
+    number: number;
+    deadline: string | null;
+    is_special: boolean;
+  }> | null = null;
+
   constructor(
     private router: Router,
     private seasonService: SeasonService,
@@ -684,6 +724,7 @@ export class MatchesPage implements OnInit {
       chevronBackOutline,
       chevronForwardOutline,
       personOutline,
+      lockClosedOutline,
     });
   }
 
@@ -692,6 +733,13 @@ export class MatchesPage implements OnInit {
     await this.seasonService.init();
     this.totalGameweeks = this.seasonService.getTotalGameweeks();
     const gameweekNumber = this.seasonService.getCurrentGameweek();
+
+    // Populate deadline + isSpecial for the SAME gameweek whose matches we're
+    // about to load, so the countdown + lock state can never disagree with
+    // the fixtures on screen. Uses the cached allGameweeks lookup shared
+    // with navigateGameweek — single source of truth.
+    await this.applyGameweekMeta(gameweekNumber);
+
     await this.loadMatchesForGameweek(gameweekNumber);
     this.checkPredictionsStatus();
   }
@@ -806,6 +854,10 @@ export class MatchesPage implements OnInit {
   }
 
   canSubmit(): boolean {
+    if (this.isLocked) {
+      return false;
+    }
+
     if (this.predictionsCompleted) {
       return false;
     }
@@ -819,6 +871,16 @@ export class MatchesPage implements OnInit {
     } else {
       return this.selectedPredictionCount === 3;
     }
+  }
+
+  /**
+   * Whether the score inputs for a given match should be disabled.
+   * Inputs are disabled when the gameweek is locked (deadline passed) OR
+   * the match itself is already live. Task 3.1.4 will bind this helper
+   * to the template's `[disabled]` on the score inputs.
+   */
+  isInputDisabled(match: MatchViewModel): boolean {
+    return this.isLocked || this.isLive(match);
   }
 
   async onSubmit() {
@@ -900,8 +962,60 @@ export class MatchesPage implements OnInit {
     }
 
     await this.loadMatchesForGameweek(target);
+    await this.applyGameweekMeta(target);
     this.predictionsCompleted = false;
     this.resetPredictions();
+  }
+
+  /**
+   * Populate `currentGameweek.deadline` and `currentGameweek.isSpecial` for
+   * the supplied target gameweek number using a lazily-fetched, cached copy
+   * of all gameweek rows. If the fetch fails, falls back to empty-string
+   * deadline and isSpecial=false so the page stays usable.
+   */
+  private async applyGameweekMeta(target: number): Promise<void> {
+    try {
+      if (this.allGameweeks === null) {
+        this.allGameweeks = await this.supabaseDataService.getGameweeks();
+      }
+      const match = (this.allGameweeks ?? []).find((gw) => gw.number === target);
+      this.setGameweekMeta(match?.deadline, match?.is_special);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Failed to load gameweek meta for ${target}: ${message}`);
+      this.setGameweekMeta(null, false);
+    }
+  }
+
+  /**
+   * Assigns the deadline and isSpecial fields on `currentGameweek`, coercing
+   * nullish inputs to safe defaults (empty string / false) so the template
+   * never receives `null` or `undefined`. Also recomputes `isLocked` from
+   * the deadline: past deadlines lock the form, future or unknown deadlines
+   * leave it unlocked.
+   */
+  private setGameweekMeta(
+    deadline: string | null | undefined,
+    isSpecial: boolean | null | undefined,
+  ): void {
+    const resolvedDeadline = deadline ?? '';
+    this.currentGameweek = {
+      ...this.currentGameweek,
+      deadline: resolvedDeadline,
+      isSpecial: isSpecial ?? false,
+    };
+    this.isLocked = resolvedDeadline
+      ? new Date(resolvedDeadline).getTime() <= Date.now()
+      : false;
+  }
+
+  /**
+   * Handler for the countdown timer's `deadlinePassed` output. Flips the
+   * form into locked state immediately without waiting for a navigation
+   * or re-fetch. Safe to call multiple times.
+   */
+  onDeadlinePassed(): void {
+    this.isLocked = true;
   }
 
   navigateTo(path: string) {
