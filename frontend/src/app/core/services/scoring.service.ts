@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { SeasonService } from './season.service';
-import { firstValueFrom } from 'rxjs';
 
 export interface MatchResult {
   homeScore: number;
@@ -98,12 +97,10 @@ export class ScoringService {
     return date.getMonth() === 11 && date.getDate() === 26;
   }
 
-  async isFinalDay(date: Date): Promise<boolean> {
-    const seasonInfo = await firstValueFrom(this.seasonService.getSeasonInfo());
-    // Check if the date is the final day of the season
-    return (
-      date.toDateString() === new Date(seasonInfo.seasonEndDate).toDateString()
-    );
+  async isFinalDay(_date: Date): Promise<boolean> {
+    // TODO (post-2.2.1): derive final-day from the last gameweek's deadline
+    // in Supabase. SeasonService no longer holds hardcoded season end dates.
+    return false;
   }
 
   async shouldForceJokerUse(date: Date, jokersUsed: number): Promise<boolean> {

@@ -125,7 +125,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
 
 ### Phase 2: Match Data Pipeline
 
-- [ ] **2.1 EPL Match Data Integration** (Size: L)
+- [x] **2.1 EPL Match Data Integration** (Size: L)
   - **Description**: Integrate a football data API (football-data.org free tier, or API-Football) to populate `gameweeks` and `matches` tables with real EPL fixtures and results. Create a Supabase Edge Function (or a simple scheduled script) that syncs fixture data and match results.
   - **Depends on**: 1.1 (database must be set up)
   - **Files**:
@@ -153,6 +153,63 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Match status (scheduled/live/completed) displayed correctly
     - Completed matches show final scores
     - No dependency on MockDataService for match data
+
+  - [ ] **2.2.1 Add gameweek + match fetch methods to SupabaseDataService** (Size: S)
+    - **Description**: Implement the service-layer methods the matches page needs: fetch the active gameweek, fetch matches for a given gameweek, and fetch adjacent gameweeks for prev/next navigation.
+    - **Depends on**: 1.1, 2.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (add `getActiveGameweek()`, `getGameweekByNumber(n)`, `getMatchesByGameweekId(id)`, `getMatchesByGameweekNumber(n)`)
+    - **Acceptance criteria**:
+      - `getActiveGameweek()` returns the row where `is_active = true` (or falls back to the gameweek whose deadline is next in the future)
+      - `getMatchesByGameweekNumber(n)` returns all matches ordered by `kickoff_time`
+      - Methods return typed Observables/Promises and surface errors cleanly
+      - No direct Supabase client usage leaks into page components
+
+  - [ ] **2.2.2 Refactor SeasonService to read gameweeks from Supabase** (Size: S)
+    - **Description**: Replace the hardcoded 2024-25 date logic in `SeasonService` with a Supabase-backed implementation that hydrates `currentGameweek$` from the `gameweeks` table via `SupabaseDataService`.
+    - **Depends on**: 2.2.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/season.service.ts` (remove hardcoded dates, call `getActiveGameweek()` on init, expose `setGameweek(number)` for nav)
+    - **Acceptance criteria**:
+      - `currentGameweek$` BehaviorSubject emits the active gameweek's `gameweek_number` on service init
+      - No hardcoded season/deadline dates remain in `season.service.ts`
+      - Existing subscribers (matches page, dashboard) keep working with the same observable contract
+      - Service handles the empty-DB case gracefully (emits null, no throw)
+
+  - [ ] **2.2.3 Wire matches page to fetch real fixtures** (Size: M)
+    - **Description**: Remove `MockDataService` usage from the matches page and fetch matches for the current gameweek from Supabase. Render team names, kickoff times, status badges, and completed scores from live data.
+    - **Depends on**: 2.2.1, 2.2.2
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (subscribe to `SeasonService.currentGameweek$`, call `getMatchesByGameweekNumber`, drop mock imports)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.html` (bind to real match fields; handle empty state)
+    - **Acceptance criteria**:
+      - Page renders real EPL fixtures for the active gameweek on load
+      - Match status badge reflects `status` column (scheduled/live/completed)
+      - Completed matches show `home_score` – `away_score`
+      - Loading state shown while fetching; empty state shown if no matches for that gameweek
+      - No `MockDataService` imports remain in this page
+
+  - [ ] **2.2.4 Prev/next gameweek navigation** (Size: S)
+    - **Description**: Wire the existing prev/next gameweek controls to actually load the adjacent gameweek's matches from Supabase. Disable the buttons at the season boundaries.
+    - **Depends on**: 2.2.3
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (prev/next handlers call `SeasonService.setGameweek`, refetch matches)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.html` (disable buttons at boundaries)
+    - **Acceptance criteria**:
+      - Clicking next advances gameweek number and loads that gameweek's matches
+      - Clicking prev goes back one gameweek
+      - Prev disabled on gameweek 1, next disabled on the final gameweek of the season
+      - Gameweek header updates to reflect the viewed gameweek (not stuck on active one)
+
+  - [ ] **2.2.5 Smoke test: matches page with real data** (Size: S)
+    - **Description**: Add a lightweight E2E smoke test that the matches page loads real fixtures from Supabase (not mock) for a logged-in player, and prev/next navigation works.
+    - **Depends on**: 2.2.3, 2.2.4
+    - **Files**:
+      - Add test in `frontend/tests/e2e/` (follow existing smoke test pattern)
+    - **Acceptance criteria**:
+      - Test logs in as a seeded test player, navigates to `/player/matches`, asserts at least one fixture row renders
+      - Test clicks next gameweek and asserts the gameweek number in the header changes
+      - Test passes locally against a Supabase project seeded by the 2.1 sync function
 
 ---
 
@@ -280,8 +337,9 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Update `docker-compose.yml` (add production profile/service)
     - Modify `frontend/src/environments/environment.ts` (separate prod Supabase URL/key, remove hardcoded keys)
     - Create `frontend/src/environments/environment.prod.ts` (production config)
-    - Modify `frontend/src/app/core/services/supabase-data.service.ts` (consistent error handling, retry logic)
-    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (loading spinner)
+    - Modify `frontend/src/app/core/services/supabase-data.service.ts` (consistent error handling, retry logic, tighten `any` return types on `getGameweeks()`/`getActiveGameweek()` → `Gameweek[]`/`Gameweek`)
+    - Modify `frontend/src/app/core/services/season.service.ts` (`safeGet*` helpers should `console.warn` on failure — currently silent — so ops can diagnose)
+    - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (loading spinner; fix `venue: ''` empty-state — template renders orphaned icon when venue blank; align import paths to use `@core/*` alias consistently)
     - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.ts` (loading spinner)
     - Modify `frontend/src/app/platforms/player/pages/groups/groups.page.ts` (loading spinner)
     - Modify `frontend/src/app/platforms/player/pages/standings/standings.page.ts` (loading spinner)
@@ -293,6 +351,84 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Production build (`ionic build --prod`) succeeds without errors
     - `environment.prod.ts` exists with production Supabase URL
     - No console.log statements left in production code (or guarded by `!environment.production`)
+    - `SupabaseDataService` methods return typed interfaces, not `any`
+    - `SeasonService` logs warnings when Supabase fetches fail (currently silent defaults)
+    - `matches.page` brittle `toString()`-based test in `season.service.spec.ts:91-97` replaced with source-file regex (see `matches.page.spec.ts:157` for the pattern)
+
+---
+
+### Phase 5: Native Apps (Deferred — post-MVP)
+
+> **Status:** Deferred. Ship web MVP first (Phase 4.2), validate with 10–50 real users, then package native. The web version proves the product; native is packaging, not feature work.
+
+Ionic + Capacitor is already in the stack, so the same codebase ships to Android, iOS, and desktop without a rewrite.
+
+- [ ] **5.1 Capacitor native readiness** (Size: M)
+  - **Description**: Add Capacitor platforms (Android, iOS) and wire the native-specific flows that differ from web.
+  - **Depends on**: 4.2 (production web build must be stable first)
+  - **Files**:
+    - `frontend/capacitor.config.ts` (app id, URL scheme)
+    - `frontend/android/` (generated via `npx cap add android`)
+    - `frontend/ios/` (generated via `npx cap add ios`)
+    - Modify `frontend/src/app/core/services/deep-link.service.ts` (custom URL scheme: `predict3://`)
+    - Modify `frontend/src/app/core/services/auth.service.ts` (native Google sign-in via `@codetrix-studio/capacitor-google-auth`)
+  - **Acceptance criteria**:
+    - App builds and runs in Android emulator and iOS simulator
+    - Deep links work for email confirmation and OAuth callbacks (both `https://` and `predict3://`)
+    - Native Google sign-in works on Android and iOS
+    - Supabase OAuth redirect URIs include native schemes
+
+- [ ] **5.2 Android Play Store release** (Size: M)
+  - **Description**: Package and submit Android app to Google Play.
+  - **Depends on**: 5.1
+  - **Requirements**:
+    - Google Play Console account ($25 one-time)
+    - App icons, splash screens, screenshots (Play Store assets)
+    - Privacy policy URL (requires custom domain)
+    - Signed release APK/AAB
+  - **Acceptance criteria**:
+    - Signed AAB uploaded to Play Console
+    - Store listing complete (title, description, screenshots, icon)
+    - Passes Play Store review
+    - Live on Google Play
+
+- [ ] **5.3 iOS App Store release** (Size: L)
+  - **Description**: Package and submit iOS app to App Store. Needs a Mac with Xcode.
+  - **Depends on**: 5.1
+  - **Requirements**:
+    - Apple Developer account ($99/year)
+    - Mac with latest Xcode
+    - App icons, splash screens, screenshots (App Store assets)
+    - Privacy policy URL
+    - TestFlight for beta testing
+  - **Acceptance criteria**:
+    - Archive built and uploaded via Xcode
+    - TestFlight beta tested
+    - Store listing complete
+    - Passes App Store review
+    - Live on App Store
+
+- [ ] **5.4 Desktop app (optional)** (Size: M)
+  - **Description**: Wrap the web app in Electron or Tauri for Windows/macOS/Linux desktop distribution.
+  - **Depends on**: 4.2
+  - **Recommendation**: Tauri (smaller bundle, better performance than Electron)
+  - **Acceptance criteria**:
+    - Desktop builds for Windows, macOS, Linux
+    - Auto-updater configured
+    - Installer signed for each OS
+
+- [ ] **5.5 Push notifications** (Size: M)
+  - **Description**: Add native push notifications for deadline reminders ("Gameweek deadline in 1 hour") and result updates.
+  - **Depends on**: 5.1
+  - **Files**:
+    - Add `@capacitor/push-notifications`
+    - Firebase Cloud Messaging (FCM) for Android
+    - APNs for iOS
+    - Supabase Edge Function to trigger notifications on schedule
+  - **Acceptance criteria**:
+    - Users opt in on first launch
+    - Deadline reminders fire 1 hour before gameweek deadline
+    - Result notifications after match completion
 
 ---
 
@@ -322,6 +458,10 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
                  +-- 4.1 (Auto Scoring)
                       |
                       +-- 4.2 (Production Readiness)
+                           |
+                           +-- 5.1 (Capacitor native) -- 5.2/5.3 (App stores), 5.5 (Push)
+                           |
+                           +-- 5.4 (Desktop — optional)
 ```
 
 ## Recommended Implementation Order
@@ -341,6 +481,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
 13. **4.0** -- Super admin simplification
 14. **4.1** -- Auto point calculation
 15. **4.2** -- Production readiness
+16. **5.1–5.5** -- Native apps (deferred until after MVP launch + user validation)
 
 ## Risks
 

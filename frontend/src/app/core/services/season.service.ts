@@ -1,61 +1,53 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { SupabaseDataService } from './supabase-data.service';
 
 export interface SeasonInfo {
   currentGameweek: number;
   totalGameweeks: number;
-  seasonStartDate: Date;
-  seasonEndDate: Date;
   isSeasonStarted: boolean;
   isSeasonEnded: boolean;
 }
+
+const DEFAULT_GAMEWEEK = 1;
+const DEFAULT_TOTAL_GAMEWEEKS = 38;
 
 @Injectable({
   providedIn: 'root',
 })
 export class SeasonService {
   private seasonInfo = new BehaviorSubject<SeasonInfo>({
-    currentGameweek: 0,
-    totalGameweeks: 38,
-    seasonStartDate: new Date('2024-08-10'),
-    seasonEndDate: new Date('2025-05-19'),
+    currentGameweek: DEFAULT_GAMEWEEK,
+    totalGameweeks: DEFAULT_TOTAL_GAMEWEEKS,
     isSeasonStarted: false,
     isSeasonEnded: false,
   });
 
-  constructor() {
-    // Initialize season status
-    this.updateSeasonStatus();
-    // Update status every hour
-    setInterval(() => this.updateSeasonStatus(), 3600000);
+  private initPromise?: Promise<void>;
+
+  constructor(private supabaseDataService: SupabaseDataService) {
+    // Fire-and-forget init so existing consumers don't have to await.
+    void this.init();
   }
 
-  private updateSeasonStatus() {
-    const now = new Date();
-    const currentInfo = this.seasonInfo.value;
+  init(): Promise<void> {
+    return (this.initPromise ??= this.doInit());
+  }
 
-    const isSeasonStarted = now >= currentInfo.seasonStartDate;
-    const isSeasonEnded = now >= currentInfo.seasonEndDate;
+  private async doInit(): Promise<void> {
+    const [activeGameweek, allGameweeks] = await Promise.all([
+      this.safeGetActiveGameweek(),
+      this.safeGetGameweeks(),
+    ]);
 
-    // Calculate current gameweek based on season progress
-    let currentGameweek = 0;
-    if (isSeasonStarted && !isSeasonEnded) {
-      const totalDays =
-        (currentInfo.seasonEndDate.getTime() -
-          currentInfo.seasonStartDate.getTime()) /
-        (1000 * 60 * 60 * 24);
-      const daysElapsed =
-        (now.getTime() - currentInfo.seasonStartDate.getTime()) /
-        (1000 * 60 * 60 * 24);
-      currentGameweek =
-        Math.floor((daysElapsed / totalDays) * currentInfo.totalGameweeks) + 1;
-    } else if (isSeasonEnded) {
-      currentGameweek = currentInfo.totalGameweeks;
-    }
+    const currentGameweek = activeGameweek?.number ?? DEFAULT_GAMEWEEK;
+    const totalGameweeks = allGameweeks.length || DEFAULT_TOTAL_GAMEWEEKS;
+    const isSeasonStarted = !!activeGameweek;
+    const isSeasonEnded = false;
 
     this.seasonInfo.next({
-      ...currentInfo,
       currentGameweek,
+      totalGameweeks,
       isSeasonStarted,
       isSeasonEnded,
     });
@@ -69,11 +61,31 @@ export class SeasonService {
     return this.seasonInfo.value.currentGameweek;
   }
 
+  getTotalGameweeks(): number {
+    return this.seasonInfo.value.totalGameweeks;
+  }
+
   isSeasonStarted(): boolean {
     return this.seasonInfo.value.isSeasonStarted;
   }
 
   isSeasonEnded(): boolean {
     return this.seasonInfo.value.isSeasonEnded;
+  }
+
+  private async safeGetActiveGameweek(): Promise<{ number: number } | null> {
+    try {
+      return await this.supabaseDataService.getActiveGameweek();
+    } catch {
+      return null;
+    }
+  }
+
+  private async safeGetGameweeks(): Promise<Array<{ number: number }>> {
+    try {
+      return await this.supabaseDataService.getGameweeks();
+    } catch {
+      return [];
+    }
   }
 }

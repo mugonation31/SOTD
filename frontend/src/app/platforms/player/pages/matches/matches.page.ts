@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -18,6 +18,7 @@ import {
   IonButtons,
   IonText,
   IonToast,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -31,12 +32,27 @@ import {
   chevronForwardOutline,
   personOutline,
 } from 'ionicons/icons';
+import { SeasonService } from '@core/services/season.service';
+import {
+  SupabaseDataService,
+} from '@core/services/supabase-data.service';
+import { Match as SupabaseMatch } from '../../../../services/supabase.service';
 
-interface Match {
-  id: number;
+/**
+ * View model for a single match row in this page's template.
+ *
+ * Maps Supabase `Match` columns onto the camelCase fields the existing
+ * inline template binds to (e.g. `match.homeTeam`, `match.kickoff`).
+ */
+interface MatchViewModel {
+  id: string;
   homeTeam: string;
   awayTeam: string;
   kickoff: string;
+  status: SupabaseMatch['status'];
+  homeScore: number | null;
+  awayScore: number | null;
+  gameweek: number;
   venue: string;
   prediction: {
     homeScore: number | null;
@@ -49,7 +65,7 @@ interface GameWeek {
   isSpecial: boolean;
   status: 'open' | 'closed' | 'in_progress';
   deadline: string;
-  matches: Match[];
+  matches: MatchViewModel[];
 }
 
 @Component({
@@ -81,7 +97,7 @@ interface GameWeek {
               <ion-button
                 fill="clear"
                 class="nav-button"
-                [disabled]="currentGameweek.number <= 1"
+                [disabled]="isLoading || currentGameweek.number <= 1"
                 (click)="navigateGameweek(-1)"
               >
                 <ion-icon
@@ -100,7 +116,7 @@ interface GameWeek {
               <ion-button
                 fill="clear"
                 class="nav-button"
-                [disabled]="currentGameweek.number >= 38"
+                [disabled]="isLoading || currentGameweek.number >= totalGameweeks"
                 (click)="navigateGameweek(1)"
               >
                 <ion-icon
@@ -157,6 +173,17 @@ interface GameWeek {
 
             <!-- Matches List -->
             <div class="matches-container">
+              <!-- Empty state -->
+              <div class="empty-state" *ngIf="matches.length === 0">
+                <ion-icon
+                  name="football-outline"
+                  class="empty-state-icon"
+                ></ion-icon>
+                <p class="empty-state-message">
+                  No fixtures available for this gameweek
+                </p>
+              </div>
+
               <div class="match-card" *ngFor="let match of matches">
                 <div class="match-header">
                   <div class="venue">
@@ -171,12 +198,25 @@ interface GameWeek {
 
                 <div class="match-content">
                   <div class="team home">{{ match.homeTeam }}</div>
-                  <div class="score-inputs">
+                  <div
+                    class="final-score"
+                    *ngIf="isCompleted(match)"
+                  >
+                    {{ match.homeScore }} - {{ match.awayScore }}
+                  </div>
+                  <div class="score-inputs" *ngIf="!isCompleted(match)">
+                    <ion-badge
+                      *ngIf="isLive(match)"
+                      class="live-badge"
+                      color="danger"
+                      >LIVE</ion-badge
+                    >
                     <input
                       type="number"
                       class="score-input"
                       [(ngModel)]="match.prediction.homeScore"
                       (ngModelChange)="onScoreChange(match)"
+                      [disabled]="isLive(match)"
                       min="0"
                       max="99"
                       placeholder="-"
@@ -187,6 +227,7 @@ interface GameWeek {
                       class="score-input"
                       [(ngModel)]="match.prediction.awayScore"
                       (ngModelChange)="onScoreChange(match)"
+                      [disabled]="isLive(match)"
                       min="0"
                       max="99"
                       placeholder="-"
@@ -372,6 +413,31 @@ interface GameWeek {
         flex-direction: column;
         gap: 12px;
         margin-bottom: 24px;
+      }
+
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 48px 16px;
+        background: var(--card-background);
+        border: 1px dashed var(--ion-color-light-shade);
+        border-radius: var(--card-border-radius);
+        color: var(--ion-color-medium);
+        text-align: center;
+      }
+
+      .empty-state-icon {
+        font-size: 48px;
+        color: var(--ion-color-medium);
+      }
+
+      .empty-state-message {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 500;
       }
 
       .match-card {
@@ -586,104 +652,30 @@ interface GameWeek {
     IonToast,
   ],
 })
-export class MatchesPage {
+export class MatchesPage implements OnInit {
   currentGameweek: GameWeek = {
-    number: 15,
+    number: 1,
     isSpecial: false,
     status: 'open',
-    deadline: '2024-01-20T11:30:00',
+    deadline: '',
     matches: [],
   };
 
-  matches: Match[] = [
-    {
-      id: 1,
-      homeTeam: 'Manchester United',
-      awayTeam: 'Liverpool',
-      kickoff: '2024-01-20T15:00:00',
-      venue: 'Old Trafford',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 2,
-      homeTeam: 'Arsenal',
-      awayTeam: 'Chelsea',
-      kickoff: '2024-01-20T17:30:00',
-      venue: 'Emirates Stadium',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 3,
-      homeTeam: 'Manchester City',
-      awayTeam: 'Tottenham',
-      kickoff: '2024-01-20T20:00:00',
-      venue: 'Etihad Stadium',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 4,
-      homeTeam: 'Newcastle',
-      awayTeam: 'Aston Villa',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'St. James Park',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 5,
-      homeTeam: 'Brighton',
-      awayTeam: 'Crystal Palace',
-      kickoff: '2024-01-21T16:30:00',
-      venue: 'Amex Stadium',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 6,
-      homeTeam: 'Brentford',
-      awayTeam: 'Nottingham Forest',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'Gtech Community Stadium',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 7,
-      homeTeam: 'West Ham',
-      awayTeam: 'Bournemouth',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'London Stadium',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 8,
-      homeTeam: 'Fulham',
-      awayTeam: 'Everton',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'Craven Cottage',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 9,
-      homeTeam: 'Luton Town',
-      awayTeam: 'Burnley',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'Kenilworth Road',
-      prediction: { homeScore: null, awayScore: null },
-    },
-    {
-      id: 10,
-      homeTeam: 'Sheffield United',
-      awayTeam: 'Wolves',
-      kickoff: '2024-01-21T14:00:00',
-      venue: 'Bramall Lane',
-      prediction: { homeScore: null, awayScore: null },
-    },
-  ];
+  matches: MatchViewModel[] = [];
 
+  totalGameweeks = 38;
+  isLoading = false;
   showTooManyPredictionsWarning = false;
   selectedPredictionCount = 0;
   showSuccessToast = false;
   predictionsCompleted = false;
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private seasonService: SeasonService,
+    private supabaseDataService: SupabaseDataService,
+    private toastController: ToastController,
+  ) {
     addIcons({
       timeOutline,
       footballOutline,
@@ -693,7 +685,66 @@ export class MatchesPage {
       chevronForwardOutline,
       personOutline,
     });
+  }
+
+  async ngOnInit(): Promise<void> {
+    this.isLoading = true;
+    await this.seasonService.init();
+    this.totalGameweeks = this.seasonService.getTotalGameweeks();
+    const gameweekNumber = this.seasonService.getCurrentGameweek();
+    await this.loadMatchesForGameweek(gameweekNumber);
     this.checkPredictionsStatus();
+  }
+
+  /**
+   * Fetch matches for the supplied gameweek from Supabase and update the
+   * current view-model. `isLoading` brackets the entire fetch so nav
+   * buttons can be disabled while in flight.
+   *
+   * On any error (sync throw or async rejection), clears `matches` so the
+   * empty state shows, releases `isLoading`, logs the error, and surfaces
+   * a user-facing toast. Errors are intentionally swallowed so the page
+   * stays usable.
+   */
+  private async loadMatchesForGameweek(gameweek: number): Promise<void> {
+    this.isLoading = true;
+    this.currentGameweek = { ...this.currentGameweek, number: gameweek };
+    try {
+      const rows = await this.supabaseDataService.getMatches(gameweek);
+      this.matches = rows.map((row) => this.toViewModel(row));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Failed to load matches for gameweek ${gameweek}: ${message}`);
+      this.matches = [];
+      await this.showErrorToast('Unable to load matches. Please try again.');
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private async showErrorToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color: 'danger',
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  private toViewModel(row: SupabaseMatch): MatchViewModel {
+    return {
+      id: row.id,
+      homeTeam: row.home_team,
+      awayTeam: row.away_team,
+      kickoff: row.kickoff_time,
+      status: row.status,
+      homeScore: row.home_score ?? null,
+      awayScore: row.away_score ?? null,
+      gameweek: row.gameweek,
+      venue: '',
+      prediction: { homeScore: null, awayScore: null },
+    };
   }
 
   checkPredictionsStatus() {
@@ -715,7 +766,7 @@ export class MatchesPage {
     }
   }
 
-  onScoreChange(match: Match) {
+  onScoreChange(match: MatchViewModel) {
     if (this.predictionsCompleted) {
       // Reset the score if predictions are completed
       match.prediction.homeScore = null;
@@ -759,6 +810,10 @@ export class MatchesPage {
       return false;
     }
 
+    if (this.matches.length === 0) {
+      return false;
+    }
+
     if (this.currentGameweek.isSpecial) {
       return this.selectedPredictionCount === this.matches.length;
     } else {
@@ -799,7 +854,9 @@ export class MatchesPage {
       })),
     };
 
-    // Store in localStorage (replacing any existing predictions for current gameweek)
+    // TODO (Task 3.2): Replace localStorage with SupabaseDataService.submitPredictions().
+    // match.id is now a Supabase UUID, so downstream consumers reading from localStorage
+    // will see UUIDs instead of local integer IDs — safe, but the whole path is deprecated.
     const storedPredictions = JSON.parse(
       localStorage.getItem('playerPredictions') || '[]'
     );
@@ -829,63 +886,37 @@ export class MatchesPage {
     this.showTooManyPredictionsWarning = false;
   }
 
-  navigateGameweek(delta: number) {
-    const newGameweek = this.currentGameweek.number + delta;
-    if (newGameweek >= 1 && newGameweek <= 38) {
-      // Move current gameweek predictions to history if completed
-      if (this.predictionsCompleted) {
-        this.moveCurrentPredictionsToHistory();
-      }
-
-      // Update current gameweek
-      this.currentGameweek = {
-        ...this.currentGameweek,
-        number: newGameweek,
-      };
-      this.loadGameweekMatches(newGameweek);
-
-      // Reset prediction status for new gameweek
-      this.predictionsCompleted = false;
-      this.resetPredictions();
+  /**
+   * Move the page to the previous (delta = -1) or next (delta = +1)
+   * gameweek. Boundaries: gameweek 1 .. SeasonService.getTotalGameweeks().
+   * Out-of-range deltas are no-ops. Predictions persistence is handled in
+   * the predictions wiring task (3.2) — this method does not touch
+   * localStorage.
+   */
+  async navigateGameweek(delta: number): Promise<void> {
+    const target = this.currentGameweek.number + delta;
+    if (target < 1 || target > this.totalGameweeks) {
+      return;
     }
-  }
 
-  private moveCurrentPredictionsToHistory() {
-    const storedPredictions = JSON.parse(
-      localStorage.getItem('playerPredictions') || '[]'
-    );
-    const currentPredictions = storedPredictions.find(
-      (pred: any) => pred.gameweek === this.currentGameweek.number
-    );
-
-    if (currentPredictions) {
-      // Move to history
-      const historicalPredictions = JSON.parse(
-        localStorage.getItem('historicalPredictions') || '[]'
-      );
-      historicalPredictions.push(currentPredictions);
-      localStorage.setItem(
-        'historicalPredictions',
-        JSON.stringify(historicalPredictions)
-      );
-
-      // Remove from current predictions
-      const updatedPredictions = storedPredictions.filter(
-        (pred: any) => pred.gameweek !== this.currentGameweek.number
-      );
-      localStorage.setItem(
-        'playerPredictions',
-        JSON.stringify(updatedPredictions)
-      );
-    }
-  }
-
-  loadGameweekMatches(gameweek: number) {
-    // TODO: Implement service call to load matches for the gameweek
-
+    await this.loadMatchesForGameweek(target);
+    this.predictionsCompleted = false;
+    this.resetPredictions();
   }
 
   navigateTo(path: string) {
     this.router.navigate([path]);
+  }
+
+  isScheduled(match: MatchViewModel): boolean {
+    return match.status === 'scheduled';
+  }
+
+  isLive(match: MatchViewModel): boolean {
+    return match.status === 'live';
+  }
+
+  isCompleted(match: MatchViewModel): boolean {
+    return match.status === 'completed';
   }
 }
