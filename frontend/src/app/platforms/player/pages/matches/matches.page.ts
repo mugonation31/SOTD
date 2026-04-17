@@ -18,6 +18,9 @@ import {
   IonButtons,
   IonText,
   IonToast,
+  IonToggle,
+  IonLabel,
+  AlertController,
   ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
@@ -32,6 +35,8 @@ import {
   chevronForwardOutline,
   personOutline,
   lockClosedOutline,
+  starOutline,
+  informationCircleOutline,
 } from 'ionicons/icons';
 import { SeasonService } from '@core/services/season.service';
 import {
@@ -179,6 +184,39 @@ interface GameWeek {
                       >You can't make more than 3 predictions for this game
                       week</span
                     >
+                  </div>
+                </div>
+
+                <!-- Joker section (indicator, toggle, warning, disabled note) -->
+                <div class="joker-section">
+                  <div class="joker-indicator" *ngIf="!isLocked">
+                    <ion-icon name="star-outline" color="warning"></ion-icon>
+                    <span>{{ jokersRemaining }}/2 jokers remaining</span>
+                  </div>
+
+                  <div class="joker-toggle-row" *ngIf="canUseJoker()">
+                    <ion-label>Play Joker this gameweek</ion-label>
+                    <ion-toggle
+                      [(ngModel)]="jokerUsedThisGameweek"
+                      class="joker-toggle"
+                      color="warning"
+                    ></ion-toggle>
+                  </div>
+
+                  <div class="joker-warning" *ngIf="jokerDeadlineWarning">
+                    <ion-icon
+                      name="alert-circle-outline"
+                      color="warning"
+                    ></ion-icon>
+                    <span>{{ jokerDeadlineWarning }}</span>
+                  </div>
+
+                  <div
+                    class="joker-disabled-note"
+                    *ngIf="currentGameweek.isSpecial && !isLocked"
+                  >
+                    <ion-icon name="information-circle-outline"></ion-icon>
+                    <span>Jokers cannot be played on special rounds</span>
                   </div>
                 </div>
 
@@ -635,6 +673,59 @@ interface GameWeek {
         flex-shrink: 0;
       }
 
+      .joker-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .joker-indicator,
+      .joker-warning,
+      .joker-disabled-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--ion-color-medium);
+
+        ion-icon {
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+      }
+
+      .joker-indicator {
+        color: var(--ion-color-warning-shade);
+        font-weight: 500;
+      }
+
+      .joker-warning {
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: rgba(var(--ion-color-warning-rgb), 0.1);
+        border: 1px solid rgba(var(--ion-color-warning-rgb), 0.25);
+        color: var(--ion-color-warning-shade);
+        font-size: 13px;
+      }
+
+      .joker-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+
+        ion-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--ion-color-dark);
+        }
+      }
+
+      .joker-disabled-note {
+        font-style: italic;
+      }
+
       @keyframes slideDown {
         from {
           transform: translateY(-100%);
@@ -663,6 +754,8 @@ interface GameWeek {
     IonBadge,
     IonButtons,
     IonText,
+    IonToggle,
+    IonLabel,
     NgFor,
     NgIf,
     DatePipe,
@@ -709,6 +802,54 @@ export class MatchesPage implements OnInit {
    */
   currentGameweekId: string = '';
 
+  // -------------------------------------------------------------------------
+  // Joker state (Task 3.4.2)
+  //
+  // Jokers are player-global (2 per season, Decision 1) but the page caches
+  // just enough of the server state to drive the toggle + the deadline
+  // warning banner. Template wiring and submit integration land in later
+  // sub-tasks — fields here are intentionally free of UI coupling.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Toggle state for "use my joker on this gameweek". Hydrated from saved
+   * predictions on load/navigation: if any row for the current GW already
+   * has `joker_used=true`, this flips to `true` so the UI reflects the
+   * saved choice. Reset to `false` whenever we leave a gameweek.
+   */
+  jokerUsedThisGameweek: boolean = false;
+
+  /**
+   * Derived from `getJokerUsage().usedCount`: `2 - usedCount`, clamped to
+   * [0, 2]. Updated once on init (jokers are season-scoped, not per-GW).
+   */
+  jokersRemaining: number = 2;
+
+  /**
+   * Non-null when the current gameweek is within 2 GWs of an auto-apply
+   * deadline AND the corresponding joker is still unused. Populated by
+   * `recomputeJokerWarning()` on init and after every navigation.
+   */
+  jokerDeadlineWarning: string | null = null;
+
+  /** Cached joker usage count for submit-time decisions (3.4.4). */
+  private jokerUsageUsedCount: number = 0;
+
+  /** Cached "last regular GW before Boxing Day" (auto-apply deadline). */
+  private beforeBoxingDay: number | null = null;
+
+  /** Cached "last regular GW before Final Day" (auto-apply deadline). */
+  private beforeFinalDay: number | null = null;
+
+  /**
+   * True when the currently-loaded gameweek already has a saved prediction
+   * row with `joker_used=true` — i.e. the user has already played their
+   * joker on this GW. Used to skip the confirmation dialog on a resubmit
+   * (the choice is already locked per Decision 2). Reset on every
+   * navigation / init and refreshed during hydration.
+   */
+  private jokerAlreadyLockedForGameweek: boolean = false;
+
   /**
    * Cache of all gameweek rows fetched once from Supabase, used by
    * `navigateGameweek` to look up the `id`, `deadline` and `is_special`
@@ -726,6 +867,7 @@ export class MatchesPage implements OnInit {
     private seasonService: SeasonService,
     private supabaseDataService: SupabaseDataService,
     private toastController: ToastController,
+    private alertController: AlertController,
   ) {
     addIcons({
       timeOutline,
@@ -736,6 +878,8 @@ export class MatchesPage implements OnInit {
       chevronForwardOutline,
       personOutline,
       lockClosedOutline,
+      starOutline,
+      informationCircleOutline,
     });
   }
 
@@ -745,6 +889,10 @@ export class MatchesPage implements OnInit {
     this.totalGameweeks = this.seasonService.getTotalGameweeks();
     const gameweekNumber = this.seasonService.getCurrentGameweek();
 
+    // Populate season-level joker context BEFORE gameweek meta so the
+    // deadline warning can be computed synchronously from cached values.
+    await this.loadJokerContext();
+
     // Populate deadline + isSpecial for the SAME gameweek whose matches we're
     // about to load, so the countdown + lock state can never disagree with
     // the fixtures on screen. Uses the cached allGameweeks lookup shared
@@ -753,6 +901,88 @@ export class MatchesPage implements OnInit {
 
     await this.loadMatchesForGameweek(gameweekNumber);
     await this.hydrateSavedPredictions(gameweekNumber);
+  }
+
+  /**
+   * Fetch the season-scoped joker context (current usage + auto-apply
+   * deadlines) and cache it on the component. Called once per load/init.
+   * Uses `typeof === 'function'` guards so existing specs that do not mock
+   * these helpers keep working — in a real Supabase environment both
+   * methods are always present. Errors are swallowed with safe defaults
+   * so a joker fetch failure never blocks the matches page.
+   */
+  private async loadJokerContext(): Promise<void> {
+    try {
+      const service = this.supabaseDataService as any;
+      const [usage, deadlines] = await Promise.all([
+        typeof service.getJokerUsage === 'function'
+          ? service.getJokerUsage()
+          : Promise.resolve({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+        typeof service.getLastRegularGameweekBeforeSpecial === 'function'
+          ? service.getLastRegularGameweekBeforeSpecial()
+          : Promise.resolve({ beforeBoxingDay: null, beforeFinalDay: null }),
+      ]);
+
+      const usedCount = usage?.usedCount ?? 0;
+      this.jokerUsageUsedCount = usedCount;
+      this.jokersRemaining = Math.max(0, Math.min(2, 2 - usedCount));
+      this.beforeBoxingDay = deadlines?.beforeBoxingDay ?? null;
+      this.beforeFinalDay = deadlines?.beforeFinalDay ?? null;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Failed to load joker context: ${message}`);
+      this.jokerUsageUsedCount = 0;
+      this.jokersRemaining = 2;
+      this.beforeBoxingDay = null;
+      this.beforeFinalDay = null;
+    }
+  }
+
+  /**
+   * Whether the joker toggle should be actionable for the current gameweek.
+   * False on special rounds (jokers can't be spent there), when the
+   * deadline has passed, when predictions are already complete, or when
+   * the player has no jokers left. Template wiring lands in 3.4.3.
+   */
+  canUseJoker(): boolean {
+    if (this.currentGameweek.isSpecial) return false;
+    if (this.jokersRemaining <= 0) return false;
+    if (this.isLocked) return false;
+    if (this.predictionsCompleted) return false;
+    return true;
+  }
+
+  /**
+   * Recompute `jokerDeadlineWarning` for the current gameweek. Fires the
+   * 1st-joker warning when we're within 2 GWs of `beforeBoxingDay` and the
+   * player hasn't yet spent any joker; fires the 2nd-joker warning when
+   * within 2 GWs of `beforeFinalDay` and exactly one joker has been spent.
+   * Otherwise clears the warning.
+   */
+  private recomputeJokerWarning(): void {
+    const current = this.currentGameweek.number;
+
+    if (
+      this.jokerUsageUsedCount === 0 &&
+      this.beforeBoxingDay !== null &&
+      this.beforeBoxingDay - current >= 0 &&
+      this.beforeBoxingDay - current <= 2
+    ) {
+      this.jokerDeadlineWarning = `Play your 1st joker by Gameweek ${this.beforeBoxingDay} or it will be auto-applied`;
+      return;
+    }
+
+    if (
+      this.jokerUsageUsedCount === 1 &&
+      this.beforeFinalDay !== null &&
+      this.beforeFinalDay - current >= 0 &&
+      this.beforeFinalDay - current <= 2
+    ) {
+      this.jokerDeadlineWarning = `Play your 2nd joker by Gameweek ${this.beforeFinalDay} or it will be auto-applied`;
+      return;
+    }
+
+    this.jokerDeadlineWarning = null;
   }
 
   /**
@@ -768,6 +998,11 @@ export class MatchesPage implements OnInit {
   private async loadMatchesForGameweek(gameweek: number): Promise<void> {
     this.isLoading = true;
     this.currentGameweek = { ...this.currentGameweek, number: gameweek };
+    // Clear the joker toggle before hydration — if the new GW has a saved
+    // joker it will be re-applied by `hydrateSavedPredictions`, otherwise
+    // the toggle stays off instead of leaking from the previous GW.
+    this.jokerUsedThisGameweek = false;
+    this.jokerAlreadyLockedForGameweek = false;
     try {
       const rows = await this.supabaseDataService.getMatches(gameweek);
       this.matches = rows.map((row) => this.toViewModel(row));
@@ -823,12 +1058,19 @@ export class MatchesPage implements OnInit {
     try {
       const rows = await this.supabaseDataService.getPredictions(gameweekNumber);
       const byId = new Map(this.matches.map((m) => [m.id, m]));
+      let anyJoker = false;
       for (const row of rows) {
+        if ((row as any).joker_used === true) anyJoker = true;
         const match = byId.get(row.match_id);
         if (!match) continue;
         match.prediction.homeScore = row.home_score;
         match.prediction.awayScore = row.away_score;
       }
+      this.jokerUsedThisGameweek = anyJoker;
+      // If the saved predictions already have joker=true, the choice is
+      // locked for this GW (Decision 2: no reverse). Skip the confirm
+      // dialog on a resubmit.
+      this.jokerAlreadyLockedForGameweek = anyJoker;
       this.updatePredictionCount();
       this.predictionsCompleted =
         this.selectedPredictionCount >= this.getRequiredPredictionCount();
@@ -949,11 +1191,57 @@ export class MatchesPage implements OnInit {
       return;
     }
 
+    // Auto-assign jokers (Decision 2): forced on the last regular GW
+    // before a special round when the player still has unspent jokers.
+    // This path skips the confirmation dialog — it's not a choice.
+    const wasAutoAssigned = this.applyJokerAutoAssign();
+
+    // Confirmation dialog: user has opted in via the toggle, this isn't
+    // an auto-assign, and we haven't already locked a joker for this GW
+    // on a previous submit.
+    if (
+      this.jokerUsedThisGameweek &&
+      !wasAutoAssigned &&
+      !this.jokerAlreadyLockedForGameweek
+    ) {
+      const confirmed = await this.confirmJokerUse();
+      if (!confirmed) {
+        return; // User cancelled — leave all state intact.
+      }
+    }
+
     const rows = this.buildPredictionRows();
 
     this.isSubmitting = true;
     try {
       await this.supabaseDataService.submitPredictions(rows);
+
+      // Mark the joker as used AFTER the prediction write succeeds — if
+      // the joker write fails we still want the predictions saved.
+      if (this.jokerUsedThisGameweek) {
+        // Only advance local counters on a FRESH joker spend. On resubmit
+        // of an already-marked gameweek, markJokerUsed no-ops at the DB
+        // layer (idempotent), so a local increment would drift the UI
+        // counter and strip the player of jokers they still hold.
+        const isFreshJokerSpend = !this.jokerAlreadyLockedForGameweek;
+        try {
+          await this.supabaseDataService.markJokerUsed(
+            this.currentGameweek.number,
+          );
+          if (isFreshJokerSpend) {
+            this.jokerUsageUsedCount += 1;
+            this.jokersRemaining = Math.max(0, 2 - this.jokerUsageUsedCount);
+            this.jokerAlreadyLockedForGameweek = true;
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          console.error(`Failed to mark joker as used: ${message}`);
+          await this.showErrorToast(
+            'Predictions saved but joker tracking failed. Contact support.',
+          );
+        }
+      }
+
       this.resetPredictions();
       this.predictionsCompleted = true;
       this.showSuccessToast = true;
@@ -967,12 +1255,54 @@ export class MatchesPage implements OnInit {
   }
 
   /**
+   * If the current gameweek is the last regular GW before Boxing Day /
+   * Final Day AND the player still has the corresponding joker unspent,
+   * force the joker flag ON and return `true`. Otherwise leave state
+   * unchanged and return `false`. The caller uses the return value to
+   * decide whether to skip the confirmation dialog.
+   */
+  private applyJokerAutoAssign(): boolean {
+    const current = this.currentGameweek.number;
+    if (current === this.beforeBoxingDay && this.jokerUsageUsedCount === 0) {
+      this.jokerUsedThisGameweek = true;
+      return true;
+    }
+    if (current === this.beforeFinalDay && this.jokerUsageUsedCount === 1) {
+      this.jokerUsedThisGameweek = true;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Show the "Play your joker?" confirmation dialog and resolve to true
+   * when the user confirms, false otherwise (Cancel or backdrop dismiss).
+   * Extracted so `onSubmit` stays focused on the submit flow.
+   */
+  private async confirmJokerUse(): Promise<boolean> {
+    const alert = await this.alertController.create({
+      header: 'Play Your Joker?',
+      message:
+        'Are you sure you want to play your joker this gameweek? This will double your points for this gameweek but cannot be reversed.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Play Joker', role: 'confirm' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    return role === 'confirm';
+  }
+
+  /**
    * Build the payload sent to `SupabaseDataService.submitPredictions`.
    * Filters out any match where either score is null so partial
-   * predictions are never persisted. `joker_used` is always false here;
-   * Task 3.4 will wire the real joker flag.
+   * predictions are never persisted. Every row for the current gameweek
+   * carries the same `joker_used` flag (Decision: "flag every row") so
+   * downstream scoring can identify joker-boosted gameweeks from any row.
    */
   private buildPredictionRows() {
+    const jokerUsed = this.jokerUsedThisGameweek;
     return this.matches
       .filter(
         (match) =>
@@ -985,7 +1315,7 @@ export class MatchesPage implements OnInit {
         away_score: match.prediction.awayScore!,
         gameweek_number: this.currentGameweek.number,
         gameweek_id: this.currentGameweekId,
-        joker_used: false,
+        joker_used: jokerUsed,
       }));
   }
 
@@ -1028,6 +1358,10 @@ export class MatchesPage implements OnInit {
    * deadline and isSpecial=false so the page stays usable.
    */
   private async applyGameweekMeta(target: number): Promise<void> {
+    // Ensure `currentGameweek.number` reflects the target BEFORE
+    // `setGameweekMeta` runs `recomputeJokerWarning`, otherwise the warning
+    // is computed against a stale number (e.g. on init the default is 1).
+    this.currentGameweek = { ...this.currentGameweek, number: target };
     try {
       if (this.allGameweeks === null) {
         this.allGameweeks = await this.supabaseDataService.getGameweeks();
@@ -1063,6 +1397,10 @@ export class MatchesPage implements OnInit {
     this.isLocked = resolvedDeadline
       ? new Date(resolvedDeadline).getTime() <= Date.now()
       : false;
+    // Joker deadline warning depends on the gameweek number + specials map,
+    // both of which are finalised above. Keep this call at the end so every
+    // meta mutation yields a fresh warning (init + nav share this path).
+    this.recomputeJokerWarning();
   }
 
   /**

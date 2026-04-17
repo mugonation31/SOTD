@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { SeasonService } from './season.service';
 
 export interface MatchResult {
   homeScore: number;
@@ -16,8 +15,6 @@ export interface PredictionResult {
   providedIn: 'root',
 })
 export class ScoringService {
-  constructor(private seasonService: SeasonService) {}
-
   calculatePoints(predictions: PredictionResult[]): number {
     let totalPoints = 0;
     let correctScores = 0;
@@ -44,12 +41,18 @@ export class ScoringService {
       totalPoints += 10;
     }
 
-    // Double points if joker used
-    if (predictions[0]?.isJokerRound) {
-      totalPoints *= 2;
-    }
+    // Double the full round total if this round is a joker round
+    const isJokerRound = predictions[0]?.isJokerRound ?? false;
+    return this.applyJokerDoubling(totalPoints, isJokerRound);
+  }
 
-    return totalPoints;
+  /**
+   * Doubles the given points when the joker has been used on this round.
+   * Kept as a thin, pure helper so callers (e.g. server-side scoring or UI
+   * previews) can reuse the same rule without going through calculatePoints.
+   */
+  applyJokerDoubling(basePoints: number, jokerUsed: boolean): number {
+    return jokerUsed ? basePoints * 2 : basePoints;
   }
 
   private calculateBasePoints(
@@ -91,31 +94,5 @@ export class ScoringService {
       prediction.homeScore === actual.homeScore &&
       prediction.awayScore === actual.awayScore
     );
-  }
-
-  isBoxingDay(date: Date): boolean {
-    return date.getMonth() === 11 && date.getDate() === 26;
-  }
-
-  async isFinalDay(_date: Date): Promise<boolean> {
-    // TODO (post-2.2.1): derive final-day from the last gameweek's deadline
-    // in Supabase. SeasonService no longer holds hardcoded season end dates.
-    return false;
-  }
-
-  async shouldForceJokerUse(date: Date, jokersUsed: number): Promise<boolean> {
-    if (jokersUsed >= 2) return false;
-
-    const isBeforeBoxingDay = date < new Date('2023-12-26');
-    const isAfterBoxingDay = date > new Date('2023-12-26');
-    const isFinalRound = await this.isFinalDay(date);
-
-    // Force first joker before Boxing Day
-    if (jokersUsed === 0 && !isBeforeBoxingDay) return true;
-
-    // Force second joker before final round
-    if (jokersUsed === 1 && isAfterBoxingDay && !isFinalRound) return true;
-
-    return false;
   }
 }

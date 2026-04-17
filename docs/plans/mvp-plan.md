@@ -444,6 +444,84 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - If 2nd joker not used by the last regular gameweek before Final Day, auto-assigned to THAT gameweek's predictions on submit (not to Final Day itself)
     - `joker_used` flag set on prediction rows, `jokers_used` incremented on `group_members`
 
+  - [ ] **3.4.1 Joker state methods on SupabaseDataService** (Size: S)
+    - **Description**: Add the service-layer methods the matches page needs to reason about joker availability. Per Decision 1, jokers are a PER-PLAYER seasonal ceiling of 2, even though `group_members.jokers_used` is per-group in the schema — we treat the max across the user's group_members rows as canonical. Also add a helper that finds the "last regular gameweek before the next special" so the UI can render the spend-by warning and the auto-assign path can detect the trigger gameweek.
+    - **Depends on**: 3.2.1, 2.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (add `getJokerUsage(userId)`, `getLastRegularGameweekBeforeSpecial(specialType: 'boxing_day' | 'final_day')`, `getNextSpecialGameweek()`)
+    - **Acceptance criteria**:
+      - `getJokerUsage(userId)` queries ALL `group_members` rows for the user and returns the MAX `jokers_used` as the canonical seasonal count (0, 1, or 2); when the user has no group memberships it returns 0
+      - `getLastRegularGameweekBeforeSpecial(specialType)` resolves to the highest-numbered gameweek where `is_special=false` AND `number < specialGameweek.number` for the matching `special_type`
+      - `getNextSpecialGameweek()` returns the nearest future `is_special=true` gameweek for warning-banner logic
+      - All methods return typed Promises/Observables and surface Supabase errors cleanly
+      - No direct Supabase client usage leaks into page components
+
+  - [ ] **3.4.2 Joker toggle UI on matches page** (Size: S)
+    - **Description**: Add a "Use Joker" toggle to the prediction form with a `X/2 jokers remaining` indicator. Hide/disable the toggle when `currentGameweek.isSpecial` is true with a tooltip: "Jokers cannot be played on special rounds". Disable the toggle when `jokersUsed >= 2`. Hydrate the toggle's initial state from any existing prediction row for the gameweek (per Decision 2, once submitted with joker the toggle is locked on for that gameweek).
+    - **Depends on**: 3.4.1, 3.2.3
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (add `jokersUsed`, `jokerUsedThisGameweek`, `jokerAlreadySubmitted` state; load in `ionViewWillEnter`; add `toggleJoker()` handler; inline template for toggle + remaining indicator + tooltip on special rounds)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only — never modify the existing suite)
+    - **Acceptance criteria**:
+      - Toggle visible on regular gameweeks; disabled + tooltip shown on special gameweeks
+      - `X/2 jokers remaining` indicator reflects `getJokerUsage` output
+      - Toggle disabled when `jokersUsed >= 2` with tooltip "No jokers remaining"
+      - When the player has already submitted this gameweek with `joker_used=true`, toggle renders on and is disabled (locked per Decision 2)
+      - Navigating between gameweeks re-evaluates all three states (special flag, remaining count, already-submitted lock)
+      - All existing matches page tests still pass
+
+  - [ ] **3.4.3 Spend-by warning banner** (Size: S)
+    - **Description**: Show a warning banner on the last 2-3 regular gameweeks before each special round if the corresponding joker is still unspent. Copy: "Play your 1st joker by Gameweek N or it will be auto-applied" (before Boxing Day), and the analogous message before Final Day. Use `getLastRegularGameweekBeforeSpecial` to resolve N and `getNextSpecialGameweek` to pick which joker (1st vs 2nd) the banner references.
+    - **Depends on**: 3.4.1, 3.4.2
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (compute `jokerWarning: { message: string; targetGameweek: number } | null` on gameweek load; render banner in inline template above the joker toggle)
+    - **Acceptance criteria**:
+      - Banner appears on the 3 gameweeks immediately preceding each special round when the corresponding joker is unspent
+      - Banner copy references the correct joker number ("1st" before Boxing Day, "2nd" before Final Day) and the correct target gameweek number
+      - Banner hidden when the relevant joker has already been used this season
+      - Banner hidden on special gameweeks themselves (the toggle tooltip covers that case)
+      - Banner hidden on gameweeks more than 3 away from the next special round
+
+  - [ ] **3.4.4 Submit flow: confirmation dialog, joker persistence, per-player sync** (Size: M)
+    - **Description**: Wire the joker into the prediction submission path. Per Decision 2, when `jokerUsedThisGameweek === true` AND the player has NOT already submitted this gameweek with joker, show an Ionic `AlertController` dialog BEFORE the Supabase call with title "Play Your Joker?", message "Are you sure you want to play your joker this gameweek? This doubles your points but cannot be reversed.", and buttons "Cancel" (dismiss, abort submit) and "Play Joker" (proceed). The auto-assign path (3.4.5) skips this dialog. On commit: set `joker_used=true` on every prediction row in the batch; then run the per-player sync from Decision 1 — UPDATE all of the user's `group_members` rows in a single query (`.eq('user_id', userId)`) to increment `jokers_used`. Recommend adding a Supabase RPC `mark_joker_used(gameweek_number int)` for atomicity but client-side is acceptable for MVP.
+    - **Depends on**: 3.2.2, 3.4.2
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (`onSubmit` gate: if `jokerUsedThisGameweek && !jokerAlreadySubmitted && !isAutoAssign` open `AlertController` dialog before calling `upsertPredictions`; on confirm proceed, on cancel abort without toast)
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (add `markJokerUsed(userId, gameweekNumber)` — single UPDATE on `group_members` filtered by `user_id` to increment `jokers_used` across ALL the user's rows; optional: scaffold `mark_joker_used` RPC)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only: dialog shown on first joker submit, dialog skipped when already submitted with joker, dialog skipped on auto-assign path, cancel aborts without upsert, confirm proceeds and triggers `markJokerUsed`)
+    - **Acceptance criteria**:
+      - Dialog only opens when `jokerUsedThisGameweek === true` AND `jokerAlreadySubmitted === false` AND the submit is not auto-assigned
+      - "Cancel" dismisses the dialog without invoking `upsertPredictions` or `markJokerUsed`; no success toast
+      - "Play Joker" proceeds to `upsertPredictions` with `joker_used=true` on every row in the batch, then calls `markJokerUsed`
+      - `markJokerUsed` UPDATEs every `group_members` row for the user (single query, `.eq('user_id', userId)`) — not just the active group — keeping per-player ceiling canonical
+      - After successful submit, re-hydrating the gameweek shows the toggle in locked-on state (Decision 2 one-way gate)
+      - `getJokerUsage` returns the incremented value on next call for this user across any group
+      - All existing matches page tests still pass
+
+  - [ ] **3.4.5 Auto-assign fallback on the last regular gameweek** (Size: S)
+    - **Description**: When the player submits predictions for the gameweek returned by `getLastRegularGameweekBeforeSpecial(specialType)` AND the corresponding joker is still unspent, force `joker_used=true` on the submitted rows and run `markJokerUsed`. This path MUST skip the 3.4.4 confirmation dialog (auto-assign is not a user-initiated joker play). Surface a non-blocking toast: "Joker auto-applied to Gameweek N".
+    - **Depends on**: 3.4.1, 3.4.4
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (in `onSubmit`, detect auto-assign condition before the dialog gate; if true, set `isAutoAssign=true`, force joker flag, skip dialog, show toast after successful upsert)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only: auto-assign fires on the correct gameweek, skips dialog, invokes `markJokerUsed`, surfaces toast; does NOT fire when joker already used; does NOT fire on earlier regular gameweeks)
+    - **Acceptance criteria**:
+      - Auto-assign only triggers on the specific gameweek returned by `getLastRegularGameweekBeforeSpecial` for the next unspent joker
+      - Auto-assign never triggers on special gameweeks themselves
+      - Auto-assign never triggers when the relevant joker has already been used this season
+      - Confirmation dialog from 3.4.4 is NOT shown on the auto-assign path
+      - `joker_used=true` persisted on every prediction row and `markJokerUsed` invoked
+      - Toast copy: "Joker auto-applied to Gameweek N"
+      - All existing matches page tests still pass
+
+  - **Decisions**:
+    1. **Joker scope is PER PLAYER, not per group.** Each player gets 2 jokers per season total, regardless of how many groups they belong to. `group_members.jokers_used` is per-group in the schema, but the player-level ceiling is canonical and we sync across ALL the user's `group_members` rows. `getJokerUsage()` returns the MAX across rows (should be equal when sync is healthy); `markJokerUsed()` UPDATEs every row for the user in a single `.eq('user_id', userId)` query. A Supabase RPC `mark_joker_used(gameweek_number int)` is recommended for atomicity; client-side is acceptable for MVP.
+    2. **Joker is LOCKED after submission, with a friendly confirmation dialog before commit.** Once a player submits predictions with `joker_used=true`, they cannot reverse it for that gameweek (they CAN still change scores before deadline). Before `submitPredictions` fires, show an Ionic `AlertController` dialog: title "Play Your Joker?", message "Are you sure you want to play your joker this gameweek? This doubles your points but cannot be reversed.", buttons "Cancel" (abort) and "Play Joker" (proceed). Dialog only shows when `jokerUsedThisGameweek === true` AND the player has not already submitted with joker. The auto-assign path (3.4.5) skips the dialog — it is already forced.
+
+  - **Risks**:
+    - **Per-player sync drift**: If `markJokerUsed` fails mid-update across a user's `group_members` rows (partial write), `getJokerUsage` will still return the correct MAX, but the rows will be inconsistent. An RPC wraps the UPDATE in a transaction — preferred over client-side.
+    - **Race with new-group-join**: If a user joins a new group AFTER using a joker, the new `group_members` row starts with `jokers_used=0`. Either backfill on insert (trigger) or rely on the MAX-read in `getJokerUsage` to mask it — document which.
+    - **Special-gameweek data integrity**: Auto-assign depends on `is_special` and `special_type` being correctly populated by the 2.1 sync. If misconfigured, the 1st joker could be auto-applied to the wrong gameweek. 3.4.1 methods should surface empty results rather than defaulting silently.
+
 ---
 
 ### Phase 4: Scoring, Super Admin & Production
@@ -539,6 +617,16 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - `group-admin/pages/predictions/predictions.page.ts:197-200`: make ordering intent explicit — either `await` `loadGameweekPredictions` or `void`-prefix the fire-and-forget call. Currently relies on sync-in-disguise
     - `SupabaseDataService.getGameweekDeadline`: add a `console.warn` when a gameweek row has a null deadline (data-integrity smell in prod, currently silent)
     - Template consistency: `&mdash;` in `group-admin/pages/predictions/predictions.page.html:126` vs literal `—` in `group-standings.page.html:45` — pick one when the templates consolidate
+    - Joker auto-assign + `markJokerUsed` failure drift: if auto-assign forces `jokerUsedThisGameweek=true` and the prediction save succeeds but `markJokerUsed` throws, rows carry `joker_used=true` while the DB counter stays old — player effectively gets a 3rd joker. Add a compensating path (clear `joker_used` on saved rows OR reconcile on next page load) and expand the "Contact support" toast message so ops knows what the drift means
+    - Joker deadline warning copy: on the deadline GW itself (`current === beforeBoxingDay` / `beforeFinalDay`) the "Play your 1st joker by Gameweek N" copy reads oddly. Add a distinct message for the exact-deadline case: "This is the last gameweek to play your 1st joker — if you don't, it will be auto-applied"
+    - `SupabaseDataService.getJokerUsage` drift detection: when `first_joker_gameweek` or `second_joker_gameweek` values differ across a user's group_members rows, log `console.warn` rather than silently returning the first non-null (surfaces back-end sync bugs)
+    - Remove the `typeof service.getJokerUsage === 'function'` / `getLastRegularGameweekBeforeSpecial` guards in `matches.page.ts`'s `loadJokerContext` once legacy pre-3.4.2 test mocks are updated to stub these methods — same pattern as the earlier `getGroups` guard
+    - Widen the final-day auto-assign check: `applyJokerAutoAssign` uses `jokerUsageUsedCount === 1` exactly; switching to `< 2` avoids silently skipping auto-assign when usedCount has drifted to an unexpected value
+    - Add a doc-comment on `markJokerUsed` noting it relies on the `group_members` RLS update-self policy to confine the UPDATE to the caller's rows (the `.eq('user_id', userId)` alone does not enforce security — RLS does)
+    - Remove the `scoring.service.spec.ts` "removed legacy methods" block once the 3.4.5 refactor is settled — low-signal once the method names are forgotten
+    - Consider refactoring `matches.page.ts`'s `applyGameweekMeta` so that `setGameweekMeta` takes the gameweek number explicitly, keeping a single point where all fields are written together (current pre-assign of `currentGameweek.number = target` is a workaround)
+    - `markJokerUsed` authorization hardening: add an integration test that disables RLS and asserts the app-layer still refuses cross-user writes. Also add a doc-comment pinning the `mark_joker_used` RPC contract so future refactors don't silently break the authorization boundary (RLS + `auth.uid()` inside the SECURITY DEFINER function)
+    - Wrap `SupabaseDataService` error surfaces in a sanitized domain error (e.g. `JokerUsageError('Unable to load joker state')`) and log the raw Supabase message only — raw messages can leak schema hints (column names, constraint names, RLS denial reasons) to the browser console
 
 ---
 

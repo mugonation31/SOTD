@@ -69,6 +69,32 @@ export class MatchesPage extends BasePage {
   /** Score number inputs across all match cards (home + away). */
   readonly scoreInputs: Locator;
 
+  /**
+   * Task 3.4 — "X/2 jokers remaining" indicator inside the deadline card.
+   * Rendered only when `!isLocked` (template guard in matches.page.ts).
+   */
+  readonly jokerIndicator: Locator;
+
+  /**
+   * Task 3.4 — row containing the "Play Joker this gameweek" label and
+   * ion-toggle. Rendered only when `canUseJoker()` returns true (not locked,
+   * not already used this GW, jokers remaining > 0, not a special round).
+   */
+  readonly jokerToggleRow: Locator;
+
+  /**
+   * Task 3.4 — deadline warning banner shown when the gameweek is close to
+   * a Boxing Day / Final Day joker deadline AND the corresponding joker is
+   * still unused. Conditional on `jokerDeadlineWarning` being non-null.
+   */
+  readonly jokerWarning: Locator;
+
+  /**
+   * Task 3.4 — "Jokers cannot be played on special rounds" note. Rendered
+   * only when the current gameweek is marked `isSpecial` AND `!isLocked`.
+   */
+  readonly jokerDisabledNote: Locator;
+
   constructor(page: Page) {
     super(page);
     this.gameweekHeading = page.locator('.gameweek-title h2');
@@ -86,6 +112,10 @@ export class MatchesPage extends BasePage {
     this.lockedBanner = page.locator('.locked-banner');
     this.resetButton = page.locator('.reset-button');
     this.scoreInputs = page.locator('.match-card .score-input');
+    this.jokerIndicator = page.locator('.joker-indicator');
+    this.jokerToggleRow = page.locator('.joker-toggle-row');
+    this.jokerWarning = page.locator('.joker-warning');
+    this.jokerDisabledNote = page.locator('.joker-disabled-note');
   }
 
   async navigate(): Promise<void> {
@@ -173,5 +203,34 @@ export class MatchesPage extends BasePage {
     for (let i = 0; i < inputCount; i++) {
       await expect(this.scoreInputs.nth(i)).toBeDisabled();
     }
+  }
+
+  /**
+   * Task 3.4 — returns the count of rendered joker-section elements across
+   * the four selectors. Used by conditional smoke tests to branch between
+   * "something rendered, assert it" and "nothing rendered in this GW state,
+   * skip" without hard-coding specific template visibility rules.
+   */
+  async getJokerElementCount(): Promise<number> {
+    const [indicator, toggleRow, warning, disabledNote] = await Promise.all([
+      this.jokerIndicator.count(),
+      this.jokerToggleRow.count(),
+      this.jokerWarning.count(),
+      this.jokerDisabledNote.count(),
+    ]);
+    return indicator + toggleRow + warning + disabledNote;
+  }
+
+  /**
+   * Task 3.4 — when the joker indicator is rendered, its text must match
+   * the canonical `X/2 jokers remaining` shape where X is a single digit
+   * (season-scoped: only 0, 1, or 2 are ever valid). Deadline-agnostic.
+   */
+  async assertJokerIndicatorTextShape(): Promise<void> {
+    await expect(this.jokerIndicator).toBeVisible();
+    // Element contains an ion-icon (no text) and a span with the copy, so
+    // normalizing whitespace and asserting the exact pattern is safe.
+    const raw = (await this.jokerIndicator.innerText()).trim();
+    expect(raw).toMatch(/^\d\/2 jokers remaining$/);
   }
 }

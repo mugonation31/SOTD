@@ -361,6 +361,133 @@ export class SupabaseDataService {
   }
 
   // -----------------------------------------------------------------------
+  // Joker state
+  // -----------------------------------------------------------------------
+
+  /**
+   * Returns the current user's season-wide joker usage.
+   *
+   * Jokers are player-global (2 per season) but the underlying columns live
+   * on `group_members` (one row per membership). We read all rows for the
+   * user and take the MAX — this is defensive against sync drift. In a
+   * healthy system every row has identical values.
+   *
+   * When the user has no memberships, returns zero/null defaults rather
+   * than throwing.
+   */
+  async getJokerUsage(): Promise<{
+    usedCount: number;
+    firstJokerGameweek: number | null;
+    secondJokerGameweek: number | null;
+  }> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.client
+      .from('group_members')
+      .select('jokers_used, first_joker_gameweek, second_joker_gameweek')
+      .eq('user_id', userId);
+
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      return { usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null };
+    }
+
+    let usedCount = 0;
+    let firstJokerGameweek: number | null = null;
+    let secondJokerGameweek: number | null = null;
+
+    for (const row of data as Array<{
+      jokers_used: number | null;
+      first_joker_gameweek: number | null;
+      second_joker_gameweek: number | null;
+    }>) {
+      if ((row.jokers_used ?? 0) > usedCount) usedCount = row.jokers_used ?? 0;
+      if (firstJokerGameweek === null && row.first_joker_gameweek !== null) {
+        firstJokerGameweek = row.first_joker_gameweek;
+      }
+      if (secondJokerGameweek === null && row.second_joker_gameweek !== null) {
+        secondJokerGameweek = row.second_joker_gameweek;
+      }
+    }
+
+    return { usedCount, firstJokerGameweek, secondJokerGameweek };
+  }
+
+  /**
+   * For each known special gameweek type (`boxing_day`, `final_day`),
+   * returns the highest-numbered regular gameweek strictly preceding it.
+   *
+   * Used by the auto-joker flow: when a player has unspent jokers heading
+   * into a special GW, the joker is auto-assigned to the immediately
+   * preceding regular gameweek.
+   *
+   * Returns null for a slot when either the special GW is absent or no
+   * regular GW precedes it (e.g. season opens on Boxing Day).
+   */
+  async getLastRegularGameweekBeforeSpecial(): Promise<{
+    beforeBoxingDay: number | null;
+    beforeFinalDay: number | null;
+  }> {
+    const { data, error } = await this.client
+      .from('gameweeks')
+      .select('number, is_special, special_type')
+      .order('number', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    const rows = (data || []) as Array<{
+      number: number;
+      is_special: boolean;
+      special_type: string | null;
+    }>;
+
+    const findBefore = (type: string): number | null => {
+      const special = rows.find(r => r.is_special && r.special_type === type);
+      if (!special) return null;
+      let last: number | null = null;
+      for (const r of rows) {
+        if (!r.is_special && r.number < special.number) {
+          if (last === null || r.number > last) last = r.number;
+        }
+      }
+      return last;
+    };
+
+    return {
+      beforeBoxingDay: findBefore('boxing_day'),
+      beforeFinalDay: findBefore('final_day'),
+    };
+  }
+
+  /**
+   * Records that the current user has played a joker on `gameweekNumber`.
+   *
+   * Delegates to the `mark_joker_used(p_gameweek_number)` Postgres RPC
+   * (migration 007) which performs the read-modify-write atomically under
+   * a row-level lock. This closes a race where two concurrent submits on
+   * different gameweeks (e.g. two tabs) could both observe `jokers_used=0`
+   * and each claim a joker slot — last write wins, one joker lost.
+   *
+   * Jokers are season-scoped and player-global (Decision 1): the RPC
+   * updates every `group_members` row for the caller's `auth.uid()` so the
+   * counter stays in sync across all their groups.
+   *
+   * The RPC is idempotent: calling it twice with the same gameweek is a
+   * no-op after the first call. `jokers_used >= 2` is also a defensive
+   * no-op (the UI prevents reaching it).
+   *
+   * Errors: rethrows any Supabase error as a plain Error so callers can
+   * log them and show a generic toast.
+   */
+  async markJokerUsed(gameweekNumber: number): Promise<void> {
+    const { error } = await this.client.rpc('mark_joker_used', {
+      p_gameweek_number: gameweekNumber,
+    });
+
+    if (error) throw new Error(error.message);
+  }
+
+  // -----------------------------------------------------------------------
   // Leaderboard
   // -----------------------------------------------------------------------
 

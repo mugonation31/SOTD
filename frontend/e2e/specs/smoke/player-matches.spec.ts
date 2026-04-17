@@ -141,3 +141,93 @@ test.describe('Player matches page — countdown + lock (Task 3.1 smoke)', () =>
     expect(jsErrors, `Uncaught JS exceptions: ${jsErrors.join(' | ')}`).toHaveLength(0);
   });
 });
+
+/**
+ * Smoke tests for Task 3.4 — joker UI embedded in the matches deadline card.
+ *
+ * These are STRUCTURAL tests only. They never:
+ *   - submit a prediction (would require auth + DB state)
+ *   - toggle the joker (would fire an AlertController dialog we don't mock)
+ *   - seed a specific GW state (special vs regular, unlocked vs locked)
+ *
+ * Visibility of each joker element is conditional on runtime flags
+ * (`!isLocked`, `canUseJoker()`, `jokerDeadlineWarning`, `isSpecial`), so
+ * we assert on WHAT IS RENDERED rather than what we expect in isolation.
+ *
+ * Login redirect is tolerated with the same graceful pattern used above.
+ */
+test.describe('Player matches page — joker UI (Task 3.4 smoke)', () => {
+  test('should render at least one joker-section element when matches page is reachable', async ({
+    page,
+  }) => {
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    if (await matchesPage.isRedirectedToLogin()) {
+      await expect(page).toHaveURL(/\/auth\/login/);
+      return;
+    }
+
+    await matchesPage.assertPageLoaded();
+
+    // Task 3.4 guarantees the joker-section is always rendered inside the
+    // deadline card; its children vary by GW state. At minimum, the
+    // indicator is present when `!isLocked`, so unlocked pages must show
+    // at least one element. For locked pages, the locked-state branch
+    // hides all joker children — this is the Task 3.1 lock contract, and
+    // is covered elsewhere. Conditionally assert on the unlocked branch.
+    if (await matchesPage.isInLockedState()) {
+      test.info().annotations.push({
+        type: 'skip-reason',
+        description: 'Page rendered locked; joker UI is hidden by Task 3.1 lock contract.',
+      });
+      return;
+    }
+
+    const count = await matchesPage.getJokerElementCount();
+    expect(
+      count,
+      'Expected at least one joker-section element (indicator/toggle/warning/disabled-note) on an unlocked matches page',
+    ).toBeGreaterThan(0);
+  });
+
+  test('should render the joker indicator with canonical "X/2 jokers remaining" copy', async ({
+    page,
+  }) => {
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    if (await matchesPage.isRedirectedToLogin()) {
+      await expect(page).toHaveURL(/\/auth\/login/);
+      return;
+    }
+
+    // The indicator is gated on `!isLocked`. Skip assertion on locked
+    // pages since the element is intentionally not in the DOM.
+    if ((await matchesPage.jokerIndicator.count()) === 0) {
+      test.info().annotations.push({
+        type: 'skip-reason',
+        description: 'joker-indicator not rendered (page is locked); pattern not asserted.',
+      });
+      return;
+    }
+
+    await matchesPage.assertJokerIndicatorTextShape();
+  });
+
+  test('should not log JS exceptions while the joker UI is mounted', async ({ page }) => {
+    const jsErrors: string[] = [];
+    page.on('pageerror', (err) => jsErrors.push(err.message));
+
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    // Let Supabase joker-context fetch + template bindings settle so any
+    // throw inside `loadJokerContext()` / `recomputeJokerWarning()` /
+    // `canUseJoker()` surfaces here, not in a later unrelated test.
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+
+    expect(jsErrors, `Uncaught JS exceptions: ${jsErrors.join(' | ')}`).toHaveLength(0);
+  });
+});

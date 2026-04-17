@@ -25,6 +25,7 @@ function createMockSupabaseClient() {
   const defaultBuilder = createMockQueryBuilder({ data: null, error: null });
   return {
     from: jest.fn().mockReturnValue(defaultBuilder),
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: { id: 'user-1' } },
@@ -541,6 +542,243 @@ describe('SupabaseDataService', () => {
       expect(builder.select).toHaveBeenCalledWith('deadline');
       expect(builder.eq).toHaveBeenCalledWith('number', 7);
       expect(builder.single).toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Joker usage
+  // -----------------------------------------------------------------------
+  describe('getJokerUsage', () => {
+    it('should return usedCount=0 and both nulls when user has no group_members rows', async () => {
+      const builder = createMockQueryBuilder({ data: [], error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getJokerUsage();
+
+      expect(mockClient.from).toHaveBeenCalledWith('group_members');
+      expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(result).toEqual({
+        usedCount: 0,
+        firstJokerGameweek: null,
+        secondJokerGameweek: null,
+      });
+    });
+
+    it('should return usedCount=0 when rows exist but jokers_used is 0 across them', async () => {
+      const builder = createMockQueryBuilder({
+        data: [
+          { jokers_used: 0, first_joker_gameweek: null, second_joker_gameweek: null },
+          { jokers_used: 0, first_joker_gameweek: null, second_joker_gameweek: null },
+        ],
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getJokerUsage();
+
+      expect(result).toEqual({
+        usedCount: 0,
+        firstJokerGameweek: null,
+        secondJokerGameweek: null,
+      });
+    });
+
+    it('should return usedCount=1 with firstJokerGameweek=18 when player has played 1 joker', async () => {
+      const builder = createMockQueryBuilder({
+        data: [
+          { jokers_used: 1, first_joker_gameweek: 18, second_joker_gameweek: null },
+          { jokers_used: 1, first_joker_gameweek: 18, second_joker_gameweek: null },
+        ],
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getJokerUsage();
+
+      expect(result).toEqual({
+        usedCount: 1,
+        firstJokerGameweek: 18,
+        secondJokerGameweek: null,
+      });
+    });
+
+    it('should return usedCount=2 with both gameweeks when both jokers played', async () => {
+      const builder = createMockQueryBuilder({
+        data: [
+          { jokers_used: 2, first_joker_gameweek: 18, second_joker_gameweek: 37 },
+          { jokers_used: 2, first_joker_gameweek: 18, second_joker_gameweek: 37 },
+        ],
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getJokerUsage();
+
+      expect(result).toEqual({
+        usedCount: 2,
+        firstJokerGameweek: 18,
+        secondJokerGameweek: 37,
+      });
+    });
+
+    it('should return MAX across rows when values differ (drift scenario)', async () => {
+      const builder = createMockQueryBuilder({
+        data: [
+          { jokers_used: 1, first_joker_gameweek: 18, second_joker_gameweek: null },
+          { jokers_used: 2, first_joker_gameweek: 18, second_joker_gameweek: 37 },
+          { jokers_used: 0, first_joker_gameweek: null, second_joker_gameweek: null },
+        ],
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getJokerUsage();
+
+      expect(result).toEqual({
+        usedCount: 2,
+        firstJokerGameweek: 18,
+        secondJokerGameweek: 37,
+      });
+    });
+
+    it('should throw Error with Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'permission denied for table group_members' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getJokerUsage()).rejects.toThrow(
+        'permission denied for table group_members'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Last regular gameweek before special
+  // -----------------------------------------------------------------------
+  describe('getLastRegularGameweekBeforeSpecial', () => {
+    it('should return beforeBoxingDay=18, beforeFinalDay=37 when GW 19 is boxing_day and GW 38 is final_day', async () => {
+      const rows: Array<{ number: number; is_special: boolean; special_type: string | null }> = [];
+      for (let n = 1; n <= 38; n++) {
+        if (n === 19) {
+          rows.push({ number: n, is_special: true, special_type: 'boxing_day' });
+        } else if (n === 38) {
+          rows.push({ number: n, is_special: true, special_type: 'final_day' });
+        } else {
+          rows.push({ number: n, is_special: false, special_type: null });
+        }
+      }
+      const builder = createMockQueryBuilder({ data: rows, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastRegularGameweekBeforeSpecial();
+
+      expect(mockClient.from).toHaveBeenCalledWith('gameweeks');
+      expect(builder.select).toHaveBeenCalledWith('number, is_special, special_type');
+      expect(builder.order).toHaveBeenCalledWith('number', { ascending: true });
+      expect(result).toEqual({ beforeBoxingDay: 18, beforeFinalDay: 37 });
+    });
+
+    it('should return beforeBoxingDay=null when Boxing Day is GW 1 (no prior regular)', async () => {
+      const rows = [
+        { number: 1, is_special: true, special_type: 'boxing_day' },
+        { number: 2, is_special: false, special_type: null },
+        { number: 3, is_special: false, special_type: null },
+        { number: 4, is_special: true, special_type: 'final_day' },
+      ];
+      const builder = createMockQueryBuilder({ data: rows, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastRegularGameweekBeforeSpecial();
+
+      expect(result).toEqual({ beforeBoxingDay: null, beforeFinalDay: 3 });
+    });
+
+    it('should return both null when no special gameweeks exist', async () => {
+      const rows = [
+        { number: 1, is_special: false, special_type: null },
+        { number: 2, is_special: false, special_type: null },
+        { number: 3, is_special: false, special_type: null },
+      ];
+      const builder = createMockQueryBuilder({ data: rows, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastRegularGameweekBeforeSpecial();
+
+      expect(result).toEqual({ beforeBoxingDay: null, beforeFinalDay: null });
+    });
+
+    it('should ignore other special_type values if present', async () => {
+      const rows = [
+        { number: 1, is_special: false, special_type: null },
+        { number: 2, is_special: true, special_type: 'mystery_cup' },
+        { number: 3, is_special: false, special_type: null },
+        { number: 4, is_special: true, special_type: 'boxing_day' },
+        { number: 5, is_special: false, special_type: null },
+        { number: 6, is_special: true, special_type: 'final_day' },
+      ];
+      const builder = createMockQueryBuilder({ data: rows, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastRegularGameweekBeforeSpecial();
+
+      expect(result).toEqual({ beforeBoxingDay: 3, beforeFinalDay: 5 });
+    });
+
+    it('should throw Error with Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'gameweeks table is unreachable' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getLastRegularGameweekBeforeSpecial()).rejects.toThrow(
+        'gameweeks table is unreachable'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // markJokerUsed (Task 3.4.4)
+  // -----------------------------------------------------------------------
+  describe('markJokerUsed', () => {
+    // The client now delegates to the atomic `mark_joker_used` Postgres RPC
+    // (migration 007). Branch logic (0→1, 1→2, idempotency, >=2 no-op) lives
+    // in the function body — tested by the migration itself, not here. These
+    // unit tests verify the RPC call shape and error surfacing only.
+
+    beforeEach(() => {
+      mockClient.rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    });
+
+    it('invokes the mark_joker_used RPC with the gameweek number as p_gameweek_number', async () => {
+      await service.markJokerUsed(18);
+
+      expect(mockClient.rpc).toHaveBeenCalledWith('mark_joker_used', {
+        p_gameweek_number: 18,
+      });
+    });
+
+    it('resolves silently on success (no return value)', async () => {
+      await expect(service.markJokerUsed(18)).resolves.toBeUndefined();
+    });
+
+    it('throws Error with Supabase error message when the RPC fails', async () => {
+      mockClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'permission denied for function mark_joker_used' },
+      });
+
+      await expect(service.markJokerUsed(10)).rejects.toThrow(
+        'permission denied for function mark_joker_used',
+      );
+    });
+
+    it('does not query group_members directly — authorization is enforced by the RPC under auth.uid()', async () => {
+      await service.markJokerUsed(18);
+
+      expect(mockClient.from).not.toHaveBeenCalledWith('group_members');
     });
   });
 
