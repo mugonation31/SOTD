@@ -28,6 +28,7 @@ import {
   IonIcon,
   IonBadge,
   IonAlert,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgIf, NgFor, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -47,9 +48,13 @@ import {
   chevronForwardOutline,
   personOutline,
   informationCircleOutline,
-  checkmarkCircleOutline
+  checkmarkCircleOutline,
+  lockClosedOutline,
 } from 'ionicons/icons';
 import { MockDataService } from '../../../../core/services/mock-data.service';
+import { GroupService } from '@core/services/group.service';
+import { SeasonService } from '@core/services/season.service';
+import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { Router } from '@angular/router';
 
 interface GameWeek {
@@ -162,11 +167,21 @@ export class PredictionsPage implements OnInit {
   historicalGameweeks: number[] = [];
   liveScoreUpdateInterval: any;
 
+  // Task 3.3.3 — visibility gating for "All Predictions" tab
+  predictionsLocked = false;
+  groupPredictions: any[] = [];
+  adminGroupId: string | null = null;
+  private allPredictionsLoaded = false;
+
   constructor(
     private mockDataService: MockDataService,
-    private router: Router
+    private router: Router,
+    private groupService: GroupService,
+    private seasonService: SeasonService,
+    private supabaseDataService: SupabaseDataService,
+    private toastController: ToastController,
   ) {
-    addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,});
+    addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,lockClosedOutline,});
     
     // Initialize current gameweek from MockDataService
     this.currentGameweek = this.mockDataService.getCurrentGameweek();
@@ -179,14 +194,104 @@ export class PredictionsPage implements OnInit {
     this.pastPredictions = [];
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.loadGameweekPredictions();
+    await this.resolveAdminGroupId();
   }
 
-  tabChanged() {
-    if (this.selectedTab === 'all') {
-      this.filterPredictions();
+  async tabChanged() {
+    if (this.selectedTab !== 'all') {
+      return;
     }
+
+    this.filterPredictions();
+
+    if (this.allPredictionsLoaded) {
+      return;
+    }
+
+    if (!this.adminGroupId) {
+      this.predictionsLocked = false;
+      this.groupPredictions = [];
+      return;
+    }
+
+    const gameweek = this.seasonService.getCurrentGameweek();
+    const loaded = await this.loadVisibilityAndPredictions(
+      this.adminGroupId,
+      gameweek,
+    );
+    // Only latch when we actually fetched post-deadline data. Locking
+    // is transient — if the deadline passes mid-session, the next tab
+    // activation should re-check and fetch.
+    this.allPredictionsLoaded = loaded;
+  }
+
+  private async resolveAdminGroupId(): Promise<void> {
+    try {
+      const adminGroups = await this.groupService.getAdminGroups();
+      this.adminGroupId = adminGroups && adminGroups.length > 0
+        ? adminGroups[0].id
+        : null;
+    } catch {
+      this.adminGroupId = null;
+    }
+  }
+
+  /**
+   * Decide whether group predictions are visible to this admin and, if so,
+   * load them. Mirrors the RLS rule: predictions for a gameweek are only
+   * visible once the deadline has passed. Admins follow the same rule.
+   */
+  private async loadVisibilityAndPredictions(
+    groupId: string,
+    gameweek: number,
+  ): Promise<boolean> {
+    let isPast = false;
+    try {
+      const result = await this.supabaseDataService.getGameweekDeadline(gameweek);
+      isPast = result.isPast;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to load gameweek deadline for gameweek ${gameweek}: ${message}`,
+      );
+      this.predictionsLocked = false;
+      this.groupPredictions = [];
+      return false;
+    }
+
+    this.predictionsLocked = !isPast;
+    if (!isPast) {
+      this.groupPredictions = [];
+      return false;
+    }
+
+    try {
+      this.groupPredictions = await this.supabaseDataService.getGroupPredictions(
+        groupId,
+        gameweek,
+      );
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to load group predictions for gameweek ${gameweek}: ${message}`,
+      );
+      this.groupPredictions = [];
+      await this.showErrorToast('Unable to load group predictions');
+      return false;
+    }
+  }
+
+  private async showErrorToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color: 'danger',
+      position: 'top',
+    });
+    await toast.present();
   }
 
   onScoreChange(match: Match) {

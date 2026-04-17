@@ -466,6 +466,84 @@ describe('SupabaseDataService', () => {
     });
   });
 
+  describe('getGameweekDeadline', () => {
+    // Fixed reference time: 2026-06-15T12:00:00Z
+    const NOW = new Date('2026-06-15T12:00:00Z').getTime();
+
+    beforeEach(() => {
+      jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should return deadline and isPast=true when deadline is in the past', async () => {
+      const pastDeadline = '2020-01-01T00:00:00Z';
+      const builder = createMockQueryBuilder({
+        data: { deadline: pastDeadline },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getGameweekDeadline(1);
+
+      expect(result).toEqual({ deadline: pastDeadline, isPast: true });
+    });
+
+    it('should return deadline and isPast=false when deadline is in the future', async () => {
+      const futureDeadline = '2099-12-31T23:59:59Z';
+      const builder = createMockQueryBuilder({
+        data: { deadline: futureDeadline },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getGameweekDeadline(2);
+
+      expect(result).toEqual({ deadline: futureDeadline, isPast: false });
+    });
+
+    it('should return empty deadline and isPast=false when deadline is null', async () => {
+      const builder = createMockQueryBuilder({
+        data: { deadline: null },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getGameweekDeadline(3);
+
+      expect(result).toEqual({ deadline: '', isPast: false });
+    });
+
+    it('should throw Error with the Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'gameweek not found' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getGameweekDeadline(99)).rejects.toThrow(
+        'gameweek not found'
+      );
+    });
+
+    it('should query gameweeks table, filter by number and use single()', async () => {
+      const builder = createMockQueryBuilder({
+        data: { deadline: '2026-06-20T10:00:00Z' },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await service.getGameweekDeadline(7);
+
+      expect(mockClient.from).toHaveBeenCalledWith('gameweeks');
+      expect(builder.select).toHaveBeenCalledWith('deadline');
+      expect(builder.eq).toHaveBeenCalledWith('number', 7);
+      expect(builder.single).toHaveBeenCalled();
+    });
+  });
+
   // -----------------------------------------------------------------------
   // Leaderboard
   // -----------------------------------------------------------------------

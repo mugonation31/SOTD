@@ -371,6 +371,55 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - User's own predictions are always visible to them
     - Group admin can see all predictions after deadline (not before)
 
+  - [ ] **3.3.1 Visibility helper on SupabaseDataService** (Size: S)
+    - **Description**: Add a small service-layer helper that returns, for a given gameweek number, whether its deadline has passed (source of truth: `gameweeks.deadline` vs `Date.now()`). Expose a companion method to fetch other members' predictions for a gameweek keyed off `group_id` -- RLS already hides pre-deadline rows for non-owners, but the helper lets the UI decide whether to even issue the query and what placeholder to render.
+    - **Depends on**: 3.2.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (add `isGameweekLocked(gameweekNumber)` and `getGroupPredictionsForGameweek(groupId, gameweekNumber)`)
+    - **Acceptance criteria**:
+      - `isGameweekLocked` resolves `true` once `gameweeks.deadline <= now()`, `false` otherwise, and surfaces fetch errors rather than silently returning `false`
+      - `getGroupPredictionsForGameweek` returns typed rows joined to `matches` + `profiles` (display name) for all members of the group in that gameweek
+      - RLS rejections bubble up so callers can show a toast instead of rendering empty tables
+      - No call paths here depend on `MockDataService`
+
+  - [ ] **3.3.2 Player group-standings page: gate other players' predictions** (Size: S)
+    - **Description**: On `group-standings.page.ts`, use `isGameweekLocked` to decide whether to render the other-players prediction columns/rows for the viewed gameweek. Before the deadline, render a placeholder row/section; after the deadline, call `getGroupPredictionsForGameweek` and render normally. The current user's own predictions must always display regardless of lock state.
+    - **Depends on**: 3.3.1
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/group-standings/group-standings.page.ts` (add `isLocked` flag per viewed gameweek, fetch predictions only when unlocked, always hydrate own predictions)
+      - Modify `frontend/src/app/platforms/player/pages/group-standings/group-standings.page.html` (placeholder block when locked, predictions table when unlocked)
+    - **Acceptance criteria**:
+      - Before deadline: placeholder "Predictions will be visible after the deadline" shown in place of other members' rows
+      - After deadline: all members' predictions render with display name, predicted score, and points
+      - Current user's own row is always visible (pre- and post-deadline)
+      - Switching between gameweeks re-evaluates lock state for each viewed gameweek
+      - No `MockDataService` imports remain in the visibility path on this page
+
+  - [ ] **3.3.3 Group-admin predictions page: gate visibility by deadline** (Size: S)
+    - **Description**: Apply the same deadline-gated rendering on the group-admin predictions page. Admins are not privileged viewers pre-deadline per the spec -- they see the same placeholder as players until the gameweek locks, then the full table once unlocked. Reuse `isGameweekLocked` and `getGroupPredictionsForGameweek`.
+    - **Depends on**: 3.3.1
+    - **Files**:
+      - Modify `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.ts` (gate fetch + render on lock state)
+    - **Acceptance criteria**:
+      - Before deadline: admin sees the placeholder, no rows for other members rendered
+      - After deadline: admin sees the full group predictions table for the gameweek
+      - Switching gameweeks re-evaluates lock state
+      - Admin's own predictions remain visible pre-deadline
+      - No `MockDataService` usage remains in the visibility path
+
+  - [ ] **3.3.4 Specs: visibility gating across lock state** (Size: S)
+    - **Description**: Add component specs covering the three lock-state scenarios on both visibility-gated pages: locked (placeholder only, no fetch of other members), unlocked (fetch + render), and transition mid-session (a spec simulating a gameweek whose deadline has passed since page load must re-query on next navigation). New tests only -- do not modify existing passing specs.
+    - **Depends on**: 3.3.2, 3.3.3
+    - **Files**:
+      - Add tests in `frontend/src/app/platforms/player/pages/group-standings/group-standings.page.spec.ts` (new `describe` block for visibility gating)
+      - Add tests in `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.spec.ts` (new `describe` block for visibility gating)
+    - **Acceptance criteria**:
+      - Locked-state spec: `getGroupPredictionsForGameweek` is not called; placeholder text is rendered
+      - Unlocked-state spec: `getGroupPredictionsForGameweek` is called once; rows render with mocked data
+      - Own-predictions spec: current user's row is visible in both locked and unlocked states
+      - Navigation spec: switching from an unlocked gameweek to a still-locked one hides other members' rows again
+      - All previously passing specs in both files still pass unchanged
+
 - [ ] **3.4 Joker System** (Size: M)
   - **Description**: Add joker selection to the prediction form. Track usage in `group_members.jokers_used`. Auto-assign jokers if not used by Boxing Day (1st) or Final Day (2nd). Block joker usage on special gameweeks.
   - **Depends on**: 3.2, 2.1 (needs special gameweek data)
@@ -477,6 +526,12 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Remove the dead `showNewPredictionsToast` field + toast markup in `predictions.page.ts`/`.html` (rewritten loadPredictions no longer sets the flag)
     - Remove the `typeof this.supabaseDataService.getGroups === 'function'` guard in `predictions.page.ts` once legacy pre-3.2.5 test mocks are updated to stub `getGroups` — currently a deliberate workaround per the never-modify-existing-tests rule
     - Tighten `toViewModel(row: any)` in `predictions.page.ts` with a typed `PredictionWithMatch` interface to prevent silent `undefined` flows into the template if a future schema change renames columns (security scanner LOW finding)
+    - Admin multi-group handling in `group-admin/pages/predictions/predictions.page.ts`: `resolveAdminGroupId` currently picks `adminGroups[0]` silently. Either respect a route/selector param or surface the single-group assumption on the admin dashboard
+    - Add a typed `GroupPrediction { username?: string; gameweek_number: number; home_score: number; away_score: number }` interface and replace `groupPredictions: any[]` on both `group-standings.page.ts` and `group-admin/pages/predictions/predictions.page.ts`
+    - Extract shared `PredictionVisibilityService.load(groupId, gameweek): Promise<{ locked: boolean; predictions: GroupPrediction[] }>` and collapse the duplicated `loadVisibilityAndPredictions` methods (MVP kept them duplicated intentionally)
+    - `group-admin/pages/predictions/predictions.page.ts:197-200`: make ordering intent explicit — either `await` `loadGameweekPredictions` or `void`-prefix the fire-and-forget call. Currently relies on sync-in-disguise
+    - `SupabaseDataService.getGameweekDeadline`: add a `console.warn` when a gameweek row has a null deadline (data-integrity smell in prod, currently silent)
+    - Template consistency: `&mdash;` in `group-admin/pages/predictions/predictions.page.html:126` vs literal `—` in `group-standings.page.html:45` — pick one when the templates consolidate
 
 ---
 

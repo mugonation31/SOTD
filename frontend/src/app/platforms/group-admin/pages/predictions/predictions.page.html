@@ -108,6 +108,26 @@
 
   <!-- All Predictions Tab - Keep existing -->
   <div *ngIf="selectedTab === 'all'" class="content-wrapper all-predictions">
+    <!-- Predictions locked placeholder (pre-deadline) -->
+    <ion-card class="predictions-locked-card" *ngIf="predictionsLocked">
+      <ion-card-content class="predictions-locked-content">
+        <ion-icon name="lock-closed-outline" class="lock-icon-large"></ion-icon>
+        <p class="predictions-locked-message">
+          Predictions will be visible after the deadline
+        </p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Group predictions list (post-deadline) -->
+    <ion-list *ngIf="!predictionsLocked && groupPredictions.length > 0" class="group-predictions-list">
+      <ion-item *ngFor="let pred of groupPredictions">
+        <ion-label>
+          <h3>{{ pred.username || 'Player' }}</h3>
+          <p>GW {{ pred.gameweek_number }} &mdash; {{ pred.home_score }} : {{ pred.away_score }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
     <!-- Gameweek Navigation -->
     <div class="gameweek-navigation">
       <ion-button

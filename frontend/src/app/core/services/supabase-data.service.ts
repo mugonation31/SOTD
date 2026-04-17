@@ -199,6 +199,36 @@ export class SupabaseDataService {
     return data;
   }
 
+  /**
+   * Centralised "has the deadline passed?" check used by UI callers
+   * (player group-standings, group-admin predictions) before attempting
+   * to fetch group predictions. `getGroupPredictions` still enforces the
+   * same check server-side (mirrored by RLS); this helper keeps the UI
+   * decision in one place.
+   *
+   * Returns `{ deadline: '', isPast: false }` when the stored deadline is
+   * null/empty — fail-open so we don't lock a UI based on unknown data.
+   */
+  async getGameweekDeadline(
+    gameweekNumber: number
+  ): Promise<{ deadline: string; isPast: boolean }> {
+    const { data, error } = await this.client
+      .from('gameweeks')
+      .select('deadline')
+      .eq('number', gameweekNumber)
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const deadline = data?.deadline;
+    if (!deadline) return { deadline: '', isPast: false };
+
+    return {
+      deadline,
+      isPast: new Date(deadline).getTime() <= Date.now(),
+    };
+  }
+
   // -----------------------------------------------------------------------
   // Matches
   // -----------------------------------------------------------------------

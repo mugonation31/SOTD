@@ -26,10 +26,14 @@ import {
   arrowDownOutline,
   removeOutline,
   peopleOutline,
-  arrowBackOutline
+  arrowBackOutline,
+  lockClosedOutline
 } from 'ionicons/icons';
 import { GroupService, Standing } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
+import { SeasonService } from '@core/services/season.service';
+import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { ToastController } from '@ionic/angular/standalone';
 
 interface GroupDetails {
   id: string;
@@ -70,12 +74,17 @@ export class GroupStandingsPage implements OnInit {
   group: GroupDetails | null = null;
   standings: Standing[] = [];
   userPosition: number | null = null;
+  predictionsLocked = false;
+  groupPredictions: any[] = [];
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private groupService: GroupService,
-    private authService: AuthService
+    private authService: AuthService,
+    private seasonService: SeasonService,
+    private supabaseDataService: SupabaseDataService,
+    private toastController: ToastController,
   ) {
     addIcons({
       trophyOutline,
@@ -83,15 +92,84 @@ export class GroupStandingsPage implements OnInit {
       arrowDownOutline,
       removeOutline,
       peopleOutline,
-      arrowBackOutline
+      arrowBackOutline,
+      lockClosedOutline
     });
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.groupId = this.route.snapshot.paramMap.get('groupId') || '';
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
 
     this.loadGroupStandings();
+
+    // Skip the visibility flow if we don't have a real groupId —
+    // otherwise getGroupPredictions('') would log an error and surface
+    // a toast for an upstream routing bug.
+    if (!this.groupId) {
+      return;
+    }
+
+    await this.loadVisibilityAndPredictions(
+      this.groupId,
+      this.seasonService.getCurrentGameweek(),
+    );
+  }
+
+  /**
+   * Decide whether group predictions are visible to this player and, if so,
+   * load them. Called during init. Mirrors the RLS rule: predictions for a
+   * gameweek are only visible once the deadline has passed.
+   */
+  private async loadVisibilityAndPredictions(
+    groupId: string,
+    gameweek: number,
+  ): Promise<void> {
+    let isPast = false;
+    try {
+      const result = await this.supabaseDataService.getGameweekDeadline(gameweek);
+      isPast = result.isPast;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to load gameweek deadline for gameweek ${gameweek}: ${message}`,
+      );
+      // Fail-open: without a deadline, don't lock the UI and don't attempt
+      // to fetch predictions (which would also fail at the RLS boundary).
+      this.predictionsLocked = false;
+      this.groupPredictions = [];
+      return;
+    }
+
+    this.predictionsLocked = !isPast;
+    if (!isPast) {
+      this.groupPredictions = [];
+      return;
+    }
+
+    try {
+      this.groupPredictions = await this.supabaseDataService.getGroupPredictions(
+        groupId,
+        gameweek,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to load group predictions for gameweek ${gameweek}: ${message}`,
+      );
+      this.groupPredictions = [];
+      await this.showErrorToast('Unable to load group predictions');
+    }
+  }
+
+  private async showErrorToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color: 'danger',
+      position: 'top',
+    });
+    await toast.present();
   }
 
   private async loadGroupStandings() {
