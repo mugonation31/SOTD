@@ -282,7 +282,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - No console errors on mount; no NgModule edits (standalone imports only)
       - Reset button hidden or disabled when `isLocked`
 
-- [ ] **3.2 Wire predictions to Supabase** (Size: M)
+- [x] **3.2 Wire predictions to Supabase** (Size: M)
   - **Description**: Submit, update, and read predictions from the Supabase `predictions` table instead of MockDataService/localStorage. Integrate with the matches page form submission.
   - **Depends on**: 1.1, 2.2, 3.1
   - **Files**:
