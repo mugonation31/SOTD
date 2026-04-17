@@ -421,20 +421,27 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - All previously passing specs in both files still pass unchanged
 
 - [ ] **3.4 Joker System** (Size: M)
-  - **Description**: Add joker selection to the prediction form. Track usage in `group_members.jokers_used`. Auto-assign jokers if not used by Boxing Day (1st) or Final Day (2nd). Block joker usage on special gameweeks.
+  - **Description**: Add joker selection to the prediction form. Track usage in `group_members.jokers_used`. Block joker usage on special gameweeks (Boxing Day + Final Day — these are 10-match rounds, no bonus applies). Auto-assign jokers on the LAST REGULAR gameweek BEFORE each special round if the player hasn't used them by then.
   - **Depends on**: 3.2, 2.1 (needs special gameweek data)
+  - **Joker rules (clarified):**
+    - Each player gets 2 jokers per season. A joker doubles that gameweek's total points.
+    - Jokers CANNOT be played on Boxing Day or Final Day (both are 10-match special rounds).
+    - The 1st joker's spend-by deadline is the LAST REGULAR gameweek BEFORE Boxing Day. If the player hasn't used it by then, it is auto-assigned to that regular gameweek's predictions.
+    - The 2nd joker's spend-by deadline is the LAST REGULAR gameweek BEFORE Final Day. Same auto-assign rule applies.
+    - The "last regular gameweek before special" is computed as: for each special gameweek with `is_special=true`, find the highest-numbered gameweek with `is_special=false` AND `number < specialGameweek.number`.
   - **Files**:
     - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (joker toggle, validation logic)
     - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.html` (joker checkbox/toggle UI, warning banners)
-    - Modify `frontend/src/app/core/services/supabase-data.service.ts` (joker tracking methods)
+    - Modify `frontend/src/app/core/services/supabase-data.service.ts` (joker tracking methods, last-regular-before-special lookup)
     - Modify `frontend/src/app/core/services/scoring.service.ts` (integrate joker doubling with Supabase data)
   - **Acceptance criteria**:
-    - "Use Joker" toggle on prediction form (only if jokers remaining)
+    - "Use Joker" toggle on prediction form (only if jokers remaining AND gameweek is not special)
     - Shows "X/2 jokers remaining" indicator
-    - Warning banner: "You must use your 1st joker before Boxing Day" when approaching deadline
-    - Joker toggle disabled on Boxing Day and Final Day gameweeks with tooltip explaining why
-    - If 1st joker not used by Boxing Day gameweek, auto-assigned to that gameweek's predictions
-    - If 2nd joker not used by Final Day gameweek, auto-assigned to that gameweek's predictions
+    - Warning banner on the last 2-3 regular gameweeks before Boxing Day: "Play your 1st joker by Gameweek N or it will be auto-applied" (N = last regular GW before Boxing Day)
+    - Same warning in the lead-up to Final Day for the 2nd joker
+    - Joker toggle disabled on Boxing Day and Final Day gameweeks with tooltip: "Jokers cannot be played on special rounds"
+    - If 1st joker not used by the last regular gameweek before Boxing Day, auto-assigned to THAT gameweek's predictions on submit (not to Boxing Day itself)
+    - If 2nd joker not used by the last regular gameweek before Final Day, auto-assigned to THAT gameweek's predictions on submit (not to Final Day itself)
     - `joker_used` flag set on prediction rows, `jokers_used` incremented on `group_members`
 
 ---
@@ -671,7 +678,10 @@ Ionic + Capacitor is already in the stack, so the same codebase ships to Android
 ## Resolved Decisions
 
 1. **Football data API**: **football-data.org** (free tier, 10 req/min). Sufficient for MVP — fixtures + results is all we need.
-2. **Joker auto-assignment**: Auto-assign when the player submits predictions for the relevant gameweek without using their joker. Show a friendly warning: "Your joker will be automatically played if not used by Gameweek X." If they never submit, auto-assign at deadline via scheduled function.
+2. **Joker auto-assignment**: Jokers CANNOT be played on Boxing Day or Final Day (10-match special rounds). The spend-by deadline for each joker is the LAST REGULAR gameweek before the corresponding special round:
+   - 1st joker: last regular GW before Boxing Day
+   - 2nd joker: last regular GW before Final Day
+   Auto-assign when the player submits predictions for that last-regular gameweek without using their joker. Show a friendly warning 2-3 gameweeks ahead: "Play your 1st joker by Gameweek X or it will be auto-applied." If they never submit, auto-assign at that gameweek's deadline via a scheduled function.
 3. **Scoring model**: Use the **frontend model** (it's the correct one):
    - Correct result: Home win 3pts, Away win 4pts, Draw 6pts
    - Correct score: +3pts per correct score
