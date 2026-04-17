@@ -242,6 +242,26 @@ export class SupabaseDataService {
     return data || [];
   }
 
+  /**
+   * Return the current user's predictions for a gameweek joined with the
+   * parent `matches` row. Shape: each element has `matches` populated with
+   * the joined match columns (home_team, away_team, kickoff_time, status,
+   * home_score, away_score, ...). Used by the predictions page to render
+   * historical + current predictions without a second round-trip.
+   */
+  async getPredictionsWithMatches(gameweekNumber: number): Promise<any[]> {
+    const userId = await this.getCurrentUserId();
+
+    const { data, error } = await this.client
+      .from('predictions')
+      .select('*, matches(*)')
+      .eq('user_id', userId)
+      .eq('gameweek_number', gameweekNumber);
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
   async submitPredictions(
     predictions: Array<{
       match_id: string;

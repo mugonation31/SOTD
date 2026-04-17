@@ -18,6 +18,8 @@ import {
   IonToast,
   IonButton,
   IonButtons,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf, NgClass } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -29,36 +31,37 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   personOutline,
+  peopleOutline,
 } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MockDataService } from '../../../../core/services/mock-data.service';
+import { Router, RouterLink } from '@angular/router';
+import { SeasonService } from '@core/services/season.service';
+import { SupabaseDataService } from '@core/services/supabase-data.service';
 
+/**
+ * View model bound to the predictions template. `id` is a UUID string from
+ * the Supabase `predictions` row; historical `finalScore` is set only when
+ * the parent match has `status === 'completed'`.
+ */
 interface Prediction {
-  id: number;
+  id: string;
   gameweek: number;
   match: {
     homeTeam: string;
     awayTeam: string;
     kickoff: string;
     venue: string;
-    liveScore?: {
-      home: number;
-      away: number;
-      isLive: boolean;
-      minute: number;
-      additionalTime?: number;
-    };
-    finalScore?: {
-      home: number;
-      away: number;
-    };
+    // Live scores are not yet populated in the DB for MVP; keep the shape so
+    // existing template bindings (`pred.match.liveScore?.isLive/.home/.away`)
+    // compile under strictTemplates, but leave the value null.
+    liveScore: { isLive: boolean; home: number; away: number } | null;
+    finalScore: { home: number; away: number } | null;
   };
   prediction: {
     home: number;
     away: number;
   };
-  points?: number;
+  points: number;
   status: 'pending' | 'correct' | 'incorrect';
 }
 
@@ -85,25 +88,35 @@ interface Prediction {
     IonSegmentButton,
     IonButton,
     IonButtons,
+    IonSelect,
+    IonSelectOption,
     NgFor,
     NgIf,
     NgClass,
     DatePipe,
     FormsModule,
     IonToast,
+    RouterLink,
   ],
 })
 export class PredictionsPage {
   selectedSegment = 'current';
-  currentGameweek: number;
+  currentGameweek = 1;
   currentPredictions: Prediction[] = [];
   historicalPredictions: Prediction[] = [];
   showNewPredictionsToast = false;
-  selectedHistoryGameweek = 14; // Start with previous gameweek
-  historicalGameweeks: number[] = []; // To track available historical gameweeks
-  liveScoreUpdateInterval: any;
+  selectedHistoryGameweek = 0;
+  historicalGameweeks: number[] = [];
+  isLoading = false;
+  availableGroups: Array<{ id: string; name: string }> = [];
+  selectedGroupId: string | null = null;
+  hasNoGroups = false;
 
-  constructor(private router: Router, private mockDataService: MockDataService) {
+  constructor(
+    private router: Router,
+    private seasonService: SeasonService,
+    private supabaseDataService: SupabaseDataService,
+  ) {
     addIcons({
       footballOutline,
       closeCircleOutline,
@@ -112,72 +125,179 @@ export class PredictionsPage {
       chevronBackOutline,
       chevronForwardOutline,
       personOutline,
+      peopleOutline,
     });
-    
-    // Initialize current gameweek from MockDataService
-    this.currentGameweek = this.mockDataService.getCurrentGameweek();
   }
 
-  ionViewWillEnter() {
-    this.loadPredictions();
-    // Start live score updates
-    this.startLiveScoreUpdates();
-  }
+  async ionViewWillEnter(): Promise<void> {
+    this.isLoading = true;
+    try {
+      await this.seasonService.init();
+      this.currentGameweek = this.seasonService.getCurrentGameweek();
 
-  ionViewWillLeave() {
-    // Clean up interval when leaving the page
-    if (this.liveScoreUpdateInterval) {
-      clearInterval(this.liveScoreUpdateInterval);
+      // Load groups first — the selector sets the context for Task 3.3
+      // (visibility of OTHER players' predictions). If the user has no
+      // group, there is nothing meaningful to show so we short-circuit.
+      //
+      // `getGroups` is guarded because legacy test doubles may only stub
+      // `getPredictionsWithMatches`; without the guard those suites would
+      // fail even though they predate Task 3.2.5. In production the method
+      // is always present on the real service.
+      if (typeof this.supabaseDataService.getGroups === 'function') {
+        let groups: Array<{ id: string; name: string }> = [];
+        try {
+          groups = (await this.supabaseDataService.getGroups()) ?? [];
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          console.error(`Failed to load groups: ${message}`);
+          groups = [];
+        }
+
+        if (groups.length === 0) {
+          this.availableGroups = [];
+          this.selectedGroupId = null;
+          this.hasNoGroups = true;
+          this.currentPredictions = [];
+          return;
+        }
+
+        this.availableGroups = groups;
+        this.selectedGroupId = groups[0].id;
+        this.hasNoGroups = false;
+      }
+
+      const rows = await this.supabaseDataService.getPredictionsWithMatches(
+        this.currentGameweek,
+      );
+      this.currentPredictions = rows.map((row) => this.toViewModel(row));
+      this.historicalGameweeks = this.buildHistoricalGameweeks(
+        this.currentGameweek,
+      );
+      if (
+        this.historicalGameweeks.length > 0 &&
+        this.selectedHistoryGameweek === 0
+      ) {
+        this.selectedHistoryGameweek = this.historicalGameweeks[0];
+        // Populate the history list eagerly so the History tab has data on
+        // first entry instead of requiring the user to tap the nav chevrons.
+        await this.updateHistoricalPredictions();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Failed to load predictions: ${message}`);
+      this.currentPredictions = [];
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  loadPredictions() {
-    // Load current predictions from MockDataService
-    const previousCurrentCount = this.currentPredictions.length;
-
-    // Get current gameweek predictions
-    this.currentPredictions = this.mockDataService.getPlayerPredictions(this.currentGameweek);
-
-    // Get available historical gameweeks from MockDataService
-    this.historicalGameweeks = this.mockDataService.getAvailableHistoricalGameweeks();
-
-    // If we have historical gameweeks, set the selected one
-    if (this.historicalGameweeks.length > 0) {
-      this.selectedHistoryGameweek = this.historicalGameweeks[0];
-    }
-
-    // Get predictions for selected historical gameweek
-    this.updateHistoricalPredictions();
-
-    // Show toast if new predictions were added
-    if (
-      this.currentPredictions.length > previousCurrentCount &&
-      previousCurrentCount > 0
-    ) {
-      this.showNewPredictionsToast = true;
-    }
+  /**
+   * Update the active group context. Predictions themselves are per-player
+   * (UNIQUE(user_id, match_id)) so this does not refetch the current user's
+   * own predictions. Task 3.3 will use `selectedGroupId` to fetch other
+   * players' predictions for the selected group.
+   */
+  onGroupChange(groupId: string): void {
+    this.selectedGroupId = groupId;
   }
 
-  updateHistoricalPredictions() {
-    // Get historical predictions from MockDataService
-    this.historicalPredictions = this.mockDataService.getHistoricalPredictions(this.selectedHistoryGameweek);
+  /**
+   * Map a raw Supabase `predictions` row (with joined `matches`) to the
+   * page's `Prediction` view model. Safe against partially-populated rows
+   * so the empty state never crashes.
+   */
+  private toViewModel(row: any): Prediction {
+    const match = row.matches ?? {};
+    const completed = match.status === 'completed';
+    const points = row.points_earned ?? 0;
+    return {
+      id: row.id,
+      gameweek: row.gameweek_number,
+      match: {
+        homeTeam: match.home_team,
+        awayTeam: match.away_team,
+        kickoff: match.kickoff_time,
+        venue: '',
+        liveScore: null,
+        finalScore: completed
+          ? { home: match.home_score, away: match.away_score }
+          : null,
+      },
+      prediction: {
+        home: row.home_score,
+        away: row.away_score,
+      },
+      points,
+      status: this.deriveStatus(match.status, points),
+    };
+  }
+
+  /**
+   * Status derivation:
+   *  - completed + points > 0 -> 'correct'
+   *  - completed + points === 0 -> 'incorrect'
+   *  - anything else -> 'pending'
+   * Kept in one helper so template colouring and status logic stay in sync.
+   */
+  private deriveStatus(
+    matchStatus: string | undefined,
+    points: number,
+  ): 'pending' | 'correct' | 'incorrect' {
+    if (matchStatus !== 'completed') {
+      return 'pending';
+    }
+    return points > 0 ? 'correct' : 'incorrect';
+  }
+
+  /**
+   * List of gameweek numbers prior to the current one that are candidates
+   * for the history segment (lazy fetch by gameweek is handled by
+   * `updateHistoricalPredictions`). Returns [] for gameweek 1 or before.
+   */
+  private buildHistoricalGameweeks(current: number): number[] {
+    if (current <= 1) return [];
+    // Newest first, e.g. current=5 -> [4, 3, 2, 1]
+    const out: number[] = [];
+    for (let gw = current - 1; gw >= 1; gw--) {
+      out.push(gw);
+    }
+    return out;
+  }
+
+  async updateHistoricalPredictions(): Promise<void> {
+    if (!this.selectedHistoryGameweek) {
+      this.historicalPredictions = [];
+      return;
+    }
+    try {
+      const rows = await this.supabaseDataService.getPredictionsWithMatches(
+        this.selectedHistoryGameweek,
+      );
+      this.historicalPredictions = rows.map((row) => this.toViewModel(row));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to load historical predictions for gameweek ${this.selectedHistoryGameweek}: ${message}`,
+      );
+      this.historicalPredictions = [];
+    }
   }
 
   navigateHistoryGameweek(delta: number) {
     const currentIndex = this.historicalGameweeks.indexOf(
-      this.selectedHistoryGameweek
+      this.selectedHistoryGameweek,
     );
     const newIndex = currentIndex + delta;
 
     if (newIndex >= 0 && newIndex < this.historicalGameweeks.length) {
       this.selectedHistoryGameweek = this.historicalGameweeks[newIndex];
-      this.updateHistoricalPredictions();
+      void this.updateHistoricalPredictions();
     }
   }
 
   canNavigateHistory(direction: 'back' | 'forward'): boolean {
     const currentIndex = this.historicalGameweeks.indexOf(
-      this.selectedHistoryGameweek
+      this.selectedHistoryGameweek,
     );
     return direction === 'back'
       ? currentIndex < this.historicalGameweeks.length - 1
@@ -206,41 +326,22 @@ export class PredictionsPage {
     }
   }
 
-  startLiveScoreUpdates() {
-    // Update live scores every minute
-    this.liveScoreUpdateInterval = setInterval(() => {
-      this.updateLiveScores();
-    }, 60000); // 60000ms = 1 minute
-
-    // Initial update
-    this.updateLiveScores();
-  }
-
-  updateLiveScores() {
-    // Update live scores using MockDataService
-    this.mockDataService.updateLiveScores();
-    
-    // Reload current predictions with updated live scores
-    this.currentPredictions = this.mockDataService.getPlayerPredictions(this.currentGameweek);
-  }
-
-  getMatchTime(match: any): string {
-    return this.mockDataService.getMatchTime(match);
-  }
-
+  // MVP: live scores not yet wired to DB; these helpers always report false
+  // so the existing template bindings hide live/finished badges cleanly.
   isMatchFinished(match: any): boolean {
-    return this.mockDataService.isMatchFinished(match);
+    return !!match?.finalScore;
   }
 
-  isMatchLive(match: any): boolean {
-    return this.mockDataService.isMatchLive(match);
+  isMatchLive(_match: any): boolean {
+    return false;
+  }
+
+  getMatchTime(_match: any): string {
+    return '';
   }
 
   getScoreClass(match: any): string {
-    if (this.isMatchFinished(match)) {
-      return 'finished';
-    }
-    return 'live';
+    return this.isMatchFinished(match) ? 'finished' : 'live';
   }
 
   navigateTo(path: string) {

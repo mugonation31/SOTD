@@ -19,6 +19,29 @@
   <ion-toast [isOpen]="showNewPredictionsToast" message="New predictions loaded!" duration="2000" color="success"
     position="top" icon="checkmark-circle-outline"></ion-toast>
 
+  <!-- Group Context Selector (Task 3.2.5) -->
+  <ion-item *ngIf="!hasNoGroups && availableGroups.length > 0">
+    <ion-label>Group</ion-label>
+    <ion-select
+      class="group-select"
+      [value]="selectedGroupId"
+      (ionChange)="onGroupChange($event.detail.value)"
+      interface="popover"
+    >
+      <ion-select-option *ngFor="let g of availableGroups" [value]="g.id">
+        {{ g.name }}
+      </ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  <!-- No Groups Empty State -->
+  <div class="no-groups-state" *ngIf="hasNoGroups">
+    <ion-icon name="people-outline"></ion-icon>
+    <p>Join a group to view predictions</p>
+    <ion-button routerLink="/player/join-group">Join a group</ion-button>
+  </div>
+
+  <ng-container *ngIf="!hasNoGroups">
   <!-- Segment Control -->
   <ion-segment [(ngModel)]="selectedSegment" class="predictions-segment">
     <ion-segment-button value="current">
@@ -149,4 +172,5 @@
       </ion-card-content>
     </ion-card>
   </div>
+  </ng-container>
 </ion-content>

@@ -684,6 +684,7 @@ export class MatchesPage implements OnInit {
 
   totalGameweeks = 38;
   isLoading = false;
+  isSubmitting = false;
   showTooManyPredictionsWarning = false;
   selectedPredictionCount = 0;
   showSuccessToast = false;
@@ -700,11 +701,21 @@ export class MatchesPage implements OnInit {
   isLocked: boolean = false;
 
   /**
+   * UUID of the currently-loaded gameweek row. Populated from the cached
+   * `allGameweeks` lookup in `setGameweekMeta`. Used as the `gameweek_id`
+   * FK when submitting predictions to Supabase. Empty string when the
+   * gameweek row could not be resolved — `onSubmit` fails closed in that
+   * case.
+   */
+  currentGameweekId: string = '';
+
+  /**
    * Cache of all gameweek rows fetched once from Supabase, used by
-   * `navigateGameweek` to look up the `deadline` and `is_special` flags
-   * for a target gameweek number without re-fetching on every nav.
+   * `navigateGameweek` to look up the `id`, `deadline` and `is_special`
+   * flags for a target gameweek number without re-fetching on every nav.
    */
   private allGameweeks: Array<{
+    id: string;
     number: number;
     deadline: string | null;
     is_special: boolean;
@@ -741,7 +752,7 @@ export class MatchesPage implements OnInit {
     await this.applyGameweekMeta(gameweekNumber);
 
     await this.loadMatchesForGameweek(gameweekNumber);
-    this.checkPredictionsStatus();
+    await this.hydrateSavedPredictions(gameweekNumber);
   }
 
   /**
@@ -795,23 +806,49 @@ export class MatchesPage implements OnInit {
     };
   }
 
-  checkPredictionsStatus() {
-    // Load stored predictions
-    const storedPredictions = JSON.parse(
-      localStorage.getItem('playerPredictions') || '[]'
-    );
-
-    // Check if current gameweek predictions exist and are complete
-    const currentGameweekPredictions = storedPredictions.find(
-      (submission: any) => submission.gameweek === this.currentGameweek.number
-    );
-
-    if (currentGameweekPredictions) {
-      const predictionCount = currentGameweekPredictions.predictions.length;
-      this.predictionsCompleted = this.currentGameweek.isSpecial
-        ? predictionCount === this.matches.length
-        : predictionCount === 3;
+  /**
+   * Read the current user's saved predictions for `gameweekNumber` from
+   * Supabase and splice their scores onto the matching `MatchViewModel`s
+   * already loaded in `this.matches`. Rows whose `match_id` is not in the
+   * current gameweek are silently ignored (e.g. a match was removed
+   * upstream). After hydration, `selectedPredictionCount` and
+   * `predictionsCompleted` are recomputed so the UI state matches the
+   * server.
+   *
+   * Errors are swallowed — a hydration failure must not prevent the page
+   * from rendering. The underlying error is logged to `console.error` so
+   * it surfaces in dev without breaking the user.
+   */
+  private async hydrateSavedPredictions(gameweekNumber: number): Promise<void> {
+    try {
+      const rows = await this.supabaseDataService.getPredictions(gameweekNumber);
+      const byId = new Map(this.matches.map((m) => [m.id, m]));
+      for (const row of rows) {
+        const match = byId.get(row.match_id);
+        if (!match) continue;
+        match.prediction.homeScore = row.home_score;
+        match.prediction.awayScore = row.away_score;
+      }
+      this.updatePredictionCount();
+      this.predictionsCompleted =
+        this.selectedPredictionCount >= this.getRequiredPredictionCount();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(
+        `Failed to hydrate predictions for gameweek ${gameweekNumber}: ${message}`,
+      );
     }
+  }
+
+  /**
+   * Number of predictions a player must submit for the current gameweek to
+   * be considered "complete". Regular gameweeks require exactly 3; special
+   * gameweeks (Boxing Day, Final Day) require a score for every match in
+   * the round. Kept as a helper so the rule lives in one place and both
+   * `canSubmit()` and `hydrateSavedPredictions()` stay in sync.
+   */
+  private getRequiredPredictionCount(): number {
+    return this.currentGameweek.isSpecial ? this.matches.length : 3;
   }
 
   onScoreChange(match: MatchViewModel) {
@@ -819,7 +856,9 @@ export class MatchesPage implements OnInit {
       // Reset the score if predictions are completed
       match.prediction.homeScore = null;
       match.prediction.awayScore = null;
-      this.showTooManyPredictionsWarning = true;
+      // Warning only applies to regular gameweeks — on special gameweeks
+      // every match must be predicted, so there's no "too many" state.
+      this.showTooManyPredictionsWarning = !this.currentGameweek.isSpecial;
       return;
     }
 
@@ -858,6 +897,10 @@ export class MatchesPage implements OnInit {
       return false;
     }
 
+    if (this.isSubmitting) {
+      return false;
+    }
+
     if (this.predictionsCompleted) {
       return false;
     }
@@ -866,11 +909,7 @@ export class MatchesPage implements OnInit {
       return false;
     }
 
-    if (this.currentGameweek.isSpecial) {
-      return this.selectedPredictionCount === this.matches.length;
-    } else {
-      return this.selectedPredictionCount === 3;
-    }
+    return this.selectedPredictionCount === this.getRequiredPredictionCount();
   }
 
   /**
@@ -884,59 +923,70 @@ export class MatchesPage implements OnInit {
   }
 
   async onSubmit() {
+    // Belt-and-braces: the button is hidden when locked, but any direct
+    // caller (test harness, hypothetical keyboard shortcut, future refactor)
+    // must fail closed.
+    if (this.isLocked) {
+      return;
+    }
+
+    // Re-entrancy guard: prevent double-submit from a double-tap. The
+    // backend upsert is idempotent (onConflict: user_id,match_id), but the
+    // user would see two toasts and potentially an error after success.
+    if (this.isSubmitting) {
+      return;
+    }
+
     if (this.predictionsCompleted) {
       return;
     }
 
-    // Get matches with predictions
-    const predictedMatches = this.matches.filter(
-      (match) =>
-        match.prediction.homeScore !== null &&
-        match.prediction.awayScore !== null
-    );
+    // Without a resolved gameweek UUID we cannot build the FK on the
+    // prediction rows. Fail visibly rather than silently dropping the
+    // submission.
+    if (!this.currentGameweekId) {
+      await this.showErrorToast('Gameweek not loaded — try again');
+      return;
+    }
 
-    // Create prediction entry
-    const submission = {
-      gameweek: this.currentGameweek.number,
-      submittedAt: new Date().toISOString(),
-      predictions: predictedMatches.map((match) => ({
-        id: match.id,
-        gameweek: this.currentGameweek.number,
-        match: {
-          homeTeam: match.homeTeam,
-          awayTeam: match.awayTeam,
-          kickoff: match.kickoff,
-          venue: match.venue,
-        },
-        prediction: {
-          home: match.prediction.homeScore,
-          away: match.prediction.awayScore,
-        },
-        status: 'pending',
-      })),
-    };
+    const rows = this.buildPredictionRows();
 
-    // TODO (Task 3.2): Replace localStorage with SupabaseDataService.submitPredictions().
-    // match.id is now a Supabase UUID, so downstream consumers reading from localStorage
-    // will see UUIDs instead of local integer IDs — safe, but the whole path is deprecated.
-    const storedPredictions = JSON.parse(
-      localStorage.getItem('playerPredictions') || '[]'
-    );
-    const updatedPredictions = storedPredictions.filter(
-      (pred: any) => pred.gameweek !== this.currentGameweek.number
-    );
-    updatedPredictions.push(submission);
-    localStorage.setItem(
-      'playerPredictions',
-      JSON.stringify(updatedPredictions)
-    );
+    this.isSubmitting = true;
+    try {
+      await this.supabaseDataService.submitPredictions(rows);
+      this.resetPredictions();
+      this.predictionsCompleted = true;
+      this.showSuccessToast = true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Failed to submit predictions: ${message}`);
+      await this.showErrorToast('Unable to save predictions. Please try again.');
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
 
-    // Reset predictions and update status
-    this.resetPredictions();
-    this.predictionsCompleted = true;
-
-    // Show success toast
-    this.showSuccessToast = true;
+  /**
+   * Build the payload sent to `SupabaseDataService.submitPredictions`.
+   * Filters out any match where either score is null so partial
+   * predictions are never persisted. `joker_used` is always false here;
+   * Task 3.4 will wire the real joker flag.
+   */
+  private buildPredictionRows() {
+    return this.matches
+      .filter(
+        (match) =>
+          match.prediction.homeScore !== null &&
+          match.prediction.awayScore !== null,
+      )
+      .map((match) => ({
+        match_id: match.id,
+        home_score: match.prediction.homeScore!,
+        away_score: match.prediction.awayScore!,
+        gameweek_number: this.currentGameweek.number,
+        gameweek_id: this.currentGameweekId,
+        joker_used: false,
+      }));
   }
 
   resetPredictions() {
@@ -963,8 +1013,12 @@ export class MatchesPage implements OnInit {
 
     await this.loadMatchesForGameweek(target);
     await this.applyGameweekMeta(target);
+    // Start from a clean slate: wipe any previous gameweek's predictions and
+    // the completed flag before hydration overlays the new gameweek's saved
+    // rows. If none exist, the inputs stay blank — matching a fresh-load UX.
     this.predictionsCompleted = false;
     this.resetPredictions();
+    await this.hydrateSavedPredictions(target);
   }
 
   /**
@@ -979,26 +1033,28 @@ export class MatchesPage implements OnInit {
         this.allGameweeks = await this.supabaseDataService.getGameweeks();
       }
       const match = (this.allGameweeks ?? []).find((gw) => gw.number === target);
-      this.setGameweekMeta(match?.deadline, match?.is_special);
+      this.setGameweekMeta(match?.id, match?.deadline, match?.is_special);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error(`Failed to load gameweek meta for ${target}: ${message}`);
-      this.setGameweekMeta(null, false);
+      this.setGameweekMeta(null, null, false);
     }
   }
 
   /**
-   * Assigns the deadline and isSpecial fields on `currentGameweek`, coercing
-   * nullish inputs to safe defaults (empty string / false) so the template
-   * never receives `null` or `undefined`. Also recomputes `isLocked` from
-   * the deadline: past deadlines lock the form, future or unknown deadlines
-   * leave it unlocked.
+   * Assigns the id, deadline and isSpecial fields for the current gameweek,
+   * coercing nullish inputs to safe defaults (empty string / false) so the
+   * template never receives `null` or `undefined`. Also recomputes
+   * `isLocked` from the deadline: past deadlines lock the form, future or
+   * unknown deadlines leave it unlocked.
    */
   private setGameweekMeta(
+    id: string | null | undefined,
     deadline: string | null | undefined,
     isSpecial: boolean | null | undefined,
   ): void {
     const resolvedDeadline = deadline ?? '';
+    this.currentGameweekId = id ?? '';
     this.currentGameweek = {
       ...this.currentGameweek,
       deadline: resolvedDeadline,

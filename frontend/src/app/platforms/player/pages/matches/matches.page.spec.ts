@@ -1278,3 +1278,779 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
     expect(compiled.querySelector('.reset-button')).toBeNull();
   });
 });
+
+describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const buildSupabaseMatch = (overrides: Partial<any> = {}) => ({
+    id: 'match-1',
+    home_team: 'Arsenal',
+    away_team: 'Chelsea',
+    kickoff_time: '2024-08-17T14:00:00Z',
+    gameweek: 7,
+    season_id: 'season-1',
+    status: 'scheduled',
+    home_score: null,
+    away_score: null,
+    created_at: '2024-08-01T00:00:00Z',
+    updated_at: '2024-08-01T00:00:00Z',
+    ...overrides,
+  });
+
+  /**
+   * Drive the component into a fully-initialised state with three scheduled
+   * matches for gameweek 7 and a future deadline (unlocked). Returns once
+   * ngOnInit resolves so tests can then populate predictions and call
+   * onSubmit().
+   */
+  const initWithThreeMatches = async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1', home_team: 'A', away_team: 'B' }),
+      buildSupabaseMatch({ id: 'm-2', home_team: 'C', away_team: 'D' }),
+      buildSupabaseMatch({ id: 'm-3', home_team: 'E', away_team: 'F' }),
+    ]);
+    await component.ngOnInit();
+  };
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = {
+      create: jest.fn().mockResolvedValue(mockToast),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('should populate currentGameweekId from the matching gameweek row after init', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-8', number: 8, is_active: false }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect((component as any).currentGameweekId).toBe('gw-uuid-7');
+  });
+
+  it('onSubmit() calls submitPredictions with rows shaped {match_id, home_score, away_score, gameweek_number, gameweek_id, joker_used:false}', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    ]);
+    await initWithThreeMatches();
+
+    component.matches[0].prediction.homeScore = 2;
+    component.matches[0].prediction.awayScore = 1;
+    component.matches[1].prediction.homeScore = 0;
+    component.matches[1].prediction.awayScore = 0;
+    component.matches[2].prediction.homeScore = 3;
+    component.matches[2].prediction.awayScore = 2;
+    component.updatePredictionCount();
+
+    await component.onSubmit();
+
+    expect(mockSupabaseDataService.submitPredictions).toHaveBeenCalledTimes(1);
+    const rows = mockSupabaseDataService.submitPredictions.mock.calls[0][0];
+    expect(rows).toEqual([
+      {
+        match_id: 'm-1',
+        home_score: 2,
+        away_score: 1,
+        gameweek_number: 7,
+        gameweek_id: 'gw-uuid-7',
+        joker_used: false,
+      },
+      {
+        match_id: 'm-2',
+        home_score: 0,
+        away_score: 0,
+        gameweek_number: 7,
+        gameweek_id: 'gw-uuid-7',
+        joker_used: false,
+      },
+      {
+        match_id: 'm-3',
+        home_score: 3,
+        away_score: 2,
+        gameweek_number: 7,
+        gameweek_id: 'gw-uuid-7',
+        joker_used: false,
+      },
+    ]);
+  });
+
+  it('onSubmit() only sends rows where BOTH home+away scores are non-null', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    ]);
+    await initWithThreeMatches();
+
+    // Only match 1 and 3 fully populated; match 2 has only home score.
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+    component.matches[1].prediction.homeScore = 2;
+    component.matches[1].prediction.awayScore = null;
+    component.matches[2].prediction.homeScore = 0;
+    component.matches[2].prediction.awayScore = 0;
+
+    await component.onSubmit();
+
+    const rows = mockSupabaseDataService.submitPredictions.mock.calls[0][0];
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r: any) => r.match_id)).toEqual(['m-1', 'm-3']);
+  });
+
+  it('onSubmit() is a no-op when isLocked is true — submitPredictions NOT called', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+    ]);
+    await initWithThreeMatches();
+
+    expect(component.isLocked).toBe(true);
+
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+
+    await component.onSubmit();
+
+    expect(mockSupabaseDataService.submitPredictions).not.toHaveBeenCalled();
+  });
+
+  it('onSubmit() shows danger toast and does NOT call submitPredictions when currentGameweekId is empty', async () => {
+    // getGameweeks returns an empty list → no matching row → currentGameweekId stays empty.
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
+    await initWithThreeMatches();
+
+    expect((component as any).currentGameweekId).toBe('');
+
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+    component.matches[1].prediction.homeScore = 1;
+    component.matches[1].prediction.awayScore = 0;
+    component.matches[2].prediction.homeScore = 1;
+    component.matches[2].prediction.awayScore = 0;
+
+    await component.onSubmit();
+
+    expect(mockSupabaseDataService.submitPredictions).not.toHaveBeenCalled();
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Gameweek not loaded — try again',
+        color: 'danger',
+      })
+    );
+  });
+
+  it('on success: predictionsCompleted becomes true and showSuccessToast becomes true', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    ]);
+    await initWithThreeMatches();
+
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+    component.matches[1].prediction.homeScore = 1;
+    component.matches[1].prediction.awayScore = 0;
+    component.matches[2].prediction.homeScore = 1;
+    component.matches[2].prediction.awayScore = 0;
+
+    expect(component.predictionsCompleted).toBe(false);
+    expect(component.showSuccessToast).toBe(false);
+
+    await component.onSubmit();
+
+    expect(component.predictionsCompleted).toBe(true);
+    expect(component.showSuccessToast).toBe(true);
+  });
+
+  it('on failure: error toast shown, predictionsCompleted stays false, console.error logged', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    ]);
+    await initWithThreeMatches();
+
+    mockSupabaseDataService.submitPredictions.mockRejectedValueOnce(
+      new Error('Network down')
+    );
+
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+    component.matches[1].prediction.homeScore = 1;
+    component.matches[1].prediction.awayScore = 0;
+    component.matches[2].prediction.homeScore = 1;
+    component.matches[2].prediction.awayScore = 0;
+
+    await expect(component.onSubmit()).resolves.not.toThrow();
+
+    expect(component.predictionsCompleted).toBe(false);
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Unable to save predictions. Please try again.',
+        color: 'danger',
+      })
+    );
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it('does NOT write to localStorage during submit', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    ]);
+    await initWithThreeMatches();
+
+    component.matches[0].prediction.homeScore = 1;
+    component.matches[0].prediction.awayScore = 0;
+    component.matches[1].prediction.homeScore = 1;
+    component.matches[1].prediction.awayScore = 0;
+    component.matches[2].prediction.homeScore = 1;
+    component.matches[2].prediction.awayScore = 0;
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+
+    await component.onSubmit();
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+
+    setItemSpy.mockRestore();
+  });
+});
+
+describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const buildSupabaseMatch = (overrides: Partial<any> = {}) => ({
+    id: 'match-1',
+    home_team: 'Arsenal',
+    away_team: 'Chelsea',
+    kickoff_time: '2024-08-17T14:00:00Z',
+    gameweek: 7,
+    season_id: 'season-1',
+    status: 'scheduled',
+    home_score: null,
+    away_score: null,
+    created_at: '2024-08-01T00:00:00Z',
+    updated_at: '2024-08-01T00:00:00Z',
+    ...overrides,
+  });
+
+  const buildPredictionRow = (overrides: Partial<any> = {}) => ({
+    id: 'pred-1',
+    user_id: 'user-1',
+    match_id: 'm-1',
+    home_score: 2,
+    away_score: 1,
+    gameweek_number: 7,
+    gameweek_id: 'gw-id-7',
+    joker_used: false,
+    points_earned: 0,
+    created_at: '2024-08-10T00:00:00Z',
+    updated_at: '2024-08-10T00:00:00Z',
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = {
+      create: jest.fn().mockResolvedValue(mockToast),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('should call getPredictions with the current gameweek number after init', async () => {
+    mockSeasonService.getCurrentGameweek.mockReturnValue(7);
+    mockSupabaseDataService.getMatches.mockResolvedValue([]);
+
+    await component.ngOnInit();
+
+    expect(mockSupabaseDataService.getPredictions).toHaveBeenCalledWith(7);
+  });
+
+  it('should populate matching MatchViewModel prediction scores from saved rows by match_id', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+      buildSupabaseMatch({ id: 'm-2' }),
+      buildSupabaseMatch({ id: 'm-3' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: 2, away_score: 1 }),
+      buildPredictionRow({ match_id: 'm-3', home_score: 0, away_score: 0 }),
+    ]);
+
+    await component.ngOnInit();
+
+    const byId = (id: string) => component.matches.find((m) => m.id === id)!;
+    expect(byId('m-1').prediction.homeScore).toBe(2);
+    expect(byId('m-1').prediction.awayScore).toBe(1);
+    expect(byId('m-2').prediction.homeScore).toBeNull();
+    expect(byId('m-2').prediction.awayScore).toBeNull();
+    expect(byId('m-3').prediction.homeScore).toBe(0);
+    expect(byId('m-3').prediction.awayScore).toBe(0);
+  });
+
+  it('should ignore prediction rows whose match_id is not in the current gameweek (no crash)', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: 3, away_score: 3 }),
+      buildPredictionRow({ match_id: 'does-not-exist', home_score: 9, away_score: 9 }),
+    ]);
+
+    await expect(component.ngOnInit()).resolves.not.toThrow();
+
+    expect(component.matches).toHaveLength(1);
+    expect(component.matches[0].prediction.homeScore).toBe(3);
+    expect(component.matches[0].prediction.awayScore).toBe(3);
+  });
+
+  it('should reflect the hydrated count in selectedPredictionCount (2 rows → 2)', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+      buildSupabaseMatch({ id: 'm-2' }),
+      buildSupabaseMatch({ id: 'm-3' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: 1, away_score: 0 }),
+      buildPredictionRow({ match_id: 'm-2', home_score: 2, away_score: 2 }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.selectedPredictionCount).toBe(2);
+  });
+
+  it('should set predictionsCompleted=true when hydrated count equals 3 on a regular gameweek', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, is_special: false }),
+    ]);
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+      buildSupabaseMatch({ id: 'm-2' }),
+      buildSupabaseMatch({ id: 'm-3' }),
+      buildSupabaseMatch({ id: 'm-4' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: 1, away_score: 0 }),
+      buildPredictionRow({ match_id: 'm-2', home_score: 1, away_score: 0 }),
+      buildPredictionRow({ match_id: 'm-3', home_score: 1, away_score: 0 }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.predictionsCompleted).toBe(true);
+  });
+
+  it('should set predictionsCompleted=false when hydrated count is less than 3 on a regular gameweek', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, is_special: false }),
+    ]);
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+      buildSupabaseMatch({ id: 'm-2' }),
+      buildSupabaseMatch({ id: 'm-3' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: 1, away_score: 0 }),
+      buildPredictionRow({ match_id: 'm-2', home_score: 1, away_score: 0 }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(component.predictionsCompleted).toBe(false);
+  });
+
+  it('on a special gameweek with 10 matches, predictionsCompleted=true only when hydrated count=10', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+    ]);
+    const matches = Array.from({ length: 10 }, (_, i) =>
+      buildSupabaseMatch({ id: `m-${i + 1}` })
+    );
+    mockSupabaseDataService.getMatches.mockResolvedValue(matches);
+
+    // First assertion: 9 saved predictions → not completed
+    mockSupabaseDataService.getPredictions.mockResolvedValueOnce(
+      Array.from({ length: 9 }, (_, i) =>
+        buildPredictionRow({ match_id: `m-${i + 1}`, home_score: 1, away_score: 0 })
+      )
+    );
+    await component.ngOnInit();
+    expect(component.predictionsCompleted).toBe(false);
+
+    // Re-init with 10 saved predictions → completed
+    mockSupabaseDataService.getPredictions.mockResolvedValueOnce(
+      Array.from({ length: 10 }, (_, i) =>
+        buildPredictionRow({ match_id: `m-${i + 1}`, home_score: 1, away_score: 0 })
+      )
+    );
+    // Reset cache so init re-runs cleanly
+    (component as any).allGameweeks = null;
+    await component.ngOnInit();
+    expect(component.predictionsCompleted).toBe(true);
+  });
+
+  it('should swallow getPredictions rejection — page still renders, matches load, error logged', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+      buildSupabaseMatch({ id: 'm-2' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockRejectedValue(
+      new Error('Network down')
+    );
+
+    await expect(component.ngOnInit()).resolves.not.toThrow();
+
+    expect(component.matches).toHaveLength(2);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it('should call getPredictions(newGameweek) after navigateGameweek(+1)', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }),
+    ]);
+    mockSupabaseDataService.getMatches.mockResolvedValue([]);
+
+    await component.ngOnInit();
+    mockSupabaseDataService.getPredictions.mockClear();
+
+    await component.navigateGameweek(1);
+
+    expect(mockSupabaseDataService.getPredictions).toHaveBeenCalledWith(8);
+  });
+
+  it('should leave inputs blank (all null) when navigating to a gameweek with zero saved predictions', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }),
+    ]);
+    // Initial load: no matches, no predictions.
+    mockSupabaseDataService.getMatches.mockResolvedValueOnce([]);
+    mockSupabaseDataService.getPredictions.mockResolvedValueOnce([]);
+    await component.ngOnInit();
+
+    // Navigation target: matches exist but NO saved predictions for GW8.
+    mockSupabaseDataService.getMatches.mockResolvedValueOnce([
+      buildSupabaseMatch({ id: 'm-gw8-1', gameweek: 8 }),
+      buildSupabaseMatch({ id: 'm-gw8-2', gameweek: 8 }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValueOnce([]);
+
+    await component.navigateGameweek(1);
+
+    expect(component.matches).toHaveLength(2);
+    component.matches.forEach((m) => {
+      expect(m.prediction.homeScore).toBeNull();
+      expect(m.prediction.awayScore).toBeNull();
+    });
+    expect(component.selectedPredictionCount).toBe(0);
+    expect(component.predictionsCompleted).toBe(false);
+  });
+});
+
+describe('MatchesPage (Task 3.2.3 — regular vs special gating)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const buildSupabaseMatch = (overrides: Partial<any> = {}) => ({
+    id: 'match-1',
+    home_team: 'Arsenal',
+    away_team: 'Chelsea',
+    kickoff_time: '2024-08-17T14:00:00Z',
+    gameweek: 7,
+    season_id: 'season-1',
+    status: 'scheduled',
+    home_score: null,
+    away_score: null,
+    created_at: '2024-08-01T00:00:00Z',
+    updated_at: '2024-08-01T00:00:00Z',
+    ...overrides,
+  });
+
+  /**
+   * Populate `component.matches` with `count` view-model rows, each with the
+   * supplied prediction scores (or null for "not predicted"). Lets each test
+   * arrange an arbitrary number of filled-in predictions without relying on
+   * ngOnInit hydration.
+   */
+  const seedMatches = (
+    count: number,
+    predictedUpTo: number,
+  ): void => {
+    const vms = Array.from({ length: count }, (_, i) => ({
+      id: `m-${i + 1}`,
+      homeTeam: 'Home',
+      awayTeam: 'Away',
+      kickoff: '2024-08-17T14:00:00Z',
+      status: 'scheduled' as const,
+      homeScore: null,
+      awayScore: null,
+      gameweek: 7,
+      venue: '',
+      prediction: {
+        homeScore: i < predictedUpTo ? 1 : null,
+        awayScore: i < predictedUpTo ? 0 : null,
+      },
+    }));
+    component.matches = vms as any;
+  };
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = {
+      create: jest.fn().mockResolvedValue(mockToast),
+    };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+
+    // Resolve a valid gameweek id so canSubmit isn't blocked by an
+    // unrelated precondition.
+    component.currentGameweekId = 'gw-id-7';
+    component.isLocked = false;
+    component.predictionsCompleted = false;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('canSubmit() is false on a regular gameweek with 2 predictions', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: false };
+    seedMatches(3, 2);
+    (component as any).updatePredictionCount();
+
+    expect(component.canSubmit()).toBe(false);
+  });
+
+  it('canSubmit() is true on a regular gameweek with exactly 3 predictions', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: false };
+    seedMatches(10, 3);
+    (component as any).updatePredictionCount();
+
+    expect(component.canSubmit()).toBe(true);
+  });
+
+  it('showTooManyPredictionsWarning is true on a regular gameweek when 4 predictions are filled', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: false };
+    seedMatches(10, 4);
+    (component as any).updatePredictionCount();
+
+    expect(component.showTooManyPredictionsWarning).toBe(true);
+  });
+
+  it('canSubmit() is false on a special gameweek with 10 matches and 5 predictions', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 5);
+    (component as any).updatePredictionCount();
+
+    expect(component.canSubmit()).toBe(false);
+  });
+
+  it('canSubmit() is true on a special gameweek with 10 matches and all 10 predicted', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 10);
+    (component as any).updatePredictionCount();
+
+    expect(component.canSubmit()).toBe(true);
+  });
+
+  it('showTooManyPredictionsWarning is false on a special gameweek with 5 predictions (warning never fires on special)', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 5);
+    (component as any).updatePredictionCount();
+
+    expect(component.showTooManyPredictionsWarning).toBe(false);
+  });
+
+  it('showTooManyPredictionsWarning is false on a special gameweek with all 10 predicted (no over-limit possible)', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 10);
+    (component as any).updatePredictionCount();
+
+    expect(component.showTooManyPredictionsWarning).toBe(false);
+  });
+
+  it('onScoreChange does NOT flip showTooManyPredictionsWarning on a special gameweek even when predictionsCompleted', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 10);
+    component.predictionsCompleted = true;
+    component.showTooManyPredictionsWarning = false;
+
+    // Simulate the user tweaking a score after completion on a special GW.
+    const match = component.matches[0];
+    match.prediction.homeScore = 5;
+    component.onScoreChange(match);
+
+    expect(component.showTooManyPredictionsWarning).toBe(false);
+  });
+
+  it('getRequiredPredictionCount() returns 3 on a regular gameweek regardless of matches.length', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: false };
+    seedMatches(10, 0);
+
+    expect((component as any).getRequiredPredictionCount()).toBe(3);
+  });
+
+  it('getRequiredPredictionCount() returns matches.length on a special gameweek', () => {
+    component.currentGameweek = { ...component.currentGameweek, isSpecial: true };
+    seedMatches(10, 0);
+
+    expect((component as any).getRequiredPredictionCount()).toBe(10);
+  });
+});

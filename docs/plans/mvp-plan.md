@@ -296,6 +296,68 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Predictions respect RLS (cannot submit after deadline -- DB rejects it)
     - Player must select a group context for predictions
 
+  - [ ] **3.2.1 Prediction CRUD methods on SupabaseDataService** (Size: S)
+    - **Description**: Add the service-layer methods the matches and predictions pages need: upsert a batch of predictions for a user/gameweek, fetch a user's predictions for a specific gameweek, and fetch a user's full prediction history with points. Per resolved decision (4), predictions are keyed on `(user_id, match_id)` — no `group_id`.
+    - **Depends on**: 1.1, 2.2, 3.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (add `upsertPredictions(rows)`, `getPredictionsForGameweek(userId, gameweekNumber)`, `getPredictionHistory(userId)`)
+    - **Acceptance criteria**:
+      - `upsertPredictions` performs a batch upsert on `predictions` with conflict target `(user_id, match_id)`
+      - `getPredictionsForGameweek` returns typed rows joined to `matches` for the given gameweek number
+      - `getPredictionHistory` returns predictions joined with match + gameweek data, ordered newest first, including `points_earned`
+      - All methods return typed Promises/Observables and surface Supabase errors cleanly (no silent swallow)
+      - RLS rejections bubble up so the UI can show a toast
+
+  - [ ] **3.2.2 Submit predictions from matches page to Supabase** (Size: M)
+    - **Description**: Replace the in-memory/mock prediction submit flow on the matches page with a call to `SupabaseDataService.upsertPredictions`. Gate submission on `isLocked` (from 3.1.3) and on the user being authenticated. Show a success toast on save and a user-friendly error toast on RLS/network failure.
+    - **Depends on**: 3.2.1
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (update `onSubmit()` to build prediction rows and call `upsertPredictions`; add `isLocked` guard at top of `onSubmit`; toast on success/error)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only — do not modify the existing 36)
+    - **Acceptance criteria**:
+      - Submitting the form inserts/upserts one row per match into `predictions` for the current user
+      - `onSubmit()` short-circuits with a locked toast if `isLocked` is true (belt-and-braces beyond `canSubmit()`)
+      - Success toast: "Predictions saved"; error toast on RLS deadline rejection: "Deadline passed — predictions locked"
+      - No `MockDataService` usage remains in the submit path
+      - All existing matches page tests still pass
+
+  - [ ] **3.2.3 Pre-fill existing predictions on matches page** (Size: S)
+    - **Description**: When the matches page loads a gameweek, fetch the current user's existing predictions for that gameweek via `getPredictionsForGameweek` and pre-fill the score inputs. Re-run on prev/next gameweek navigation.
+    - **Depends on**: 3.2.1, 2.2.4
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (after `loadMatchesForGameweek`, call `getPredictionsForGameweek` and merge into `MatchViewModel.prediction`)
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts` (new tests only)
+    - **Acceptance criteria**:
+      - Returning to a gameweek where the user has submitted predictions shows those values pre-filled
+      - Matches with no existing prediction render empty score inputs
+      - Prev/next gameweek navigation refetches predictions for the viewed gameweek
+      - No flicker of stale predictions between gameweeks (old values cleared before new fetch resolves)
+      - Fetch errors do not crash the page; inputs fall back to empty
+
+  - [ ] **3.2.4 Wire predictions history page to Supabase** (Size: S)
+    - **Description**: Replace `MockDataService` on the predictions history page with `getPredictionHistory`. Render each prediction with its match, gameweek number, the user's score, the actual result (if completed), and `points_earned`.
+    - **Depends on**: 3.2.1
+    - **Files**:
+      - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.ts` (fetch from `SupabaseDataService`, drop mock imports, add loading/empty/error states)
+      - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.html` (bind to real fields; empty state when no history)
+    - **Acceptance criteria**:
+      - Page lists all the user's submitted predictions grouped/ordered by gameweek (newest first)
+      - Each row shows predicted score, actual score (or "TBD" for scheduled/live), and points earned (or "—" pre-scoring)
+      - Empty state shown when the user has no predictions
+      - Loading spinner shown while fetching
+      - No `MockDataService` imports remain in this page
+
+  - [ ] **3.2.5 Smoke test: end-to-end prediction flow** (Size: S)
+    - **Description**: Add a lightweight E2E smoke test covering the full loop: seeded player logs in, submits predictions on the matches page, navigates away, returns and sees them pre-filled, then opens the predictions history page and sees the same entries listed.
+    - **Depends on**: 3.2.2, 3.2.3, 3.2.4
+    - **Files**:
+      - Add test in `frontend/tests/e2e/` (follow the pattern established by 2.2.5)
+    - **Acceptance criteria**:
+      - Test logs in as a seeded player, submits scores for the active gameweek, asserts success toast
+      - Test navigates away and returns to `/player/matches`, asserts submitted scores are pre-filled
+      - Test opens `/player/predictions` and asserts at least one prediction row renders with the submitted values
+      - Test passes locally against a Supabase project seeded by the 2.1 sync function
+
 - [ ] **3.3 Prediction Visibility** (Size: S)
   - **Description**: Hide other players' predictions until the gameweek deadline has passed. The RLS policy already enforces this at the DB level -- this task is about the frontend displaying the right thing.
   - **Depends on**: 3.2
@@ -409,6 +471,12 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - 3.1.4 lock-UI spec block in `matches.page.spec.ts` wrapped with `jest.useFakeTimers()` / `useRealTimers()` to prevent `CountdownTimerComponent` intervals leaking into the real clock between tests
     - `countdown-timer.component.spec.ts` "clean up interval on destroy" test tightened: snapshot `clearInterval` call count before `fixture.destroy()` and assert it increments after (current assertion passes spuriously if deadline logic changes)
     - Add an inline comment in `matches.page.ts` documenting that `CountdownTimerComponent.deadlinePassed` is the runtime source of truth for the `isLocked` transition (load-time is snapshot only) — prevents future readers from adding a second deadline-check that desyncs
+    - `predictions.page.ts`: replace 1..(current-1) history iteration with a single history query that derives `historicalGameweeks = uniq(rows.map(r => r.gameweek_number))` — fewer round-trips and matches the 3.2.4 AC "lists submitted predictions grouped by gameweek"
+    - Move `matches.page.ts` `hydrateSavedPredictions` call from `ngOnInit` into `ionViewWillEnter` for cache-aware Ionic routing (nav back from predictions page currently shows stale data if the component is cached)
+    - Defensive `?? 0` on potentially-null `home_score` / `away_score` from Supabase in predictions.page and matches.page hydrate path (submitPredictions enforces non-null on write but belt-and-braces for the VM types)
+    - Remove the dead `showNewPredictionsToast` field + toast markup in `predictions.page.ts`/`.html` (rewritten loadPredictions no longer sets the flag)
+    - Remove the `typeof this.supabaseDataService.getGroups === 'function'` guard in `predictions.page.ts` once legacy pre-3.2.5 test mocks are updated to stub `getGroups` — currently a deliberate workaround per the never-modify-existing-tests rule
+    - Tighten `toViewModel(row: any)` in `predictions.page.ts` with a typed `PredictionWithMatch` interface to prevent silent `undefined` flows into the template if a future schema change renames columns (security scanner LOW finding)
 
 ---
 

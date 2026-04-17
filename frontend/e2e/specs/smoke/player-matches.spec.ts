@@ -43,6 +43,29 @@ test.describe('Player matches page (Task 2.2 smoke)', () => {
 
     expect(jsErrors, `Uncaught JS exceptions: ${jsErrors.join(' | ')}`).toHaveLength(0);
   });
+
+  /**
+   * Task 3.2 regression guard — the submit button was rewritten to upsert
+   * to Supabase (instead of writing to localStorage) and now disables
+   * while submitting. This test simply verifies the button is still a real
+   * `ion-button` in the DOM so a future template refactor can't silently
+   * remove it. We don't click it (requires auth + seeded data + network).
+   */
+  test('should render the Ionic submit button when matches page is reachable', async ({ page }) => {
+    const matchesPage = new MatchesPage(page);
+    await matchesPage.navigate();
+
+    if (await matchesPage.isRedirectedToLogin()) {
+      await expect(page).toHaveURL(/\/auth\/login/);
+      return;
+    }
+
+    await matchesPage.assertPageLoaded();
+    await expect(matchesPage.submitButton).toBeVisible();
+    // Confirm it's an actual ion-button element (not a plain <button> that
+    // could slip past the smoke if the template were ever refactored).
+    await expect(matchesPage.submitButton).toHaveJSProperty('tagName', 'ION-BUTTON');
+  });
 });
 
 /**

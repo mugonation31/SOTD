@@ -358,6 +358,61 @@ describe('SupabaseDataService', () => {
     });
   });
 
+  describe('getPredictionsWithMatches', () => {
+    it('should return predictions joined with matches for a user and gameweek when getPredictionsWithMatches is called', async () => {
+      const rows = [
+        {
+          id: 'p1',
+          user_id: 'user-1',
+          match_id: 'm1',
+          home_score: 2,
+          away_score: 1,
+          gameweek_number: 5,
+          points_earned: 5,
+          matches: {
+            id: 'm1',
+            home_team: 'Arsenal',
+            away_team: 'Chelsea',
+            kickoff_time: '2025-01-01T15:00:00Z',
+            status: 'completed',
+            home_score: 2,
+            away_score: 1,
+            gameweek: 5,
+          },
+        },
+      ];
+      const builder = createMockQueryBuilder({ data: rows, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getPredictionsWithMatches(5);
+
+      expect(mockClient.from).toHaveBeenCalledWith('predictions');
+      expect(builder.select).toHaveBeenCalledWith('*, matches(*)');
+      expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(builder.eq).toHaveBeenCalledWith('gameweek_number', 5);
+      expect(result).toEqual(rows);
+    });
+
+    it('should throw a meaningful error when the Supabase query fails', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'join failed' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getPredictionsWithMatches(1)).rejects.toThrow('join failed');
+    });
+
+    it('should return an empty array when no predictions exist for the gameweek', async () => {
+      const builder = createMockQueryBuilder({ data: null, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getPredictionsWithMatches(99);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('getGroupPredictions', () => {
     it('should return group member predictions after deadline when getGroupPredictions is called', async () => {
       const predictions = [
