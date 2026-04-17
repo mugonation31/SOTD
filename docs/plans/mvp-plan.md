@@ -358,7 +358,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - Test opens `/player/predictions` and asserts at least one prediction row renders with the submitted values
       - Test passes locally against a Supabase project seeded by the 2.1 sync function
 
-- [ ] **3.3 Prediction Visibility** (Size: S)
+- [x] **3.3 Prediction Visibility** (Size: S)
   - **Description**: Hide other players' predictions until the gameweek deadline has passed. The RLS policy already enforces this at the DB level -- this task is about the frontend displaying the right thing.
   - **Depends on**: 3.2
   - **Files**:
