@@ -420,7 +420,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - Navigation spec: switching from an unlocked gameweek to a still-locked one hides other members' rows again
       - All previously passing specs in both files still pass unchanged
 
-- [ ] **3.4 Joker System** (Size: M)
+- [x] **3.4 Joker System** (Size: M)
   - **Description**: Add joker selection to the prediction form. Track usage in `group_members.jokers_used`. Block joker usage on special gameweeks (Boxing Day + Final Day — these are 10-match rounds, no bonus applies). Auto-assign jokers on the LAST REGULAR gameweek BEFORE each special round if the player hasn't used them by then.
   - **Depends on**: 3.2, 2.1 (needs special gameweek data)
   - **Joker rules (clarified):**
