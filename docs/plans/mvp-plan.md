@@ -560,6 +560,153 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - No fake analytics, coaching, mentoring, or revenue features
     - Normal login flow works — guard routes super-admin to their dashboard
 
+  - [ ] **4.0.1 Migration: is_active + sync_metadata + RLS policies** (Size: M)
+    - **Description**: New migration `008_superadmin_infrastructure.sql` that adds the `is_active` flag on `profiles`, the single-row `sync_metadata` table that the cooldown enforcement reads/writes, and the RLS policy updates on `predictions` and `group_members` so deactivated users can read but not mutate. Seed the `sync_metadata` row at migration time so cooldown logic always has a row to upsert against.
+    - **Depends on**: 1.1, 1.2, 2.1
+    - **Files**:
+      - Create `frontend/supabase/migrations/008_superadmin_infrastructure.sql`
+        - `ALTER TABLE profiles ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE` + index on `is_active`
+        - `CREATE TABLE sync_metadata (id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1), last_sync_at TIMESTAMPTZ, last_sync_status TEXT, last_sync_error TEXT)` — single-row table
+        - Seed: `INSERT INTO sync_metadata (id) VALUES (1) ON CONFLICT DO NOTHING`
+        - RLS policies on `predictions` INSERT/UPDATE: add `WHERE EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_active = TRUE)`
+        - RLS policies on `group_members` INSERT/UPDATE/DELETE: same `is_active` check
+        - Grant super-admin SELECT on `sync_metadata`; grant Edge Function `service_role` full access
+    - **Acceptance criteria**:
+      - Migration applies cleanly against the existing schema; existing rows get `is_active = TRUE` by default
+      - A deactivated user's prediction INSERT/UPDATE is rejected by RLS (DB-level, not just UI)
+      - A deactivated user's `group_members` INSERT/UPDATE/DELETE is rejected by RLS
+      - Reads still work for deactivated users (leaderboards, standings continue to render their historical data)
+      - `sync_metadata` row with `id = 1` exists post-migration
+      - Super-admin reads on `sync_metadata` are not blocked by RLS (super-admin bypasses via existing `is_super_admin()` helper)
+
+  - [ ] **4.0.2 Auth guard reads role from Supabase profile (not localStorage)** (Size: S)
+    - **Description**: Stop trusting localStorage for role-based routing. The super-admin guard must resolve the current user's role from the Supabase `profiles` row (already cached on `SupabaseService.currentProfile$` after 1.2) and gate access on `role === 'super-admin'`. Same change applied to any other role guards still reading localStorage.
+    - **Depends on**: 1.2
+    - **Files**:
+      - Modify `frontend/src/app/core/guards/` (super-admin guard — read role from `SupabaseService.currentProfile$`)
+      - Modify `frontend/src/app/core/services/auth.service.ts` (remove localStorage role lookups in routing helpers if any remain after 1.2)
+    - **Acceptance criteria**:
+      - Super-admin guard resolves role from Supabase, not localStorage
+      - Non-super-admin users navigating to `/super-admin/*` are redirected to their role's dashboard
+      - Refresh on a super-admin route does not boot the user out (profile observable hydrates before guard resolves, or guard awaits the first emission)
+      - localStorage role keys are not read in the guard path
+      - Existing passing tests are not modified — new tests cover the guard if needed
+
+  - [ ] **4.0.3 Delete obsolete super-admin pages + prune routes** (Size: S)
+    - **Description**: Remove the metrics, predictions, and register pages from the super-admin platform along with their routes and any imports they pull in. Keep dashboard and users pages as starting points for the rewrite.
+    - **Depends on**: 4.0.2
+    - **Files**:
+      - Delete `frontend/src/app/platforms/super-admin/pages/metrics/` (entire folder)
+      - Delete `frontend/src/app/platforms/super-admin/pages/predictions/` (entire folder)
+      - Delete `frontend/src/app/platforms/super-admin/pages/register/` (entire folder)
+      - Modify `frontend/src/app/platforms/super-admin/super-admin.routes.ts` (remove deleted routes, keep dashboard + users)
+    - **Acceptance criteria**:
+      - Three page folders deleted with no orphan imports remaining
+      - Routes file no longer references the deleted pages
+      - App still builds (`ionic build` succeeds)
+      - No broken nav links from the simplified layout (4.0.4) to the deleted pages
+      - No tests break from missing imports (delete or update any tests that referenced the deleted pages)
+
+  - [ ] **4.0.4 Simplified layout with 2 tabs + logout button** (Size: S)
+    - **Description**: Strip the super-admin layout down to two tabs (Dashboard, Users & Groups) and a logout button. Drop any tab/menu entries that pointed to deleted pages.
+    - **Depends on**: 4.0.3
+    - **Files**:
+      - Modify `frontend/src/app/platforms/super-admin/layout/` (tab bar component template + ts — keep only Dashboard and Users & Groups; add logout)
+    - **Acceptance criteria**:
+      - Layout renders exactly two tab entries
+      - Logout button calls `AuthService.signOut()` and redirects to `/welcome`
+      - No dead nav entries to deleted pages
+      - Layout looks consistent with the player and group-admin platform layouts (Ionic tab patterns)
+      - Renders without console errors on a fresh load as a super-admin
+
+  - [ ] **4.0.5 Admin service methods in SupabaseDataService** (Size: M)
+    - **Description**: Add the admin-facing service methods that the dashboard and users-and-groups pages need. Per Decision 1, `getLastMatchSync` reads from `sync_metadata` and computes `cooldownRemainingSeconds` so the dashboard can render the countdown without re-implementing the math. Per Decision 2, `signOutUser` invokes the new `admin-signout` Edge Function (4.0.7) — the client never holds the `service_role` key.
+    - **Depends on**: 4.0.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts`:
+        - `getAllUsers(): Promise<Profile[]>` — full list with `is_active`
+        - `getAllGroups(): Promise<Group[]>` — full list with member count
+        - `toggleUserActive(userId: string, active: boolean): Promise<void>` — UPDATE `profiles.is_active`
+        - `deleteGroup(groupId: string): Promise<void>` — DELETE on `groups` (cascade handles `group_members` per existing schema)
+        - `getLastMatchSync(): Promise<{ lastSyncAt: string | null; lastSyncStatus: string | null; lastSyncError: string | null; cooldownRemainingSeconds: number }>` — reads `sync_metadata`, computes remaining cooldown vs 5-minute window
+        - `triggerMatchSync(): Promise<{ ok: boolean; reason?: string; cooldownRemainingSeconds?: number }>` — invokes `sync-matches` Edge Function
+        - `signOutUser(userId: string): Promise<{ ok: boolean; reason?: string }>` — invokes `admin-signout` Edge Function
+    - **Acceptance criteria**:
+      - All seven methods unit-tested via mocked Supabase client
+      - Errors rethrown with sanitized messages (no raw Postgres column/constraint names leaked)
+      - `getLastMatchSync` returns `cooldownRemainingSeconds = 0` when last sync is older than 5 minutes or `last_sync_at` is null
+      - `triggerMatchSync` and `signOutUser` surface non-200 / `{ok:false}` responses to the caller without throwing on cooldown (so the UI can render a friendly toast)
+      - No `service_role` key referenced anywhere on the client
+
+  - [ ] **4.0.6 Edge Function — sync-matches cooldown enforcement** (Size: M)
+    - **Description**: Modify the existing `sync-matches` Edge Function (built in 2.1) to enforce a server-side 5-minute cooldown using `sync_metadata`. Per Decision 1, the Edge Function is the authoritative gate — the client countdown is UX polish only. On invoke, read `sync_metadata.last_sync_at`; if `(now - last_sync_at) < 5 minutes`, return HTTP 429 with `{ ok: false, reason: 'cooldown', cooldownRemainingSeconds: N }` without hitting football-data.org. Otherwise proceed with sync, then upsert `last_sync_at = now`, `last_sync_status = 'ok' | 'error'`, and `last_sync_error` if applicable.
+    - **Depends on**: 4.0.1, 2.1
+    - **Files**:
+      - Modify `frontend/supabase/functions/sync-matches/index.ts` (cooldown read/write around the existing sync logic; HTTP 429 on cooldown hit; metadata upsert after each run regardless of outcome)
+    - **Acceptance criteria**:
+      - Cooldown enforced server-side: duplicate invocations within 5 min return HTTP 429 without calling football-data.org
+      - Response body on cooldown: `{ ok: false, reason: 'cooldown', cooldownRemainingSeconds: N }` with N reflecting actual time remaining
+      - On successful sync: `sync_metadata` upserted with `last_sync_at = now`, `last_sync_status = 'ok'`, `last_sync_error = null`
+      - On sync failure: `sync_metadata` upserted with `last_sync_status = 'error'` and `last_sync_error` populated (sanitized — no API keys leaked)
+      - Existing 2.1 sync behavior preserved when called outside cooldown
+
+  - [ ] **4.0.7 Edge Function — admin-signout (new)** (Size: S)
+    - **Description**: New Edge Function that lets a super-admin force-terminate another user's sessions after deactivation (Decision 2). Uses the `service_role` key server-side to call `auth.admin.signOut(userId)`. Caller authorization is verified by reading the calling user's profile role from `auth.uid()` — only `role = 'super-admin'` is allowed; everyone else gets HTTP 403.
+    - **Depends on**: 4.0.1
+    - **Files**:
+      - Create `frontend/supabase/functions/admin-signout/index.ts`
+      - Create `frontend/supabase/functions/admin-signout/config.ts` if needed (mirror `sync-matches` layout)
+    - **Acceptance criteria**:
+      - Accepts `{ userId: string }` POST body
+      - Verifies caller is super-admin by selecting `profiles.role` for `auth.uid()` — returns HTTP 403 `{ ok: false, reason: 'forbidden' }` for non-super-admins
+      - On authorized call: invokes `supabaseAdmin.auth.admin.signOut(userId)` using `service_role` key from environment, returns `{ ok: true }`
+      - Target user's sessions are terminated within seconds (verifiable: target user's next request 401s and they are bounced to `/welcome`)
+      - Logs sanitized — no PII or tokens written to function logs
+      - `service_role` key only read from env, never echoed in responses
+
+  - [ ] **4.0.8 Dashboard page wired to real data + Sync button with cooldown countdown** (Size: M)
+    - **Description**: Rewrite the super-admin dashboard to fetch real data from Supabase: total users, total groups, active gameweek, and last match sync metadata. Render a "Sync Matches Now" button that calls `triggerMatchSync()`. On success, show a success toast and start a 30-second client-side countdown (button visually disabled — UX polish, the Edge Function is the authoritative gate per Decision 1). On a `429`/cooldown response, show a toast with the `cooldownRemainingSeconds` value returned by the Edge Function.
+    - **Depends on**: 4.0.5, 4.0.6
+    - **Files**:
+      - Modify `frontend/src/app/platforms/super-admin/pages/dashboard/dashboard.page.ts` (real data fetch via `SupabaseDataService`, sync button handler, client countdown state)
+      - Modify `frontend/src/app/platforms/super-admin/pages/dashboard/dashboard.page.html` (KPI tiles, sync button + countdown, last sync status + error display)
+    - **Acceptance criteria**:
+      - Dashboard renders real counts: `getAllUsers().length`, `getAllGroups().length`, `getActiveGameweek().gameweek_number`, last sync timestamp + status
+      - "Sync Matches Now" button visible; click triggers `triggerMatchSync()`
+      - On success: toast "Match sync triggered", button disabled for 30s with visible countdown
+      - On `429`/cooldown: toast "Sync on cooldown — try again in Ns" using `cooldownRemainingSeconds` from the Edge Function response
+      - Last sync status block shows last_sync_at, status badge (ok/error), and error message when status is `error`
+      - Loading spinner while initial data loads; error toast on fetch failure
+      - No mock data used anywhere on this page
+
+  - [ ] **4.0.9 Users & Groups combined page with deactivate (+ signout) and delete** (Size: M)
+    - **Description**: Replace the existing users page with a single Users & Groups page using an `ion-segment` to switch between the two lists. In the Users segment, each row has an active/inactive toggle. When the admin deactivates a user (`active=false`), call `toggleUserActive(id, false)` AND `signOutUser(id)` so the deactivated user is force-signed-out (Decision 2). Surface success/failure for both calls — partial failure (toggle ok, signout failed) needs its own toast so the admin knows the user's existing session is still live. In the Groups segment, each row has a delete button gated behind a confirmation alert.
+    - **Depends on**: 4.0.5, 4.0.7
+    - **Files**:
+      - Modify `frontend/src/app/platforms/super-admin/pages/users/users.page.ts` (segment state, both fetches, toggle handler with chained `signOutUser`, delete handler with confirm)
+      - Modify `frontend/src/app/platforms/super-admin/pages/users/users.page.html` (`ion-segment`, two segment views, empty states)
+      - Rename folder if appropriate (or leave as `users/` and treat as the combined page — match existing project conventions)
+    - **Acceptance criteria**:
+      - `ion-segment` toggles between Users and Groups lists
+      - Users segment: toggle calls `toggleUserActive`; on deactivate (`active=false`) ALSO calls `signOutUser` — verifiable via network tab and DB
+      - Successful deactivate + signout: single success toast "User deactivated and signed out"
+      - Toggle succeeds but signout fails: warning toast "User deactivated but session not terminated — they may still be active until token expires"
+      - Re-activate (`active=true`) only calls `toggleUserActive`, no signout invocation
+      - Groups segment: delete button opens an Ionic `AlertController` confirm; on confirm calls `deleteGroup(id)`; group disappears from list
+      - Empty state shown when either list is empty
+      - RLS / network errors surface as toasts with sanitized messages
+
+  - **Decisions**:
+    1. **Sync button rate limiting: SERVER-SIDE Edge Function cooldown is authoritative; client-side countdown is UX polish.** The `sync-matches` Edge Function reads/writes `sync_metadata.last_sync_at` and rejects invocations within a 5-minute window with HTTP 429 + `{ ok: false, reason: 'cooldown', cooldownRemainingSeconds: N }` — football-data.org is never hit on cooldown. The dashboard separately renders a 30-second client countdown after the button is pressed for UX feedback, but the cooldown enforcement does NOT depend on the client. A user with devtools who re-fires the request still gets blocked by the Edge Function.
+    2. **User deactivation: RLS flag is the authoritative write-block; admin-signout Edge Function force-terminates active sessions.** `profiles.is_active` (default TRUE) gates `predictions` and `group_members` INSERT/UPDATE/DELETE via RLS — deactivated users can still READ (so leaderboards keep rendering their historical data) but cannot mutate. Because RLS only applies to NEW requests (existing tokens still authenticate at the auth layer), the deactivation flow ALSO calls a new `admin-signout` Edge Function that uses `service_role` to invoke `auth.admin.signOut(userId)`. The Edge Function verifies the caller is super-admin via `auth.uid()` → `profiles.role` and rejects everyone else with HTTP 403.
+
+  - **Risks**:
+    - **Migration 008 effect on existing users**: All existing `profiles` rows default to `is_active = TRUE`, so no user is accidentally locked out by the migration. Verify in a staging Supabase project before production push.
+    - **Edge Function `service_role` leakage**: The `service_role` key MUST stay in the Edge Function environment — never echoed in responses, logs, or client-readable env. `admin-signout` and `sync-matches` are the only call sites; both must read from `Deno.env.get` and never accept it as a request parameter.
+    - **RLS policy ordering vs super-admin reads**: New RLS policies on `predictions` / `group_members` add an `is_active` check on writes only. Super-admin reads of `sync_metadata`, `profiles`, and `groups` must still bypass via the existing `is_super_admin()` helper — verify after migration that super-admin can list all users/groups without RLS blocking.
+    - **Cooldown table initialization**: `sync_metadata` MUST have its `id = 1` row seeded at migration time (`INSERT ... ON CONFLICT DO NOTHING`). If absent, the first sync attempt would either crash on the read or upsert silently — neither acceptable. Cover this in 4.0.1.
+    - **Partial failure on deactivate flow (4.0.9)**: If `toggleUserActive` succeeds but `signOutUser` fails, the user is write-locked but their existing session token is still valid until expiry. The UI must surface this distinctly so the admin knows to escalate (or wait for token expiry). Document explicitly in the toast copy.
+
 - [ ] **4.1 Auto Point Calculation** (Size: M)
   - **Description**: When match results come in (via the sync function from 2.1), automatically calculate points for all predictions on that match. Use the existing `calculate_prediction_points` SQL function. Update `group_members` totals.
   - **Depends on**: 2.1, 3.2
@@ -627,6 +774,16 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Consider refactoring `matches.page.ts`'s `applyGameweekMeta` so that `setGameweekMeta` takes the gameweek number explicitly, keeping a single point where all fields are written together (current pre-assign of `currentGameweek.number = target` is a workaround)
     - `markJokerUsed` authorization hardening: add an integration test that disables RLS and asserts the app-layer still refuses cross-user writes. Also add a doc-comment pinning the `mark_joker_used` RPC contract so future refactors don't silently break the authorization boundary (RLS + `auth.uid()` inside the SECURITY DEFINER function)
     - Wrap `SupabaseDataService` error surfaces in a sanitized domain error (e.g. `JokerUsageError('Unable to load joker state')`) and log the raw Supabase message only — raw messages can leak schema hints (column names, constraint names, RLS denial reasons) to the browser console
+    - **sync-matches cooldown race condition:** the current read-then-act pattern lets two concurrent invocations both pass the 5-min gate when clicked near-simultaneously (low risk — football-data.org upserts are idempotent — but wastes API quota). Fix: replace the check with a single `UPDATE sync_metadata SET last_sync_status = 'in_progress' WHERE id = 1 AND (last_sync_at IS NULL OR last_sync_at < NOW() - INTERVAL '5 minutes' OR last_sync_status = 'error') RETURNING *`. If zero rows returned, you're in cooldown. This also wires the `'in_progress'` enum value (currently dead)
+    - **Auth guard cold-start race:** `AuthGuard` reads `supabaseService.currentProfile?.role` synchronously. On a cold start with a persisted session, `currentSession$` has emitted but `currentProfile$` may still be null while the profile query is in flight. Deep-linking to `/super-admin/dashboard` in that window redirects a legit super-admin to `/auth/login`. Fix: switch the guard to subscribe to `profile$` with `filter(p => p !== null)` and a short timeout fallback
+    - **Extract `AdminService` from `SupabaseDataService`:** the 7 super-admin methods (`getAllUsers`, `getAllGroups`, `toggleUserActive`, `deleteGroup`, `getLastMatchSync`, `triggerMatchSync`, `signOutUser`) bloat the main data service (now ~670 LOC mixing player, admin, scoring, and groups). Extracting an `AdminService` keeps the normal data-access service focused and prevents accidental admin calls from non-admin pages
+    - **Dashboard client countdown vs server cooldown:** `CLIENT_COUNTDOWN_SECONDS = 30` but the server enforces 300s. After a successful click, the button re-enables after 30s but the next click hits server cooldown and restarts a 270s countdown — looks flaky. Either lift the client value to 300 (match the server) or add an inline comment explaining the intentional optimistic re-enable pacing
+    - **admin-signout audit logging:** re-order the Edge Function so `userId` is parsed BEFORE the role check. Currently a forbidden caller leaves no record of which user they tried to target — parsing first captures full attack context in the denial log
+    - `sync_metadata` `'in_progress'` status enum value is dead code today — wire it up as part of the cooldown race fix above OR remove the CHECK constraint value (migration 008:52)
+    - **Paginate `getAllUsers` / `getAllGroups`:** currently capped at `.limit(500)` as a safety guard. Replace with proper `.range(offset, offset + pageSize - 1)` + infinite scroll / paging controls on the users-groups admin page. At scale (thousands of users) even 500 rows is a lot to ship each tab visit
+    - **Admin audit log:** add an `admin_audit_log` table written by `admin-signout` (and future privileged super-admin operations) — records caller, target, action, timestamp. Currently only stdout `console.log` at the Edge Function; not queryable
+    - **CORS response headers:** both `sync-matches` and `admin-signout` Edge Functions respond to OPTIONS with 204 but set no `Access-Control-Allow-Origin`/`-Methods`/`-Headers`. `supabase-js` handles this internally so current callers work, but direct browser `fetch` from a different origin would fail. Add an allowlist-based CORS header set (not `*`)
+    - Confirm the users-groups page is excluded from any session-replay / error-tracking capture (Sentry etc.) — it renders user emails. Mask or exclude via provider config
 
 ---
 

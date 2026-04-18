@@ -73,3 +73,6 @@ testem.log
 .DS_Store
 Thumbs.db
 
+
+# direnv env files — NEVER commit (contain secrets like SUPABASE_ACCESS_TOKEN)
+.envrc

@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { DatePipe, NgIf } from '@angular/common';
 import {
   IonHeader,
   IonToolbar,
@@ -8,122 +9,28 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonButton,
+  IonIcon,
+  IonSpinner,
+  IonBadge,
   IonGrid,
   IonRow,
   IonCol,
-  IonIcon,
-  IonButton,
-  IonBadge,
-  IonList,
-  IonItem,
-  IonLabel,
+  ToastController,
 } from '@ionic/angular/standalone';
-import { RouterLink } from '@angular/router';
-import { NgFor, NgIf, DatePipe, TitleCasePipe, DecimalPipe } from '@angular/common';
 import { addIcons } from 'ionicons';
 import {
-  peopleOutline,
-  layersOutline,
-  footballOutline,
-  trophyOutline,
-  alertCircleOutline,
+  cloudDownloadOutline,
   timeOutline,
-  lockClosedOutline,
-  checkmarkCircleOutline,
-  starOutline,
-  calendarOutline,
-  walletOutline,
-  trendingUpOutline,
-  cashOutline,
-  pulseOutline,
-  statsChartOutline,
-  phonePortraitOutline,
-  desktopOutline,
-  chatbubbleOutline } from 'ionicons/icons';
+} from 'ionicons/icons';
+import { SupabaseDataService } from '@core/services/supabase-data.service';
 
-interface SystemOverview {
-  totalGroups: number;
-  activeGroups: number;
-  totalUsers: number;
-  activeUsers: number;
-  totalPredictions: number;
-  submittedPredictions: number;
-  currentGameweek: number;
-  nextDeadline: Date;
-  jokerStats: {
-    firstJokerUsed: number;
-    secondJokerUsed: number;
-    totalEligible: number;
-  };
-  specialEvents: {
-    nextEvent: 'boxing_day' | 'final_day' | null;
-    daysUntil: number;
-  };
-  paymentStats: {
-    totalPaid: number;
-    totalPending: number;
-    totalGroups: number;
-  };
-}
+type SyncStatus = 'ok' | 'error' | 'in_progress' | null;
 
-interface RecentActivity {
-  type:
-    | 'group_created'
-    | 'user_joined'
-    | 'prediction_submitted'
-    | 'deadline_passed';
-  description: string;
-  timestamp: Date;
-}
-
-
-
-interface BusinessIntelligence {
-  growth: {
-    newUsersThisWeek: number;
-    newUsersThisMonth: number;
-    newGroupsThisWeek: number;
-    newGroupsThisMonth: number;
-    growthRateWeekly: number; // percentage
-    growthRateMonthly: number; // percentage
-  };
-  revenue: {
-    monthlyRecurringRevenue: number; // in currency
-    totalRevenue: number;
-    conversionRate: number; // percentage
-    averageRevenuePerUser: number;
-    churnRate: number; // percentage
-  };
-  engagement: {
-    dailyActiveUsers: number;
-    weeklyActiveUsers: number;
-    averageSessionDuration: number; // minutes
-    predictionsPerUser: number;
-    retentionRate: number; // percentage
-  };
-  adoption: {
-    featuresUsed: {
-      predictions: number; // percentage of users
-      jokers: number;
-      groupChat: number;
-      leaderboards: number;
-    };
-    platformUsage: {
-      mobile: number; // percentage
-      web: number;
-    };
-    topGroups: {
-      name: string;
-      members: number;
-      engagement: number; // percentage
-    }[];
-  };
-}
+const CLIENT_COUNTDOWN_SECONDS = 30;
 
 @Component({
   selector: 'app-dashboard',
-  templateUrl: './dashboard.page.html',
-  styleUrls: ['./dashboard.page.scss'],
   standalone: true,
   imports: [
     IonHeader,
@@ -134,215 +41,328 @@ interface BusinessIntelligence {
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
+    IonButton,
+    IonIcon,
+    IonSpinner,
+    IonBadge,
     IonGrid,
     IonRow,
     IonCol,
-    IonIcon,
-    IonButton,
-    IonBadge,
-    IonList,
-    IonItem,
-    IonLabel,
-    RouterLink,
-    NgFor,
     NgIf,
     DatePipe,
-    TitleCasePipe,
-    DecimalPipe,
+  ],
+  template: `
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>System Overview</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <div class="loading-state" *ngIf="isLoading">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+
+      <ion-grid *ngIf="!isLoading">
+        <ion-row>
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-header>
+                <ion-card-title>Total Users</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="stat-value">{{ totalUsers }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-header>
+                <ion-card-title>Total Groups</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="stat-value">{{ totalGroups }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-header>
+                <ion-card-title>Active Gameweek</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="stat-value">{{ activeGameweekNumber ?? '—' }}</div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+
+          <ion-col size="12" sizeMd="6" sizeLg="3">
+            <ion-card class="stat-card">
+              <ion-card-header>
+                <ion-card-title>Last Match Sync</ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="sync-info">
+                  <div class="sync-timestamp" *ngIf="lastSyncAt; else neverSynced">
+                    {{ lastSyncAt | date : 'short' }}
+                  </div>
+                  <ng-template #neverSynced>
+                    <div class="sync-timestamp">Never synced</div>
+                  </ng-template>
+
+                  <ion-badge
+                    *ngIf="lastSyncStatus === 'ok'"
+                    color="success"
+                  >ok</ion-badge>
+                  <ion-badge
+                    *ngIf="lastSyncStatus === 'error'"
+                    color="danger"
+                  >error</ion-badge>
+                  <ion-badge
+                    *ngIf="lastSyncStatus === 'in_progress'"
+                    color="warning"
+                  >in progress</ion-badge>
+                  <ion-badge
+                    *ngIf="!lastSyncStatus"
+                    color="medium"
+                  >never synced</ion-badge>
+                </div>
+
+                <div class="sync-action">
+                  <ion-button
+                    *ngIf="!syncCountdownSeconds || syncCountdownSeconds <= 0"
+                    expand="block"
+                    [disabled]="isSyncing"
+                    (click)="onSyncClick()"
+                  >
+                    <ion-icon name="cloud-download-outline" slot="start"></ion-icon>
+                    Sync Matches Now
+                  </ion-button>
+                  <div
+                    *ngIf="syncCountdownSeconds && syncCountdownSeconds > 0"
+                    class="cooldown-text"
+                  >
+                    <ion-icon name="time-outline"></ion-icon>
+                    Retry in {{ syncCountdownSeconds }}s
+                  </div>
+                </div>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-content>
+  `,
+  styles: [
+    `
+      ion-content {
+        --background: #f4f5f8;
+      }
+      .loading-state {
+        display: flex;
+        justify-content: center;
+        padding: 32px;
+      }
+      .stat-card {
+        margin: 0;
+      }
+      .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--ion-color-dark);
+      }
+      .sync-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .sync-timestamp {
+        font-size: 14px;
+        color: var(--ion-color-medium);
+        flex: 1;
+      }
+      .sync-action {
+        margin-top: 8px;
+      }
+      .cooldown-text {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--ion-color-medium);
+        font-weight: 500;
+      }
+    `,
   ],
 })
-export class DashboardPage {
-  overview: SystemOverview = {
-    totalGroups: 15,
-    activeGroups: 12,
-    totalUsers: 156,
-    activeUsers: 143,
-    totalPredictions: 429,
-    submittedPredictions: 398,
-    currentGameweek: 15,
-    nextDeadline: new Date('2024-03-23T11:30:00'),
-    jokerStats: {
-      firstJokerUsed: 85,
-      secondJokerUsed: 32,
-      totalEligible: 143,
-    },
-    specialEvents: {
-      nextEvent: 'boxing_day',
-      daysUntil: 45,
-    },
-    paymentStats: {
-      totalPaid: 12,
-      totalPending: 3,
-      totalGroups: 15,
-    },
-  };
+export class DashboardPage implements OnDestroy {
+  totalUsers = 0;
+  totalGroups = 0;
+  activeGameweekNumber: number | null = null;
 
+  lastSyncAt: string | null = null;
+  lastSyncStatus: SyncStatus = null;
+  lastSyncError: string | null = null;
 
+  /**
+   * Client-side countdown ticker (decremented every second). The
+   * authoritative cooldown gate lives server-side (Edge Function, Task
+   * 4.0.6) — this is UX-only so the admin sees a visible "wait" between
+   * sync attempts. Initialised from `getLastMatchSync().cooldownRemainingSeconds`
+   * on load and reset by the sync flow on success / cooldown response.
+   */
+  syncCountdownSeconds = 0;
 
-  businessIntelligence: BusinessIntelligence = {
-    growth: {
-      newUsersThisWeek: 47,
-      newUsersThisMonth: 203,
-      newGroupsThisWeek: 5,
-      newGroupsThisMonth: 18,
-      growthRateWeekly: 12.5,
-      growthRateMonthly: 28.7,
-    },
-    revenue: {
-      monthlyRecurringRevenue: 3240,
-      totalRevenue: 18650,
-      conversionRate: 8.3,
-      averageRevenuePerUser: 23.50,
-      churnRate: 3.2,
-    },
-    engagement: {
-      dailyActiveUsers: 89,
-      weeklyActiveUsers: 127,
-      averageSessionDuration: 14.5,
-      predictionsPerUser: 8.7,
-      retentionRate: 76.4,
-    },
-    adoption: {
-      featuresUsed: {
-        predictions: 94.2,
-        jokers: 67.8,
-        groupChat: 43.1,
-        leaderboards: 82.5,
-      },
-      platformUsage: {
-        mobile: 68.3,
-        web: 31.7,
-      },
-      topGroups: [
-        { name: 'Premier League Fanatics', members: 24, engagement: 91.2 },
-        { name: 'Champions League Elite', members: 18, engagement: 87.5 },
-        { name: 'Football Madness', members: 22, engagement: 84.8 },
+  isLoading = false;
+  isSyncing = false;
+
+  private countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+  constructor(
+    private supabaseDataService: SupabaseDataService,
+    private toastController: ToastController,
+  ) {
+    addIcons({
+      cloudDownloadOutline,
+      timeOutline,
+    });
+  }
+
+  /**
+   * Re-fetches all dashboard stats every time the tab becomes active. Admin
+   * may switch between dashboard and users tabs and expect fresh counts;
+   * `ngOnInit` would only fire on the initial mount.
+   */
+  async ionViewWillEnter(): Promise<void> {
+    this.isLoading = true;
+    // Render cards independently. `getActiveGameweek` uses .single() which
+    // rejects when no row has is_active=true (pre-season, between weeks,
+    // fresh migrations). A single rejection shouldn't hide every other
+    // stat, so use allSettled and log partial failures.
+    // Use getAdminCounts() — a HEAD query that returns just the counts
+    // via response headers (no row payload shipped). Prevents wastefully
+    // transferring full user/group tables just to compute `.length`.
+    const [countsResult, gameweekResult, syncResult] = await Promise.allSettled(
+      [
+        this.supabaseDataService.getAdminCounts(),
+        this.supabaseDataService.getActiveGameweek(),
+        this.supabaseDataService.getLastMatchSync(),
       ],
-    },
-  };
+    );
 
-  recentActivities: RecentActivity[] = [
-    {
-      type: 'group_created',
-      description: 'New group "Premier League Fanatics" created',
-      timestamp: new Date('2024-03-20T14:30:00'),
-    },
-    {
-      type: 'user_joined',
-      description: 'New user joined "Champions League Group"',
-      timestamp: new Date('2024-03-20T13:15:00'),
-    },
-    {
-      type: 'prediction_submitted',
-      description: 'Batch of 25 predictions submitted for GW15',
-      timestamp: new Date('2024-03-20T12:45:00'),
-    },
-    {
-      type: 'deadline_passed',
-      description: 'Gameweek 14 deadline passed, predictions locked',
-      timestamp: new Date('2024-03-20T11:30:00'),
-    },
-  ];
+    if (countsResult.status === 'fulfilled') {
+      this.totalUsers = countsResult.value.userCount;
+      this.totalGroups = countsResult.value.groupCount;
+    } else {
+      this.totalUsers = 0;
+      this.totalGroups = 0;
+    }
+    this.activeGameweekNumber =
+      gameweekResult.status === 'fulfilled'
+        ? gameweekResult.value?.number ?? null
+        : null;
+    if (syncResult.status === 'fulfilled') {
+      const sync = syncResult.value;
+      this.lastSyncAt = sync?.lastSyncAt ?? null;
+      this.lastSyncStatus = sync?.lastSyncStatus ?? null;
+      this.lastSyncError = sync?.lastSyncError ?? null;
+      const remaining = sync?.cooldownRemainingSeconds ?? 0;
+      if (remaining > 0) {
+        this.startCountdown(remaining);
+      }
+    }
 
-  constructor() {
-    addIcons({layersOutline,peopleOutline,footballOutline,timeOutline,starOutline,calendarOutline,walletOutline,trophyOutline,alertCircleOutline,lockClosedOutline,checkmarkCircleOutline,trendingUpOutline,cashOutline,pulseOutline,statsChartOutline,phonePortraitOutline,desktopOutline,chatbubbleOutline,});
+    const rejected = [countsResult, gameweekResult, syncResult].filter(
+      (r) => r.status === 'rejected',
+    ) as PromiseRejectedResult[];
+    for (const r of rejected) {
+      const message =
+        r.reason instanceof Error ? r.reason.message : 'Unknown error';
+      console.error(`Dashboard partial load failure: ${message}`);
+    }
+    // Only surface a toast if EVERY stat failed — otherwise the UI shows
+    // what it can and stays quiet about transient single-card misses.
+    if (rejected.length === 3) {
+      await this.showToast('Failed to load dashboard data');
+    }
+
+    this.isLoading = false;
   }
 
-  getTimeUntilDeadline(): string {
-    const now = new Date();
-    const diff = this.overview.nextDeadline.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
+  /**
+   * Triggers a server-side match sync. The Edge Function returns one of:
+   * `{ ok: true }` (synced — start fresh client cooldown), `{ ok: false,
+   * reason: 'cooldown', cooldownRemainingSeconds }` (server cooldown still
+   * active — mirror the server's remaining seconds), or throws (network /
+   * invoke failure — surface a generic error toast).
+   */
+  async onSyncClick(): Promise<void> {
+    if (this.isSyncing) return;
+    this.isSyncing = true;
+    try {
+      const result = await this.supabaseDataService.triggerMatchSync();
 
-    if (hours < 0) return 'Deadline passed';
-    if (hours < 24) return `${hours}h remaining`;
-    return `${Math.floor(hours / 24)}d ${hours % 24}h`;
-  }
+      if (result?.ok) {
+        await this.showToast('Match data synced successfully');
+        this.startCountdown(CLIENT_COUNTDOWN_SECONDS);
+        return;
+      }
 
-  getActivityIcon(type: string): string {
-    switch (type) {
-      case 'group_created':
-        return 'layers-outline';
-      case 'user_joined':
-        return 'people-outline';
-      case 'prediction_submitted':
-        return 'football-outline';
-      case 'deadline_passed':
-        return 'time-outline';
-      default:
-        return 'alert-circle-outline';
+      if (result?.reason === 'cooldown') {
+        const remaining = result.cooldownRemainingSeconds ?? 0;
+        await this.showToast(`Sync on cooldown — try again in ${remaining}s`);
+        this.startCountdown(remaining);
+        return;
+      }
+
+      // Non-ok response with no recognised reason — show whatever the
+      // server returned, falling back to a generic message.
+      const reason = result?.reason ?? 'unknown error';
+      await this.showToast(`Sync failed: ${reason}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`Sync failed: ${message}`);
+      await this.showToast(`Sync failed: ${message}`);
+    } finally {
+      this.isSyncing = false;
     }
   }
 
-  getActivityColor(type: string): string {
-    switch (type) {
-      case 'group_created':
-        return 'primary';
-      case 'user_joined':
-        return 'secondary';
-      case 'prediction_submitted':
-        return 'success';
-      case 'deadline_passed':
-        return 'warning';
-      default:
-        return 'medium';
+  ngOnDestroy(): void {
+    this.clearCountdown();
+  }
+
+  /**
+   * Begin (or restart) the visible countdown. Clears any previous interval
+   * so successive sync attempts don't stack tickers.
+   */
+  private startCountdown(seconds: number): void {
+    this.clearCountdown();
+    this.syncCountdownSeconds = seconds;
+    this.countdownInterval = setInterval(() => {
+      this.syncCountdownSeconds = Math.max(0, this.syncCountdownSeconds - 1);
+      if (this.syncCountdownSeconds <= 0) {
+        this.clearCountdown();
+      }
+    }, 1000);
+  }
+
+  private clearCountdown(): void {
+    if (this.countdownInterval !== null) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
     }
   }
 
-  getNextEventDisplay(): string {
-    if (!this.overview.specialEvents.nextEvent) return 'No upcoming events';
-    return this.overview.specialEvents.nextEvent === 'boxing_day'
-      ? 'Boxing Day Special'
-      : 'Final Day Madness';
-  }
-
-  async manageSpecialEvent() {
-    // TODO: Implement special event management modal
-
-  }
-
-  async manageJokers() {
-    // TODO: Implement joker management modal
-
-  }
-
-  async managePayments() {
-    // TODO: Implement payment overview modal
-
-  }
-
-
-
-  // Business Intelligence Helper Methods
-  getGrowthTrend(percentage: number): string {
-    if (percentage > 20) return 'Excellent';
-    if (percentage > 10) return 'Good';
-    if (percentage > 0) return 'Positive';
-    return 'Declining';
-  }
-
-  getRetentionStatus(rate: number): string {
-    if (rate > 80) return 'Excellent';
-    if (rate > 60) return 'Good';
-    if (rate > 40) return 'Fair';
-    return 'Needs Improvement';
-  }
-
-  getConversionRateColor(rate: number): string {
-    if (rate > 10) return 'success';
-    if (rate > 5) return 'warning';
-    return 'danger';
-  }
-
-  formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  }
-
-  formatPercentage(value: number, decimals: number = 1): string {
-    return `${value.toFixed(decimals)}%`;
+  private async showToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'top',
+    });
+    await toast.present();
   }
 }

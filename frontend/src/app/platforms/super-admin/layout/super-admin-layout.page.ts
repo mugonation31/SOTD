@@ -14,16 +14,12 @@ import {
 import { RouterModule, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
-  settingsOutline,
-  personOutline,
   footballOutline,
   gridOutline,
-  layersOutline,
-  statsChartOutline,
   peopleOutline,
-  personAddOutline,
-  speedometerOutline,
+  logOutOutline,
 } from 'ionicons/icons';
+import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-super-admin-layout',
@@ -45,21 +41,24 @@ import {
   ],
 })
 export class SuperAdminLayoutPage {
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {
     addIcons({
-      settingsOutline,
-      personOutline,
       footballOutline,
       gridOutline,
-      layersOutline,
-      statsChartOutline,
       peopleOutline,
-      personAddOutline,
-      speedometerOutline,
+      logOutOutline,
     });
   }
 
   navigateTo(path: string) {
     this.router.navigate([path], { replaceUrl: true });
+  }
+
+  async logout(): Promise<void> {
+    await this.authService.logout();
+    this.router.navigate(['/auth/login']);
   }
 }

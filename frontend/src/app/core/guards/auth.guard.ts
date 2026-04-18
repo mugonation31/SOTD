@@ -4,20 +4,28 @@ import { Observable } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { User } from '../interfaces/user.interface';
 import { AuthService } from '../services/auth.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthGuard {
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private supabaseService: SupabaseService
   ) {}
 
-  private getLoginRoute(expectedRole?: string): string {
-    switch (expectedRole) {
-      case 'super-admin':
-        return '/super-admin/login';
-      default:
-        return '/auth/login';
+  // Task 4.0.2: super-admin no longer has a dedicated login page;
+  // all unauthenticated/role-mismatch redirects go to /auth/login.
+  private static readonly LOGIN_ROUTE = '/auth/login';
+
+  private redirectToLogin(route: ActivatedRouteSnapshot): void {
+    const attemptedUrl = '/' + route.url.map(seg => seg.path).join('/');
+    if (attemptedUrl && attemptedUrl !== '/') {
+      this.router.navigate([AuthGuard.LOGIN_ROUTE], {
+        queryParams: { returnUrl: attemptedUrl }
+      });
+    } else {
+      this.router.navigate([AuthGuard.LOGIN_ROUTE]);
     }
   }
 
@@ -28,17 +36,26 @@ export class AuthGuard {
         try {
           // Get expected role from route data
           const expectedRole = route.data?.['expectedRole'];
-          
-          // Check if user is authenticated using the reactive state
-          if (!authResponse || !authResponse.user) {
-            const loginRoute = this.getLoginRoute(expectedRole);
-            this.router.navigate([loginRoute]);
+
+          // Super-admin routes: source role from Supabase profile (Task 4.0.2)
+          if (expectedRole === 'super-admin') {
+            const profileRole = this.supabaseService.currentProfile?.role;
+            if (profileRole === 'super-admin') {
+              return true;
+            }
+            this.redirectToLogin(route);
             return false;
           }
-          
+
+          // Check if user is authenticated using the reactive state
+          if (!authResponse || !authResponse.user) {
+            this.redirectToLogin(route);
+            return false;
+          }
+
           // Get user role from the auth response
           const userRole = authResponse.user.role;
-          
+
           // If no expected role is specified, just check if user is authenticated
           if (!expectedRole) {
             return true;
@@ -49,15 +66,13 @@ export class AuthGuard {
             return true;
           }
 
-          // Role mismatch - redirect to appropriate login
-          const loginRoute = this.getLoginRoute(expectedRole);
-          this.router.navigate([loginRoute]);
+          // Role mismatch - redirect to login with returnUrl
+          this.redirectToLogin(route);
           return false;
         } catch (error) {
           // Error parsing user data - redirect to default login
-          const loginRoute = this.getLoginRoute(route.data?.['expectedRole']);
           console.error('AuthGuard: Error getting user data, redirecting to login:', error);
-          this.router.navigate([loginRoute]);
+          this.redirectToLogin(route);
           return false;
         }
       })

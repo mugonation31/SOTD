@@ -501,4 +501,210 @@ export class SupabaseDataService {
     if (error) throw new Error(error.message);
     return data || [];
   }
+
+  // -----------------------------------------------------------------------
+  // Super-admin (Task 4.0.5)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Returns counts only (no row payload) for the admin dashboard. Uses
+   * PostgREST `head: true, count: 'exact'` so Supabase returns just the
+   * count in the response header — no row bytes shipped. Cheap at scale.
+   * Super-admin only via existing RLS policies.
+   */
+  async getAdminCounts(): Promise<{ userCount: number; groupCount: number }> {
+    const [usersResult, groupsResult] = await Promise.all([
+      this.client
+        .from('profiles')
+        .select('*', { count: 'exact', head: true }),
+      this.client
+        .from('groups')
+        .select('*', { count: 'exact', head: true }),
+    ]);
+
+    if (usersResult.error) throw new Error(usersResult.error.message);
+    if (groupsResult.error) throw new Error(groupsResult.error.message);
+
+    return {
+      userCount: usersResult.count ?? 0,
+      groupCount: groupsResult.count ?? 0,
+    };
+  }
+
+  /**
+   * Returns every profile in the system, newest first. Super-admin only —
+   * RLS on `profiles` (migration 001) gates this to callers whose JWT
+   * resolves to `role = 'super-admin'`.
+   *
+   * Capped at 500 rows as a safety limit. Task 4.2 will replace this with
+   * proper paginated `.range(offset, offset+pageSize-1)` + infinite scroll
+   * on the admin list page.
+   */
+  async getAllUsers(): Promise<Array<{
+    id: string;
+    email: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+    is_active: boolean;
+    created_at: string;
+  }>> {
+    const { data, error } = await this.client
+      .from('profiles')
+      .select('id, email, username, first_name, last_name, role, is_active, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  /**
+   * Returns every group in the system, newest first. Super-admin only —
+   * RLS on `groups` (migration 004) gates this to callers whose JWT
+   * resolves to `role = 'super-admin'`.
+   *
+   * Capped at 500 rows as a safety limit. Task 4.2 will replace this with
+   * proper paginated `.range(offset, offset+pageSize-1)` + infinite scroll
+   * on the admin list page.
+   */
+  async getAllGroups(): Promise<Array<{
+    id: string;
+    name: string;
+    code: string;
+    admin_id: string;
+    current_members: number;
+    max_members: number;
+    is_active: boolean;
+    created_at: string;
+  }>> {
+    const { data, error } = await this.client
+      .from('groups')
+      .select('id, name, code, admin_id, current_members, max_members, is_active, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  /**
+   * Activates or deactivates a user account. The `is_active` flag (added in
+   * migration 008) is the authoritative write-block: deactivated users can
+   * still READ data (so leaderboards keep rendering their history) but
+   * predictions / group_members RLS rejects all INSERT/UPDATE/DELETE.
+   *
+   * NOTE: existing JWTs continue to authenticate at the auth layer until
+   * they expire. To force an immediate logout, the caller should also invoke
+   * `signOutUser(userId)` after deactivating.
+   */
+  async toggleUserActive(userId: string, active: boolean): Promise<void> {
+    const { error } = await this.client
+      .from('profiles')
+      .update({ is_active: active })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Permanently deletes a group. `group_members` rows cascade delete via
+   * `ON DELETE CASCADE` (migration 004). Predictions are NOT deleted —
+   * they reference `user_id`/`match_id`/`gameweek_id` (migration 005) and
+   * are per-player, so each member's season history survives the group
+   * being removed. Super-admin RLS policy required.
+   */
+  async deleteGroup(groupId: string): Promise<void> {
+    const { error } = await this.client
+      .from('groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Reads the single-row `sync_metadata` table (id = 1) and computes the
+   * remaining client-side cooldown window (5 minutes). The Edge Function
+   * remains the authoritative gate (Decision 1) — this method only powers
+   * the dashboard countdown.
+   *
+   * Returns zeros/nulls if the row hasn't been seeded yet (defensive — the
+   * migration seeds it).
+   */
+  async getLastMatchSync(): Promise<{
+    lastSyncAt: string | null;
+    lastSyncStatus: 'ok' | 'error' | 'in_progress' | null;
+    lastSyncError: string | null;
+    cooldownRemainingSeconds: number;
+  }> {
+    const COOLDOWN_SECONDS = 300; // 5 minutes
+
+    const { data, error } = await this.client
+      .from('sync_metadata')
+      .select('last_sync_at, last_sync_status, last_sync_error')
+      .eq('id', 1)
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    if (!data) {
+      return {
+        lastSyncAt: null,
+        lastSyncStatus: null,
+        lastSyncError: null,
+        cooldownRemainingSeconds: 0,
+      };
+    }
+
+    const lastSyncAt = data.last_sync_at ?? null;
+    let cooldownRemainingSeconds = 0;
+    if (lastSyncAt) {
+      const elapsedSeconds = (Date.now() - new Date(lastSyncAt).getTime()) / 1000;
+      cooldownRemainingSeconds = Math.max(0, Math.floor(COOLDOWN_SECONDS - elapsedSeconds));
+    }
+
+    return {
+      lastSyncAt,
+      lastSyncStatus: data.last_sync_status ?? null,
+      lastSyncError: data.last_sync_error ?? null,
+      cooldownRemainingSeconds,
+    };
+  }
+
+  /**
+   * Triggers a match data sync via the `sync-matches` Edge Function. The
+   * Edge Function enforces a server-side 5-minute cooldown (Task 4.0.6) —
+   * a cooldown response is normal and surfaced to the caller as-is. Only
+   * unexpected invoke errors are thrown.
+   */
+  async triggerMatchSync(): Promise<{
+    ok: boolean;
+    syncedAt?: string;
+    reason?: string;
+    cooldownRemainingSeconds?: number;
+  }> {
+    const { data, error } = await this.client.functions.invoke('sync-matches', {
+      body: {},
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  /**
+   * Force-terminates the active session for `userId` via the `admin-signout`
+   * Edge Function (Task 4.0.7). The Edge Function holds the `service_role`
+   * key and verifies the caller is super-admin server-side — the client
+   * never holds elevated credentials (Decision 2).
+   */
+  async signOutUser(userId: string): Promise<{ ok: boolean; reason?: string }> {
+    const { data, error } = await this.client.functions.invoke('admin-signout', {
+      body: { userId },
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
 }

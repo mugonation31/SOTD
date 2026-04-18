@@ -32,6 +32,9 @@ function createMockSupabaseClient() {
         error: null,
       }),
     },
+    functions: {
+      invoke: jest.fn().mockResolvedValue({ data: null, error: null }),
+    },
     // Expose helper so individual tests can override
     __mockBuilder: defaultBuilder,
   };
@@ -833,6 +836,331 @@ describe('SupabaseDataService', () => {
       await expect(service.getGroup('g1')).rejects.toThrow(
         'relation "groups" does not exist'
       );
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 4.0.5 — Admin service methods
+// ---------------------------------------------------------------------------
+describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
+  let service: SupabaseDataService;
+  let mockClient: ReturnType<typeof createMockSupabaseClient>;
+  let mockSupabaseService: any;
+
+  beforeEach(() => {
+    mockClient = createMockSupabaseClient();
+    mockSupabaseService = createMockSupabaseService(mockClient);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        SupabaseDataService,
+        { provide: SupabaseService, useValue: mockSupabaseService },
+      ],
+    });
+
+    service = TestBed.inject(SupabaseDataService);
+  });
+
+  // -----------------------------------------------------------------------
+  // getAllUsers
+  // -----------------------------------------------------------------------
+  describe('getAllUsers', () => {
+    it('should query profiles ordered by created_at DESC and return all rows', async () => {
+      const users = [
+        {
+          id: 'u2', email: 'b@x.com', username: 'beta', first_name: 'B', last_name: 'B',
+          role: 'player', is_active: true, created_at: '2026-04-02T00:00:00Z',
+        },
+        {
+          id: 'u1', email: 'a@x.com', username: 'alpha', first_name: 'A', last_name: 'A',
+          role: 'group_admin', is_active: false, created_at: '2026-04-01T00:00:00Z',
+        },
+      ];
+      const builder = createMockQueryBuilder({ data: users, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getAllUsers();
+
+      expect(mockClient.from).toHaveBeenCalledWith('profiles');
+      expect(builder.select).toHaveBeenCalledWith(
+        'id, email, username, first_name, last_name, role, is_active, created_at'
+      );
+      expect(builder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(result).toEqual(users);
+    });
+
+    it('should throw Error with Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'permission denied for table profiles' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getAllUsers()).rejects.toThrow(
+        'permission denied for table profiles'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getAllGroups
+  // -----------------------------------------------------------------------
+  describe('getAllGroups', () => {
+    it('should query groups ordered by created_at DESC and return all rows', async () => {
+      const groups = [
+        {
+          id: 'g2', name: 'Beta', code: 'BBB', admin_id: 'u2',
+          current_members: 5, max_members: 10, is_active: true,
+          created_at: '2026-04-02T00:00:00Z',
+        },
+        {
+          id: 'g1', name: 'Alpha', code: 'AAA', admin_id: 'u1',
+          current_members: 3, max_members: 10, is_active: false,
+          created_at: '2026-04-01T00:00:00Z',
+        },
+      ];
+      const builder = createMockQueryBuilder({ data: groups, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getAllGroups();
+
+      expect(mockClient.from).toHaveBeenCalledWith('groups');
+      expect(builder.select).toHaveBeenCalledWith(
+        'id, name, code, admin_id, current_members, max_members, is_active, created_at'
+      );
+      expect(builder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(result).toEqual(groups);
+    });
+
+    it('should throw Error with Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'permission denied for table groups' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getAllGroups()).rejects.toThrow(
+        'permission denied for table groups'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // toggleUserActive
+  // -----------------------------------------------------------------------
+  describe('toggleUserActive', () => {
+    it('should update profiles with is_active=true and filter by id when called with true', async () => {
+      const builder = createMockQueryBuilder({ data: null, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await service.toggleUserActive('user-42', true);
+
+      expect(mockClient.from).toHaveBeenCalledWith('profiles');
+      expect(builder.update).toHaveBeenCalledWith({ is_active: true });
+      expect(builder.eq).toHaveBeenCalledWith('id', 'user-42');
+    });
+
+    it('should update profiles with is_active=false when called with false', async () => {
+      const builder = createMockQueryBuilder({ data: null, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await service.toggleUserActive('user-42', false);
+
+      expect(builder.update).toHaveBeenCalledWith({ is_active: false });
+      expect(builder.eq).toHaveBeenCalledWith('id', 'user-42');
+    });
+
+    it('should throw Error with Supabase error message on update failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'permission denied' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.toggleUserActive('user-42', true)).rejects.toThrow(
+        'permission denied'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // deleteGroup
+  // -----------------------------------------------------------------------
+  describe('deleteGroup', () => {
+    it('should call delete on groups table filtered by id', async () => {
+      const builder = createMockQueryBuilder({ data: null, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await service.deleteGroup('g-1');
+
+      expect(mockClient.from).toHaveBeenCalledWith('groups');
+      expect(builder.delete).toHaveBeenCalled();
+      expect(builder.eq).toHaveBeenCalledWith('id', 'g-1');
+    });
+
+    it('should throw Error with Supabase error message on delete failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'foreign key violation' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.deleteGroup('g-1')).rejects.toThrow(
+        'foreign key violation'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getLastMatchSync
+  // -----------------------------------------------------------------------
+  describe('getLastMatchSync', () => {
+    // Fix Date.now to a stable reference point so cooldown math is deterministic
+    const NOW = new Date('2026-06-15T12:00:00Z').getTime();
+
+    beforeEach(() => {
+      jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should return cooldownRemainingSeconds=0 when last sync is older than 5 minutes', async () => {
+      const tenMinutesAgo = new Date(NOW - 10 * 60 * 1000).toISOString();
+      const builder = createMockQueryBuilder({
+        data: {
+          id: 1,
+          last_sync_at: tenMinutesAgo,
+          last_sync_status: 'ok',
+          last_sync_error: null,
+        },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastMatchSync();
+
+      expect(mockClient.from).toHaveBeenCalledWith('sync_metadata');
+      expect(builder.eq).toHaveBeenCalledWith('id', 1);
+      expect(builder.single).toHaveBeenCalled();
+      expect(result).toEqual({
+        lastSyncAt: tenMinutesAgo,
+        lastSyncStatus: 'ok',
+        lastSyncError: null,
+        cooldownRemainingSeconds: 0,
+      });
+    });
+
+    it('should return positive cooldownRemainingSeconds when last sync is fresh', async () => {
+      // 2 minutes ago → 300 - 120 = 180 seconds remaining
+      const twoMinutesAgo = new Date(NOW - 2 * 60 * 1000).toISOString();
+      const builder = createMockQueryBuilder({
+        data: {
+          id: 1,
+          last_sync_at: twoMinutesAgo,
+          last_sync_status: 'ok',
+          last_sync_error: null,
+        },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastMatchSync();
+
+      expect(result.cooldownRemainingSeconds).toBe(180);
+      expect(result.lastSyncAt).toBe(twoMinutesAgo);
+      expect(result.lastSyncStatus).toBe('ok');
+      expect(result.lastSyncError).toBeNull();
+    });
+
+    it('should return zeros/nulls when no row exists', async () => {
+      const builder = createMockQueryBuilder({ data: null, error: null });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      const result = await service.getLastMatchSync();
+
+      expect(result).toEqual({
+        lastSyncAt: null,
+        lastSyncStatus: null,
+        lastSyncError: null,
+        cooldownRemainingSeconds: 0,
+      });
+    });
+
+    it('should throw Error with Supabase error message on DB failure', async () => {
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'sync_metadata not accessible' },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await expect(service.getLastMatchSync()).rejects.toThrow(
+        'sync_metadata not accessible'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // triggerMatchSync
+  // -----------------------------------------------------------------------
+  describe('triggerMatchSync', () => {
+    it('should invoke sync-matches Edge Function with empty body and return payload as-is', async () => {
+      const payload = { ok: true, syncedAt: '2026-06-15T12:00:00Z' };
+      mockClient.functions.invoke.mockResolvedValueOnce({ data: payload, error: null });
+
+      const result = await service.triggerMatchSync();
+
+      expect(mockClient.functions.invoke).toHaveBeenCalledWith('sync-matches', { body: {} });
+      expect(result).toEqual(payload);
+    });
+
+    it('should return cooldown payload as-is (cooldown is a normal response, not an error)', async () => {
+      const payload = { ok: false, reason: 'cooldown', cooldownRemainingSeconds: 180 };
+      mockClient.functions.invoke.mockResolvedValueOnce({ data: payload, error: null });
+
+      const result = await service.triggerMatchSync();
+
+      expect(result).toEqual(payload);
+    });
+
+    it('should throw Error with invoke error message on unexpected failure', async () => {
+      mockClient.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'edge function unreachable' },
+      });
+
+      await expect(service.triggerMatchSync()).rejects.toThrow(
+        'edge function unreachable'
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // signOutUser
+  // -----------------------------------------------------------------------
+  describe('signOutUser', () => {
+    it('should invoke admin-signout Edge Function with {userId} and return payload', async () => {
+      const payload = { ok: true };
+      mockClient.functions.invoke.mockResolvedValueOnce({ data: payload, error: null });
+
+      const result = await service.signOutUser('user-42');
+
+      expect(mockClient.functions.invoke).toHaveBeenCalledWith('admin-signout', {
+        body: { userId: 'user-42' },
+      });
+      expect(result).toEqual(payload);
+    });
+
+    it('should throw Error with invoke error message on unexpected failure', async () => {
+      mockClient.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'forbidden' },
+      });
+
+      await expect(service.signOutUser('user-42')).rejects.toThrow('forbidden');
     });
   });
 });

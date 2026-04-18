@@ -3,20 +3,6 @@ import { SuperAdminLayoutPage } from './layout/super-admin-layout.page';
 import { AuthGuard } from '../../core/guards/auth.guard';
 
 export const routes: Routes = [
-  // Public routes - no authentication required
-  {
-    path: 'register',
-    loadComponent: () =>
-      import('./pages/register/register.page').then(
-        (m) => m.SuperAdminRegisterPage
-      ),
-  },
-  {
-    path: 'login',
-    loadComponent: () =>
-      import('./pages/login/login.page').then((m) => m.SuperAdminLoginPage),
-  },
-  
   // Protected routes - require super-admin authentication
   {
     path: '',
@@ -33,34 +19,18 @@ export const routes: Routes = [
         data: { preload: true },
       },
       {
-        path: 'metrics',
+        path: 'users-groups',
         loadComponent: () =>
-          import('./pages/metrics/metrics.page').then((m) => m.MetricsPage),
-      },
-      {
-        path: 'groups',
-        loadComponent: () =>
-          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
-        data: { preload: true },
-      },
-      {
-        path: 'predictions',
-        loadComponent: () =>
-          import('./pages/predictions/predictions.page').then(
-            (m) => m.PredictionsPage
+          import('./pages/users-groups/users-groups.page').then(
+            (m) => m.UsersGroupsPage,
           ),
-        data: { preload: true },
       },
+      // Backward-compat: the old `users` route now redirects to the
+      // combined Users & Groups page (Task 4.0.9).
       {
         path: 'users',
-        loadComponent: () =>
-          import('./pages/users/users.page').then((m) => m.UsersPage),
-      },
-      {
-        path: 'settings',
-        loadComponent: () =>
-          import('./pages/settings/settings.page').then((m) => m.SettingsPage),
-        data: { preload: true },
+        redirectTo: 'users-groups',
+        pathMatch: 'full',
       },
       {
         path: '',

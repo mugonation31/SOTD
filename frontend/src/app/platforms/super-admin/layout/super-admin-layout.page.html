@@ -9,8 +9,8 @@
         </div>
       </div>
       <ion-buttons slot="end">
-        <ion-button (click)="navigateTo('/super-admin/settings')">
-          <ion-icon name="person-outline" class="profile-icon"></ion-icon>
+        <ion-button class="logout-button" (click)="logout()">
+          <ion-icon name="log-out-outline"></ion-icon>
         </ion-button>
       </ion-buttons>
     </ion-toolbar>
@@ -23,19 +23,9 @@
         <ion-label>Dashboard</ion-label>
       </ion-tab-button>
 
-      <ion-tab-button tab="metrics" href="/super-admin/metrics">
-        <ion-icon name="speedometer-outline"></ion-icon>
-        <ion-label>Metrics</ion-label>
-      </ion-tab-button>
-
-      <ion-tab-button tab="groups" href="/super-admin/groups">
-        <ion-icon name="layers-outline"></ion-icon>
-        <ion-label>Groups & Users</ion-label>
-      </ion-tab-button>
-
-      <ion-tab-button tab="predictions" href="/super-admin/predictions">
-        <ion-icon name="stats-chart-outline"></ion-icon>
-        <ion-label>Predictions</ion-label>
+      <ion-tab-button tab="users" href="/super-admin/users-groups">
+        <ion-icon name="people-outline"></ion-icon>
+        <ion-label>Users & Groups</ion-label>
       </ion-tab-button>
     </ion-tab-bar>
   </ion-tabs>

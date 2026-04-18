@@ -5,6 +5,24 @@
 //   FOOTBALL_DATA_API_KEY  - API key for football-data.org
 //   SUPABASE_URL           - Supabase project URL
 //   SUPABASE_SERVICE_ROLE_KEY - Supabase service role key (bypasses RLS)
+//
+// ---------------------------------------------------------------------------
+// COOLDOWN INVARIANT (Task 4.0.6)
+// ---------------------------------------------------------------------------
+// A 5-minute (300s) server-side cooldown is enforced via the singleton
+// public.sync_metadata row (id = 1). Before each sync attempt:
+//
+//   1. Read sync_metadata.last_sync_at + last_sync_status.
+//   2. If last_sync_at is within the last 300s AND last_sync_status != 'error',
+//      reject with HTTP 429 and { ok: false, reason: 'cooldown',
+//      cooldownRemainingSeconds: N }. football-data.org is NOT called.
+//   3. Failed syncs (status = 'error') are exempt — the user can retry
+//      immediately. NULL last_sync_at (never run) also bypasses cooldown.
+//
+// On every completed attempt (success or failure), sync_metadata is updated
+// with last_sync_at = NOW() so subsequent calls see the cooldown window.
+// Successful syncs clear last_sync_error; failed syncs record a sanitised
+// message and set last_sync_status = 'error' (re-runnable immediately).
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -131,6 +149,36 @@ function groupBy<T>(items: T[], key: keyof T): Record<string, T[]> {
   }, {} as Record<string, T[]>);
 }
 
+const COOLDOWN_SECONDS = 300; // 5 minutes — see COOLDOWN INVARIANT at top.
+
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
+
+// Strip newlines, control chars, and clamp length so error text is safe to
+// store in sync_metadata.last_sync_error and return to the client.
+function sanitizeError(message: unknown): string {
+  const raw = message instanceof Error ? message.message : String(message ?? 'Unknown error');
+  return raw.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500);
+}
+
+async function recordSyncOutcome(
+  supabase: SupabaseClient,
+  status: 'ok' | 'error',
+  error: string | null
+): Promise<void> {
+  const { error: updateError } = await supabase
+    .from('sync_metadata')
+    .update({
+      last_sync_at: new Date().toISOString(),
+      last_sync_status: status,
+      last_sync_error: error,
+    })
+    .eq('id', 1);
+  if (updateError) {
+    console.error('Failed to update sync_metadata:', updateError);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Edge Function handler
 // ---------------------------------------------------------------------------
@@ -175,6 +223,38 @@ serve(async (req: Request) => {
     // Create Supabase client with service role (bypasses RLS)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // -----------------------------------------------------------------------
+    // Cooldown check (Task 4.0.6)
+    // -----------------------------------------------------------------------
+    // Read the singleton sync_metadata row. If the previous sync succeeded
+    // within COOLDOWN_SECONDS, reject with HTTP 429. Errors are exempt so a
+    // failed run can be retried immediately. A missing row or NULL
+    // last_sync_at also bypasses the cooldown.
+    const { data: meta, error: metaError } = await supabase
+      .from('sync_metadata')
+      .select('last_sync_at, last_sync_status')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (metaError) {
+      console.error('Failed to read sync_metadata:', metaError);
+      return new Response(
+        JSON.stringify({ ok: false, reason: 'sync_failed', error: 'Could not read sync metadata' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (meta?.last_sync_at && meta.last_sync_status !== 'error') {
+      const elapsedSeconds = (Date.now() - new Date(meta.last_sync_at).getTime()) / 1000;
+      if (elapsedSeconds < COOLDOWN_SECONDS) {
+        const cooldownRemainingSeconds = Math.ceil(COOLDOWN_SECONDS - elapsedSeconds);
+        return new Response(
+          JSON.stringify({ ok: false, reason: 'cooldown', cooldownRemainingSeconds }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Fetch all PL matches for the current season
     const response = await fetch(
       'https://api.football-data.org/v4/competitions/PL/matches',
@@ -182,10 +262,14 @@ serve(async (req: Request) => {
     );
 
     if (!response.ok) {
+      const errMsg = `Football API returned ${response.status}: ${response.statusText}`;
+      await recordSyncOutcome(supabase, 'error', sanitizeError(errMsg));
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Football API returned ${response.status}: ${response.statusText}`,
+          ok: false,
+          reason: 'sync_failed',
+          error: errMsg,
         }),
         { status: 502, headers: { 'Content-Type': 'application/json' } }
       );
@@ -210,10 +294,14 @@ serve(async (req: Request) => {
     const data = await response.json();
 
     if (!data.matches || !Array.isArray(data.matches)) {
+      const errMsg = 'Unexpected API response: no matches array';
+      await recordSyncOutcome(supabase, 'error', sanitizeError(errMsg));
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Unexpected API response: no matches array',
+          ok: false,
+          reason: 'sync_failed',
+          error: errMsg,
         }),
         { status: 502, headers: { 'Content-Type': 'application/json' } }
       );
@@ -272,12 +360,27 @@ serve(async (req: Request) => {
       totalGameweeksSynced++;
     }
 
+    const syncedAt = new Date().toISOString();
+
+    // Record outcome in sync_metadata. Partial errors (some gameweeks failed)
+    // are still recorded as 'error' so the user can immediately retry.
+    if (errors.length === 0) {
+      await recordSyncOutcome(supabase, 'ok', null);
+    } else {
+      await recordSyncOutcome(supabase, 'error', sanitizeError(errors.join('; ')));
+    }
+
     const result = {
       success: errors.length === 0,
+      ok: errors.length === 0,
+      syncedAt,
+      syncedGameweeks: totalGameweeksSynced,
+      syncedMatches: totalMatchesSynced,
+      // Legacy field names preserved for backwards compatibility.
       matchesSynced: totalMatchesSynced,
       gameweeksSynced: totalGameweeksSynced,
       rateLimitRemaining: remainingCalls,
-      ...(errors.length > 0 && { errors }),
+      ...(errors.length > 0 && { reason: 'sync_failed', errors }),
     };
 
     return new Response(JSON.stringify(result), {
@@ -286,9 +389,24 @@ serve(async (req: Request) => {
     });
   } catch (error) {
     console.error('sync-matches error:', error);
+    // Best-effort: re-create a service-role client and record the failure so
+    // the cooldown does not block the next attempt. Wrapped in try/catch
+    // because this path is already an error handler.
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        await recordSyncOutcome(supabase, 'error', sanitizeError(error));
+      }
+    } catch (recordErr) {
+      console.error('Failed to record sync error:', recordErr);
+    }
     return new Response(
       JSON.stringify({
         success: false,
+        ok: false,
+        reason: 'sync_failed',
         error: 'Internal server error. Check function logs for details.',
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
