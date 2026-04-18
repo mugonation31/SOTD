@@ -526,7 +526,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
 
 ### Phase 4: Scoring, Super Admin & Production
 
-- [ ] **4.0 Super Admin Simplification** (Size: M)
+- [x] **4.0 Super Admin Simplification** (Size: M)
   - **Description**: Gut the current 6-page super-admin section down to a single, practical dashboard. Remove all fake analytics, coaching, mentoring, revenue, and placeholder features. Replace the separate super-admin registration flow with a simple `role = 'super-admin'` flag on your Supabase profile row. Build what you actually need as the app owner.
   - **Depends on**: 1.1, 1.2, 2.1
   - **Files**:
