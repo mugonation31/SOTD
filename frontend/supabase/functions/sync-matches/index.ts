@@ -347,6 +347,25 @@ serve(async (req: Request) => {
       // Batch upsert all matches for this gameweek
       const dbMatches = matches.map((m) => mapApiMatchToDbMatch(m, gameweek.id, seasonYear));
 
+      // Scoring hook: when this upsert flips a match's status to 'completed'
+      // (or changes the scores on an already-completed match), migration 010's
+      // `score_match_on_completion` trigger fires automatically and:
+      //   1. Calls `score_predictions_for_match(match_id)` to populate
+      //      `predictions.points_earned` for every prediction on this match
+      //      via `calculate_prediction_points` (migration 005).
+      //   2. Calls `recompute_group_member_aggregates(user_id)` for every user
+      //      with a prediction on this match — updating `total_points`,
+      //      `correct_scores`, `correct_results`, `gameweeks_played`, and the
+      //      perfect-round bonus across ALL of that user's group_members rows.
+      //
+      // Idempotency: upserting the same completed match with the same scores
+      // is a no-op at the DB level (row unchanged → trigger does not fire).
+      // Upserting with corrected scores re-triggers scoring and aggregate
+      // recompute from scratch — safe to run, no double-counting.
+      //
+      // Do NOT add a second scoring path here (e.g. an RPC call after this
+      // upsert). Scoring lives in SQL for transactional safety; this function
+      // is the dumb write path.
       const { error: matchError } = await supabase
         .from('matches')
         .upsert(dbMatches, { onConflict: 'external_id' });

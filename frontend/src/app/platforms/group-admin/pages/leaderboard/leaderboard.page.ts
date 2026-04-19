@@ -13,6 +13,8 @@ import {
   IonIcon,
   IonButtons,
   IonButton,
+  IonSpinner,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { NgFor, NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -55,6 +57,7 @@ interface GroupStanding {
     IonIcon,
     IonButtons,
     IonButton,
+    IonSpinner,
     NgFor,
     NgIf,
   ],
@@ -67,7 +70,8 @@ export class LeaderboardPage implements OnInit {
   constructor(
     private router: Router,
     private groupService: GroupService,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastController: ToastController
   ) {
     addIcons({
       footballOutline,
@@ -78,9 +82,17 @@ export class LeaderboardPage implements OnInit {
     });
   }
 
-  ngOnInit() {
+  // Ionic fires ionViewWillEnter on every entry (first + subsequent) so
+  // it is the single refresh hook. ngOnInit only resolves the current
+  // user id once — no data fetch — so we avoid a double round-trip on
+  // first navigation.
+  async ngOnInit(): Promise<void> {
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
-    this.loadGroupStandings();
+  }
+
+  async ionViewWillEnter() {
+    this.currentUserId = this.authService.getCurrentUser()?.id || null;
+    await this.loadGroupStandings();
   }
 
   private async loadGroupStandings() {
@@ -123,9 +135,21 @@ export class LeaderboardPage implements OnInit {
       this.groupStandings = results;
     } catch (error) {
       console.error('Error loading group standings:', error);
+      this.groupStandings = [];
+      await this.showErrorToast('Unable to load standings. Please try again.');
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async showErrorToast(message: string) {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'bottom',
+      color: 'danger',
+    });
+    await toast.present();
   }
 
   // Track by function for better performance when rendering groups

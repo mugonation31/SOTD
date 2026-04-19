@@ -723,6 +723,90 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Leaderboard pages show real standings sorted by total_points
     - Points update without manual intervention
 
+  - [ ] **4.1.1 Migration: scoring trigger + perfect-round bonus + aggregate recompute** (Size: M)
+    - **Description**: New migration `007_scoring_trigger.sql` that installs a `BEFORE UPDATE` (or `AFTER UPDATE`) trigger on `matches` firing when `status` transitions to `'completed'`. The trigger calls a new `score_match(match_id uuid)` SECURITY DEFINER function that: (a) iterates every prediction row for that match and writes `points_earned = calculate_prediction_points(...)` including the `joker_used` doubling, (b) after all three matches in a regular gameweek are completed for a given user, evaluates the perfect-round bonus (3 correct exact scores → bonus added to the gameweek's prediction rows per the existing `scoring.service.ts` rules), and (c) recomputes `group_members` aggregates (`total_points`, `correct_scores`, `correct_results`, `gameweeks_played`) for every `group_members` row whose `user_id` had predictions on this match. Idempotent: re-running against an already-scored match MUST converge (no double-counting) — use a deterministic recompute over source rows rather than incremental deltas.
+    - **Depends on**: 2.1, 3.2
+    - **Files**:
+      - Create `frontend/supabase/migrations/007_scoring_trigger.sql`
+        - `CREATE FUNCTION score_match(p_match_id uuid) RETURNS void LANGUAGE plpgsql SECURITY DEFINER`
+        - Trigger: `CREATE TRIGGER trg_score_match AFTER UPDATE OF status ON matches FOR EACH ROW WHEN (NEW.status = 'completed' AND OLD.status IS DISTINCT FROM NEW.status) EXECUTE FUNCTION score_match_trigger()`
+        - `score_match_trigger()` wrapper calls `score_match(NEW.id)`
+        - Aggregate recompute as a SQL `UPDATE group_members SET total_points = (SELECT SUM(points_earned) ...), correct_scores = ..., correct_results = ..., gameweeks_played = ... WHERE user_id = <affected>` — sourced from predictions joined to matches
+        - Grant execute on `score_match` to `service_role` (Edge Function invocation path) and `authenticated` is NOT required — trigger fires on DB write regardless of caller
+    - **Acceptance criteria**:
+      - Migration applies cleanly on top of existing schema; no policy conflicts
+      - Transitioning a `matches` row to `status='completed'` fires the trigger exactly once and writes `points_earned` on every matching `predictions` row
+      - `joker_used=true` predictions earn doubled points (matches `scoring.service.ts` rules)
+      - Perfect round bonus applied when a user has 3 correct exact scores across the 3 matches they predicted in a REGULAR gameweek (not special rounds — Boxing Day / Final Day are 10-match rounds, no bonus)
+      - `group_members` aggregates reflect the recomputed totals for all affected users
+      - Re-firing the trigger (e.g. re-setting status to completed) does not double-count — totals converge to the same values
+      - Raw SQL migration tested against a Supabase local instance or staging project before merge
+
+  - [ ] **4.1.2 Edge Function: invoke scoring after sync + status tracking** (Size: S)
+    - **Description**: Modify the existing `sync-matches` Edge Function (from 2.1, extended in 4.0.6) so that after it upserts match results, it explicitly calls `score_match(match_id)` via `supabase.rpc('score_match', { p_match_id })` for every match whose status was just flipped to `'completed'` in this sync run. The DB trigger from 4.1.1 is the authoritative path; this RPC call is a belt-and-braces redundancy path (Decision A below) and also lets the Edge Function capture scoring errors per-match for `sync_metadata.last_sync_error`.
+    - **Depends on**: 4.1.1, 2.1, 4.0.6
+    - **Files**:
+      - Modify `frontend/supabase/functions/sync-matches/index.ts` (after match upsert, collect matches newly transitioned to completed, call `score_match` RPC per match, aggregate errors into the sync_metadata error field)
+    - **Acceptance criteria**:
+      - After match upsert, the function iterates the set of matches whose status just became `'completed'` and calls `score_match` for each
+      - RPC errors are caught per-match (one failure does not abort the whole sync); errors aggregated into `last_sync_error`
+      - Function run completes with `last_sync_status='ok'` only when every scoring RPC succeeded; otherwise `'error'` with the aggregated error message
+      - No duplicate scoring — calling `score_match` after the trigger has already fired is safe because 4.1.1 is idempotent
+      - No `service_role` key leaked to response or logs
+
+  - [ ] **4.1.3 Wire player standings page to real leaderboard data** (Size: S)
+    - **Description**: Replace `MockDataService` on the player standings page (`standings.page.ts`) with a real leaderboard fetch from Supabase. Add a `getLeaderboard(groupId)` method to `SupabaseDataService` if not already present (1.1 lists it but implementation may be stubbed). Query `group_members` joined to `profiles` ordered by `total_points DESC`, tiebreakers: `correct_scores DESC`, then `correct_results DESC`. Render rank, display name, total_points, correct_scores, correct_results, gameweeks_played.
+    - **Depends on**: 4.1.1
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (implement/verify `getLeaderboard(groupId)` with the ordering + joined profile fields)
+      - Modify `frontend/src/app/platforms/player/pages/standings/standings.page.ts` (drop `MockDataService`, fetch from `SupabaseDataService`, add loading/empty/error states)
+      - Modify `frontend/src/app/platforms/player/pages/standings/standings.page.html` (bind to real fields; empty state when no members yet)
+    - **Acceptance criteria**:
+      - Page renders real leaderboard rows for the player's active group (or group selector if multi-group)
+      - Ordering: `total_points DESC, correct_scores DESC, correct_results DESC`
+      - Each row shows rank, display name, total points, correct scores, correct results, gameweeks played
+      - Loading spinner shown while fetching; empty state when the group has no members with points yet
+      - No `MockDataService` imports remain in this page
+
+  - [ ] **4.1.4 Wire group-admin leaderboard page to real data** (Size: S)
+    - **Description**: Same treatment for the group-admin leaderboard page. Reuse `getLeaderboard(groupId)` from 4.1.3 so both pages share a single query path. The admin variant operates on the admin's own group (via `resolveAdminGroupId` or similar single-group assumption already flagged in 4.2 refactor notes).
+    - **Depends on**: 4.1.3
+    - **Files**:
+      - Modify `frontend/src/app/platforms/group-admin/pages/leaderboard/leaderboard.page.ts` (drop mock, fetch from `SupabaseDataService.getLeaderboard`, add loading/empty/error states)
+      - Modify `frontend/src/app/platforms/group-admin/pages/leaderboard/leaderboard.page.html` (bind to real fields)
+    - **Acceptance criteria**:
+      - Admin leaderboard renders real `group_members` standings for the admin's group
+      - Identical ordering + column set as 4.1.3 for consistency between player and admin views
+      - Loading + empty states match the player page's UX
+      - No `MockDataService` imports remain in this page
+      - Admin can identify at a glance which members have played each gameweek via `gameweeks_played`
+
+  - [ ] **4.1.5 Specs: scoring trigger + leaderboard wiring** (Size: S)
+    - **Description**: Add specs covering the scoring path. For the DB trigger, add a SQL-level test (pgTAP or a scripted Deno test invoked by the Edge Function test harness) that inserts fixtures + predictions, flips match status to completed, and asserts `points_earned` + `group_members` aggregates match expected values for: correct-score-with-joker, correct-result-only, perfect-round-bonus-in-regular-gameweek, no-bonus-on-special-gameweek, re-fire-idempotency. For the frontend, add component specs on both leaderboard pages covering loading, empty, populated, and error states. New tests only — do not modify any existing passing specs.
+    - **Depends on**: 4.1.1, 4.1.3, 4.1.4
+    - **Files**:
+      - Add `frontend/supabase/tests/scoring_trigger.test.sql` (or Deno test file under `frontend/supabase/functions/sync-matches/` if pgTAP not configured)
+      - Add test block in `frontend/src/app/platforms/player/pages/standings/standings.page.spec.ts` (new `describe` — do not touch existing)
+      - Add test block in `frontend/src/app/platforms/group-admin/pages/leaderboard/leaderboard.page.spec.ts` (new `describe` — do not touch existing)
+    - **Acceptance criteria**:
+      - DB-level test asserts the 5 scoring scenarios above pass against a seeded Supabase local instance
+      - Player standings spec covers: initial loading, empty leaderboard, populated (sorted) leaderboard, fetch error toast
+      - Admin leaderboard spec mirrors the above four scenarios
+      - Idempotency scenario explicit: running the scoring trigger twice on the same match converges to identical `points_earned` and `group_members` totals (no double-counting)
+      - All previously passing specs in both frontend pages still pass unchanged
+
+  - **Design Rationale (A vs B)**:
+    - **Option A (chosen): DB trigger as authoritative scoring path, Edge Function RPC as belt-and-braces.** The `score_match` function is invoked automatically by the `trg_score_match` trigger whenever a match row flips to `'completed'`. This means ANY write path that completes a match (Edge Function sync, super-admin manual fix, future webhooks) scores consistently without each caller re-implementing the logic. The Edge Function additionally calls `score_match` via RPC after its upsert so it can catch scoring errors per-match and surface them via `sync_metadata.last_sync_error`. Because the trigger + RPC are both idempotent (deterministic recompute from source rows, not incremental deltas), running both on the same match is safe.
+    - **Option B (rejected): Edge Function-only scoring, no DB trigger.** Keeps scoring logic in one place (TypeScript) and avoids plpgsql complexity. REJECTED because (1) any future write path that completes a match bypasses scoring entirely, (2) manual super-admin corrections to match rows would require re-running the Edge Function, (3) splits scoring logic across two runtimes (the SQL `calculate_prediction_points` helper would still need to be called from TS), and (4) couples the scoring correctness SLA to Edge Function availability. The trigger makes scoring a property of the database, not a property of the sync pipeline.
+
+  - **Risks**:
+    - **Trigger idempotency bugs**: If `score_match` uses incremental deltas (e.g. `total_points = total_points + <new points>`), re-firing the trigger (or the Edge Function RPC after the trigger) double-counts. Mandatory: deterministic recompute from source rows (aggregate `SUM` over predictions joined to matches). Covered by the idempotency test in 4.1.5.
+    - **Perfect-round bonus timing**: The bonus requires all 3 of a user's predictions for a gameweek to be scored. If matches complete out of order, the bonus must be evaluated on every match completion (not just the 3rd) — otherwise the bonus is silently skipped when the user's 3rd-completing match happens to be the earliest by kickoff time. Trigger logic must re-check the full gameweek state on every match completion.
+    - **Special-gameweek bonus leak**: Boxing Day and Final Day are 10-match rounds with no perfect-round bonus. The trigger MUST check `gameweeks.is_special` before awarding bonus — otherwise a player with 3 correct scores in a special round gets an illegal bonus. Covered by the no-bonus-on-special test in 4.1.5.
+    - **Aggregate recompute performance**: Recomputing `group_members` aggregates on every match completion can be expensive at scale (for each affected user, re-sum their entire prediction history). For MVP-scale (10–50 users × 38 gameweeks × 3 predictions = ~5,700 rows worst case) this is fine. At 10k+ users, move to incremental deltas with a reconciliation job — out of scope for MVP.
+    - **Trigger + Edge Function double-fire race**: Both the trigger and the Edge Function RPC call `score_match` on the same match within milliseconds. Postgres serializes the second call behind the first (row-level locks on the `predictions`/`group_members` writes), so the second call is a no-op recompute. Confirmed safe by the idempotency property, but document explicitly so future refactors don't break the invariant.
+    - **`calculate_prediction_points` drift**: The existing SQL function's point values must match `scoring.service.ts`. If they drift, the UI's "estimated points" preview won't match the actual scored value. Add a cross-check test (or consolidate to a single source of truth) — flag tracked in the 4.2 refactor list.
+
 - [ ] **4.2 Production Readiness** (Size: M)
   - **Description**: Add global error handling, loading states on all data-fetching pages, and proper environment configuration for production deployment.
   - **Depends on**: All previous tasks
@@ -784,6 +868,10 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - **Admin audit log:** add an `admin_audit_log` table written by `admin-signout` (and future privileged super-admin operations) — records caller, target, action, timestamp. Currently only stdout `console.log` at the Edge Function; not queryable
     - **CORS response headers:** both `sync-matches` and `admin-signout` Edge Functions respond to OPTIONS with 204 but set no `Access-Control-Allow-Origin`/`-Methods`/`-Headers`. `supabase-js` handles this internally so current callers work, but direct browser `fetch` from a different origin would fail. Add an allowlist-based CORS header set (not `*`)
     - Confirm the users-groups page is excluded from any session-replay / error-tracking capture (Sentry etc.) — it renders user emails. Mask or exclude via provider config
+    - **Scoring trigger un-completion edge case (migration 010):** the `score_match_on_completion` trigger fires on `status → completed` and score corrections, but NOT on the reverse transition (`completed → scheduled/postponed`). If the feed flips a mistakenly-completed match back, `predictions.points_earned` and `group_members.total_points` stay stale. Fix: extend the trigger WHEN clause with `OLD.status = 'completed' AND NEW.status IS DISTINCT FROM 'completed'`, and in that branch zero out `points_earned` for the match's predictions before calling `recompute_group_member_aggregates` on each affected user
+    - `010_scoring_trigger_test.sql` Test 6: add a comment noting that after the score correction User2's GW1 totals also drift (intentionally not asserted) — prevents surprise if a future test asserts on User2
+    - **Super-admin matches-write blast radius:** the Task 4.1 scoring trigger means any super-admin writing to `matches` influences every player's totals across every group. Super-admin is the intended trust model, but add audit logging — a separate trigger on `matches` UPDATE writing to an immutable `match_audit` table (caller, before/after scores, timestamp) so corrections are traceable
+    - **Production-aware logger:** route `console.error` calls in `standings.page.ts` / `leaderboard.page.ts` (and all pages that log raw errors) through an `environment.production`-gated logger so raw Supabase error objects don't surface in prod browser consoles
 
 ---
 

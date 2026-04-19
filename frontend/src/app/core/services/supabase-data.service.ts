@@ -492,11 +492,16 @@ export class SupabaseDataService {
   // -----------------------------------------------------------------------
 
   async getLeaderboard(groupId: string): Promise<any[]> {
+    // Tiebreakers per plan 4.1.3: total_points DESC, then correct_scores DESC,
+    // then correct_results DESC. Chained .order() calls serialize into a single
+    // PostgREST ORDER BY clause.
     const { data, error } = await this.client
       .from('group_members')
       .select('*, profiles(username, avatar_url)')
       .eq('group_id', groupId)
-      .order('total_points', { ascending: false });
+      .order('total_points', { ascending: false })
+      .order('correct_scores', { ascending: false })
+      .order('correct_results', { ascending: false });
 
     if (error) throw new Error(error.message);
     return data || [];

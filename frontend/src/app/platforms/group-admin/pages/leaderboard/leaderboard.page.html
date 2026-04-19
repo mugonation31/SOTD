@@ -22,8 +22,14 @@
     <p *ngIf="groupStandings.length > 0">{{ groupStandings.length }} group{{ groupStandings.length === 1 ? '' : 's' }} managed</p>
   </div>
 
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state ion-text-center ion-padding">
+    <ion-spinner name="dots"></ion-spinner>
+    <p>Loading leaderboard…</p>
+  </div>
+
   <!-- No Groups Message -->
-  <ion-card *ngIf="groupStandings.length === 0" class="empty-state">
+  <ion-card *ngIf="!isLoading && groupStandings.length === 0" class="empty-state">
     <ion-card-content>
       <ion-icon name="people-outline" size="large" color="medium"></ion-icon>
       <h3>No Groups Created</h3>
@@ -36,7 +42,7 @@
   </ion-card>
 
   <!-- Groups List -->
-  <ion-list *ngIf="groupStandings.length > 0">
+  <ion-list *ngIf="!isLoading && groupStandings.length > 0">
     <ion-item 
       *ngFor="let groupStanding of groupStandings; trackBy: trackByGroupId" 
       button 

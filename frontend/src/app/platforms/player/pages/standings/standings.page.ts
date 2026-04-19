@@ -19,6 +19,8 @@ import {
   IonAvatar,
   IonButtons,
   IonButton,
+  IonSpinner,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -32,7 +34,6 @@ import {
   personOutline, personAddOutline, chevronForwardOutline } from 'ionicons/icons';
 import { FormsModule } from '@angular/forms';
 import { GroupService, Standing, GroupWithStandings } from '@core/services/group.service';
-import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-standings',
@@ -62,24 +63,30 @@ import { AuthService } from '@core/services/auth.service';
     FormsModule,
     IonButtons,
     IonButton,
+    IonSpinner,
   ],
 })
 export class StandingsPage implements OnInit {
-  currentUserId: string | null = null;
   isLoading = false;
   groupStandings: GroupWithStandings[] = [];
 
   constructor(
     private router: Router,
     private groupService: GroupService,
-    private authService: AuthService
+    private toastController: ToastController
   ) {
     addIcons({footballOutline,personOutline,peopleOutline,personAddOutline,chevronForwardOutline,trophyOutline,arrowUpOutline,arrowDownOutline,removeOutline,});
   }
 
-  ngOnInit() {
-    this.currentUserId = this.authService.getCurrentUser()?.id || null;
-    this.loadGroupStandings();
+  // Ionic fires ionViewWillEnter on every entry (first + subsequent) so
+  // it is the single refresh hook. ngOnInit intentionally no-ops to avoid
+  // a double-fetch on first navigation.
+  async ngOnInit(): Promise<void> {
+    return;
+  }
+
+  async ionViewWillEnter() {
+    await this.loadGroupStandings();
   }
 
   private async loadGroupStandings() {
@@ -88,9 +95,21 @@ export class StandingsPage implements OnInit {
       this.groupStandings = await this.groupService.getUserGroupsWithStandings();
     } catch (error) {
       console.error('Error loading standings:', error);
+      this.groupStandings = [];
+      await this.showErrorToast('Unable to load standings. Please try again.');
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async showErrorToast(message: string) {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'bottom',
+      color: 'danger',
+    });
+    await toast.present();
   }
 
   // Track by function for better performance when rendering groups
@@ -129,9 +148,6 @@ export class StandingsPage implements OnInit {
     }
   }
 
-  isCurrentUser(userId: string): boolean {
-    return userId === this.currentUserId;
-  }
 
   navigateTo(path: string) {
     this.router.navigate([path]);
