@@ -707,7 +707,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - **Cooldown table initialization**: `sync_metadata` MUST have its `id = 1` row seeded at migration time (`INSERT ... ON CONFLICT DO NOTHING`). If absent, the first sync attempt would either crash on the read or upsert silently — neither acceptable. Cover this in 4.0.1.
     - **Partial failure on deactivate flow (4.0.9)**: If `toggleUserActive` succeeds but `signOutUser` fails, the user is write-locked but their existing session token is still valid until expiry. The UI must surface this distinctly so the admin knows to escalate (or wait for token expiry). Document explicitly in the toast copy.
 
-- [ ] **4.1 Auto Point Calculation** (Size: M)
+- [x] **4.1 Auto Point Calculation** (Size: M)
   - **Description**: When match results come in (via the sync function from 2.1), automatically calculate points for all predictions on that match. Use the existing `calculate_prediction_points` SQL function. Update `group_members` totals.
   - **Depends on**: 2.1, 3.2
   - **Files**:
