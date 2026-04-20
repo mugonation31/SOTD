@@ -1,4 +1,6 @@
 services:
+  # Development service: hot-reload dev server on port 3048.
+  # Default `docker compose up` runs ONLY this service.
   app:
     build:
       context: ./frontend
@@ -10,3 +12,25 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+
+  # Production service: nginx-served static build on port 8080.
+  # Naming note: `app-prod` mirrors the existing `app` service naming.
+  # Gated behind the `production` profile; invoke with:
+  #   docker compose --profile production up
+  # Requires SUPABASE_URL and SUPABASE_ANON_KEY in shell env (direnv/.envrc locally, secrets in CI).
+  app-prod:
+    profiles: [production]
+    container_name: sotd-app-prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Required: public Supabase config baked into the SPA bundle at build time.
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        # Optional: default to empty string if unset in shell env.
+        API_URL: ${API_URL:-}
+        ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+    ports:
+      - "8080:80"
+    restart: unless-stopped

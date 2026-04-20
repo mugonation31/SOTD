@@ -1,8 +1,8 @@
 # Predict3 - Complete Supabase Setup Guide
 
 **Created:** 2026-01-05
-**Status:** Ready for New Project Setup
-**Purpose:** Set up fresh Supabase project with simplified MVP V1 schema (no prize money)
+**Status:** Setup complete — project `zsoevdobcpgacrvgqlkx` is live. This guide is retained for onboarding new environments (staging clones, contributor sandboxes) that need to repeat the migration.
+**Purpose:** Set up a fresh Supabase project with the MVP schema from scratch.
 
 ---
 
@@ -22,30 +22,24 @@ You'll need two values:
 
 ## Step 2: Update Environment File
 
-### File: `frontend/src/environments/environment.ts`
+### File: `frontend/src/environments/environment.ts` and `environment.prod.ts`
 
-Replace the old Supabase credentials:
+As of Task 4.2.1, production builds use `environment.prod.ts` via `angular.json` fileReplacements. That file ships placeholders (`__SUPABASE_URL__`, `__SUPABASE_ANON_KEY__`) which are substituted at build time by `replace-env.js` from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` env vars.
+
+**For local dev:** `environment.ts` contains the dev values directly (public-safe anon key + project URL).
+
+**For prod builds:** set env vars in `.envrc` (local, via direnv) or the Cloudflare Pages dashboard (CI). Never hardcode production credentials in source.
 
 ```typescript
-// OLD (paused project)
-url: 'https://lmybyfrhzarxmantttki.supabase.co',
-key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-
-// NEW (your new project)
-url: 'https://YOUR_NEW_PROJECT_REF.supabase.co',
-key: 'YOUR_NEW_ANON_KEY_HERE'
-```
-
-**Full replacement:**
-```typescript
-const productionConfig = {
+// environment.prod.ts (do NOT edit in place — placeholders only)
+export const environment = {
   production: true,
   supabase: {
-    url: 'https://YOUR_NEW_PROJECT_REF.supabase.co',  // ← Update this
-    key: 'YOUR_NEW_ANON_KEY_HERE'                     // ← Update this
+    url: '__SUPABASE_URL__',
+    key: '__SUPABASE_ANON_KEY__',
   },
-  apiUrl: 'https://api.example.com',
-  encryptionKey: 'your-encryption-key-here'
+  apiUrl: '__API_URL__',
+  encryptionKey: '__ENCRYPTION_KEY__',
 };
 
 const developmentConfig = {

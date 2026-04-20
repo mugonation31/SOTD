@@ -47,7 +47,7 @@
 **Supabase**
 - Backend-as-a-Service (BaaS) platform
 - Provides PostgreSQL database, authentication, storage, and real-time features
-- URL: `https://lmybyfrhzarxmantttki.supabase.co`
+- Project: `zsoevdobcpgacrvgqlkx` (URL: `https://zsoevdobcpgacrvgqlkx.supabase.co`)
 
 **RLS (Row Level Security)**
 - PostgreSQL security feature

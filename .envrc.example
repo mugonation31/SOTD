@@ -1,0 +1,40 @@
+# ============================================================================
+# .envrc — per-project environment variables, loaded by direnv
+# ============================================================================
+# Copy this file to `.envrc` (which is gitignored) and fill in the values
+# below. Then run `direnv allow` from the repo root to activate them.
+#
+# Prerequisites: `sudo apt install direnv` and add `eval "$(direnv hook bash)"`
+# to your ~/.bashrc (or ~/.zshrc for zsh).
+# ============================================================================
+
+# ------------------- Supabase (frontend, public-safe) -----------------------
+# Used at build time by replace-env.js to substitute placeholders in
+# environment.prod.ts. These are the values that ship in the browser bundle —
+# they're public by design (anon key is gated by RLS, project URL is public).
+#
+# Where to get them:
+#   Supabase Dashboard -> your project -> Project Settings -> API
+#
+# For the Predict3 production project:
+#   export SUPABASE_URL=https://zsoevdobcpgacrvgqlkx.supabase.co
+#   export SUPABASE_ANON_KEY=<copy the anon/publishable key from the dashboard>
+
+export SUPABASE_URL=
+export SUPABASE_ANON_KEY=
+
+# ------------------- Supabase CLI (admin, NEVER commit) ---------------------
+# Personal Access Token used by `supabase functions deploy` and other CLI
+# operations. Generate at https://supabase.com/dashboard/account/tokens.
+# Set expiry to 90 days and rotate on calendar.
+#
+# SECURITY: this token has full admin access to your Supabase account.
+# Treat it like a password — never paste into chat, logs, or PRs.
+
+export SUPABASE_ACCESS_TOKEN=
+
+# ------------------- Optional ----------------------------------------------
+# Only set these if the project actually uses them. Safe to leave empty.
+
+# export API_URL=
+# export ENCRYPTION_KEY=

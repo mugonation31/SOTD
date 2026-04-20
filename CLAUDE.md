@@ -46,6 +46,35 @@ cd frontend && npm run build:prod
 cd frontend && npm run build:cloudflare
 ```
 
+### Production Docker
+
+Self-hosted / local validation of the prod bundle. The Dockerfile is a
+multi-stage build (Node builder → Nginx runtime, ~55MB image) that compiles
+`environment.prod.ts` and serves static files with SPA fallback + cache headers.
+
+```bash
+# 1. Set env vars for the prod build (e.g. in .envrc, loaded via direnv).
+#    SUPABASE_URL and SUPABASE_ANON_KEY are public-safe to commit to .envrc.
+#    Never put SUPABASE_ACCESS_TOKEN or service-role keys in frontend env.
+export SUPABASE_URL="https://<project>.supabase.co"
+export SUPABASE_ANON_KEY="<anon-key>"
+
+# 2. Build + run the prod container (port 8080)
+docker compose --profile production up -d --build
+
+# 3. Smoke test
+./scripts/smoke-test-prod.sh
+
+# 4. Tear down
+docker compose --profile production down
+```
+
+The dev profile on port 3048 is unaffected: `docker compose up` still runs
+the Ionic dev server as usual. Cloudflare Pages deployments use a separate
+path (`npm run build:cloudflare` with env vars set in the Cloudflare
+dashboard) — this Docker workflow is for self-hosted hosts and local
+pre-deploy validation only.
+
 ## Architecture
 
 ### Platform-Based Architecture

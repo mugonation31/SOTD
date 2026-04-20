@@ -19,9 +19,14 @@ Third-party services, APIs, and external integrations.
 ### Configuration
 
 **Project Details:**
-- URL: `https://lmybyfrhzarxmantttki.supabase.co`
+- URL: `https://zsoevdobcpgacrvgqlkx.supabase.co`
+- Project ref: `zsoevdobcpgacrvgqlkx`
 - Environment: Production
-- Region: [Your region]
+- Region: Central EU (Frankfurt)
+
+The URL and anon key are injected into the prod bundle at build time via
+`replace-env.js` from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` env vars
+— never hardcoded in source (see `frontend/src/environments/environment.prod.ts`).
 
 **Setup:**
 ```typescript

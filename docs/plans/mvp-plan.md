@@ -981,6 +981,19 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Remove `sync_metadata 'in_progress'` enum value if the atomic cooldown claim in 4.2.5 doesn't wire it
     - Add `010_scoring_trigger_test.sql` Test 6 comment noting User2 GW1 drift is intentionally not asserted (prevents surprise)
 
+  - **Docker / infra polish (from Task 4.2 Batch 1 review)**:
+    - Trim `frontend/.dockerignore` further: add `supabase`, `playwright-report`, `test-results`, `e2e`, `*.spec.ts`, `jest.config.*`, `deno.lock`, `.envrc*`, `docs`, `README*.md`, `*.md` — reduces build context size and layer invalidation surface
+    - Pin Dockerfile base images by digest (`FROM node:20-alpine@sha256:...`, `FROM nginx:alpine@sha256:...`) for reproducible prod artefacts and supply-chain hygiene
+    - Harden `scripts/smoke-test-prod.sh` main-bundle regex: replace `main\.[a-z0-9]+\.js` with a parser that extracts any `<script src="...js">` — current form could silently break on future Angular/Ionic bundle naming changes
+    - Add `text/html`, `application/wasm`, `font/woff2` to nginx `gzip_types` in `frontend/nginx.conf` for completeness (text/html is implicit but explicit prevents confusion)
+    - Drop `container_name: sotd-app-prod` from `docker-compose.yml` prod service if we ever need parallel deploys (blue/green)
+    - `SUPABASE_COMPLETE_SETUP.md`: delete the stale `developmentConfig` snippet block (lines ~45-53) — doc now points at the live file so the placeholder snippet is misleading
+    - Consider `frontend/nginx.conf` server-level security headers (CSP, X-Frame-Options) — nginx `add_header` does NOT inherit once a nested `add_header` is set, so plan the layout before adding
+    - Run nginx as a non-root user: switch `frontend/Dockerfile` stage 2 from `nginx:alpine` to `nginxinc/nginx-unprivileged:alpine`, OR add explicit `USER nginx` after adjusting `/var/cache/nginx` and pid file permissions (MEDIUM security finding from Batch 1 scan — defense-in-depth; low exploitability today)
+    - Validate `BASE_URL` env var in `scripts/smoke-test-prod.sh` with a regex check near the top (`[[ "$BASE_URL" =~ ^https?://[A-Za-z0-9.:/_-]+$ ]] \|\| exit 1`) to prevent shell-metachar mishaps — local-only script so current risk is nil, cosmetic hardening
+    - Add `Content-Security-Policy` to `frontend/nginx.conf`. Ship as `Content-Security-Policy-Report-Only` first to catch violations without breaking Angular/Ionic runtime (they need `style-src 'unsafe-inline'`). Allowlist must cover Supabase REST/realtime (`*.supabase.co`, `wss://*.supabase.co`) and Google OAuth origins (`accounts.google.com`). Validate via live browser session before switching to enforcing mode
+    - Verify the paused Supabase project `lmybyfrhzarxmantttki` is fully deleted (not just unused). Historical git commits still contain its anon JWT; if the project is deleted the key is dead-letter, if it's just paused the key is dormant and discoverable via `git log -p`. Ops task, not code
+
 ---
 
 ### Phase 5: Native Apps (Deferred — post-MVP)

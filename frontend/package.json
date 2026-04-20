@@ -13,7 +13,7 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "lint": "ng lint",
-    "build:cloudflare": "npm install -g @ionic/cli && ionic build --prod",
+    "build:cloudflare": "npm install -g @ionic/cli && node replace-env.js && ionic build --prod",
     "build:prod": "node replace-env.js && ng build --configuration=production"
   },
   "private": true,
