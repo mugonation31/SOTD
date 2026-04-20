@@ -812,7 +812,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
   - **Depends on**: All prior tasks (4.0, 4.1 complete)
   - **Sequencing**: 4.2.1 + 4.2.2 first (env + Docker unblock deployment testing), then 4.2.5 (security), then remaining in any order.
 
-  - [ ] **4.2.1 Production environment configuration** (Size: S)
+  - [x] **4.2.1 Production environment configuration** (Size: S)
     - **Description**: Split dev and prod environment files so production builds read a distinct Supabase URL/anon key without hardcoded secrets. CI/CD supplies the production config at build time. No secrets committed to the repo.
     - **Depends on**: None (entry point of 4.2)
     - **Files**:
@@ -826,7 +826,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - Dev build continues to read `environment.ts` unchanged
       - README / deployment notes mention how CI injects the prod key (doc update is part of this task)
 
-  - [ ] **4.2.2 Production Docker image** (Size: M)
+  - [x] **4.2.2 Production Docker image** (Size: M)
     - **Description**: Build a production container distinct from the dev `Dockerfile.dev`. Multi-stage build: Node stage runs `ionic build --prod`, Nginx stage serves the static output on port 80. Add a production service/profile to `docker-compose.yml` so `docker compose --profile prod up` runs the prod image locally for smoke testing before deploying.
     - **Depends on**: 4.2.1
     - **Files**:
