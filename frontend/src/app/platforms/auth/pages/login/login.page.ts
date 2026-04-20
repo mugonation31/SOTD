@@ -24,10 +24,6 @@ import {
   footballOutline, mailOutline } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../services/supabase.service';
-import {
-  validateEmail,
-  validatePassword,
-} from '../../../../core/utils/validation.utils';
 
 interface ValidationErrors {
   email: string;
@@ -124,10 +120,13 @@ export class LoginPage implements OnInit {
   }
 
   validatePassword() {
+    // Login only checks that a password was entered — not its complexity.
+    // Complexity rules (uppercase/number/special char) belong on signup
+    // and reset-password, where the user is creating a NEW password.
+    // Re-checking on login would lock out anyone whose existing password
+    // predates the current policy or doesn't match the exact char set.
     if (!this.loginData.password) {
       this.validationErrors.password = 'Password is required';
-    } else if (!validatePassword(this.loginData.password)) {
-      this.validationErrors.password = 'Please enter a valid password';
     } else {
       this.validationErrors.password = '';
     }
