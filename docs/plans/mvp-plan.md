@@ -879,7 +879,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - `matches.page` venue empty-state template no longer renders an orphaned icon when venue is blank
       - Pattern is consistent across player, group-admin, and super-admin platforms
 
-  - [ ] **4.2.5 Critical security hardening** (Size: M)
+  - [x] **4.2.5 Critical security hardening** (Size: M)
     - **Description**: Seven launch-blocking security/hardening items surfaced by prior security scans and code review. All have concrete fixes; grouping here so they ship as one PR with coordinated tests.
     - **Depends on**: 4.0.6, 4.0.7, 4.1.1 (the Edge Functions + migrations these items modify must exist)
     - **Files**:
@@ -899,6 +899,115 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - **CORS allowlist**: Both Edge Functions respond to OPTIONS with explicit `Access-Control-Allow-Origin` set to the production + staging app origins (not `*`), plus `-Methods` and `-Headers` reflecting actual usage. Direct cross-origin `fetch` from disallowed origins fails.
       - **Session-replay / Sentry exclusion**: The super-admin users-and-groups page is excluded from session-replay and error-tracking capture (renders user emails). Verified via provider config (exclusion list or PII masking rule).
       - Each item covered by a test: SQL test for un-completion + trigger; Deno/unit test for atomic cooldown + audit ordering; migration verification for audit tables.
+
+    - [x] **4.2.5.1 Migration 011 — scoring trigger un-completion edge case** (Size: S)
+      - **Description**: Extend the existing `score_match_on_completion` trigger to handle the reverse transition. Today the trigger only fires when `status` flips TO `'completed'`; if a super-admin corrects a match by flipping it back out of `'completed'` (e.g. to `'scheduled'` or `'postponed'` after a mis-entered score), stale `points_earned` remain on the prediction rows and `group_members` aggregates stay inflated. Extend the trigger's `WHEN` clause to ALSO fire on `OLD.status = 'completed' AND NEW.status IS DISTINCT FROM 'completed'`, and in that branch zero `points_earned` for every prediction on the match then call `recompute_group_member_aggregates` for each affected user. The forward-completion branch is unchanged.
+      - **Depends on**: 4.1.1 (migration 010 must exist)
+      - **Files**:
+        - Create `frontend/supabase/migrations/011_scoring_trigger_uncompletion.sql` (DROP + recreate the trigger with the extended `WHEN` clause and a branch that handles un-completion by zeroing `points_earned` and recomputing aggregates)
+        - Modify `frontend/supabase/tests/010_scoring_trigger_test.sql` (add test case: complete match → un-complete match → assert `points_earned = 0` on all predictions for the match AND affected `group_members.total_points` / `correct_scores` / `correct_results` decrement to the pre-completion baseline)
+      - **Acceptance criteria**:
+        - Trigger fires on both forward (`→ completed`) and reverse (`completed →`) transitions
+        - Un-completion zeros `points_earned` on every prediction for the match and recomputes aggregates for every affected user
+        - Forward-completion path from 4.1.1 is preserved unchanged (same `points_earned` written, same aggregate recompute)
+        - New SQL test asserts the complete-then-uncomplete round-trip converges to pre-completion baseline
+        - Idempotent: repeating the un-completion transition is a no-op (aggregates already at baseline)
+        - Existing 010 scoring tests still pass unchanged
+
+    - [x] **4.2.5.2 Migration 012 — admin_audit_log + matches_audit tables + UPDATE-only audit trigger** (Size: M)
+      - **Description**: Create two append-only audit tables and the `matches` UPDATE trigger that writes to `matches_audit`. `admin_audit_log` records super-admin Edge Function invocations (written by `admin-signout` in 4.2.5.5; success AND denied). `matches_audit` records score corrections made directly against the `matches` table (e.g. super-admin fixes via PostgREST). The trigger fires on UPDATE ONLY — INSERT events are always service_role writes from the sync Edge Function (no human actor to attribute) so they are intentionally excluded. RLS on both tables: super-admin SELECT only; no UPDATE / DELETE policies anywhere (append-only enforced at the policy layer; writes happen via `SECURITY DEFINER` functions or the trigger itself).
+      - **Depends on**: 4.1.1
+      - **Files**:
+        - Create `frontend/supabase/migrations/012_audit_tables_and_trigger.sql`
+          - `CREATE TABLE admin_audit_log (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), caller_id uuid, target_user_id uuid, action text NOT NULL, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now())` + index on `(caller_id, created_at DESC)` and `(target_user_id, created_at DESC)`
+          - `CREATE TABLE matches_audit (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), caller_id uuid, match_id uuid NOT NULL, before_scores jsonb, after_scores jsonb, created_at timestamptz NOT NULL DEFAULT now())` + index on `(match_id, created_at DESC)`
+          - `CREATE FUNCTION matches_audit_trigger() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$` — captures `auth.uid()` as `caller_id`, serializes `OLD`/`NEW` home+away scores into `before_scores`/`after_scores`, INSERTs one row per UPDATE
+          - `CREATE TRIGGER trg_matches_audit AFTER UPDATE ON matches FOR EACH ROW WHEN (OLD.home_score IS DISTINCT FROM NEW.home_score OR OLD.away_score IS DISTINCT FROM NEW.away_score) EXECUTE FUNCTION matches_audit_trigger()` — UPDATE only, no INSERT trigger
+          - RLS: ENABLE on both tables; policy `admin_audit_log_super_admin_select` and `matches_audit_super_admin_select` using existing `is_super_admin()` helper; NO insert/update/delete policies (writes only via SECURITY DEFINER paths)
+          - Grant `service_role` INSERT on `admin_audit_log` (Edge Function write path); grant nothing to `authenticated`
+        - Create `frontend/supabase/tests/012_audit_tables_test.sql` (assert: super-admin can SELECT both tables; non-admin SELECT returns zero rows; UPDATE to `matches.home_score` writes exactly one `matches_audit` row with correct `caller_id` / `before_scores` / `after_scores`; INSERT into `matches` does NOT fire the audit trigger — zero audit rows; UPDATE to a non-score column on `matches` does NOT fire the trigger; direct UPDATE / DELETE on `matches_audit` denied by RLS)
+      - **Acceptance criteria**:
+        - Migration applies cleanly on top of 011
+        - `admin_audit_log` and `matches_audit` tables exist with the specified columns and indexes
+        - `matches` UPDATE trigger fires on score changes and writes a single `matches_audit` row capturing `caller_id` (from `auth.uid()`), `before_scores`, `after_scores`
+        - **INSERT on `matches` does NOT fire the audit trigger** — service_role sync writes do not pollute the audit log (captured explicitly in the test file)
+        - Non-score column updates on `matches` do not fire the trigger
+        - Super-admin can SELECT from both audit tables; non-admin cannot
+        - Direct UPDATE / DELETE against `matches_audit` denied by RLS (append-only)
+        - `service_role` has INSERT on `admin_audit_log` (so 4.2.5.5 can write rows from the Edge Function)
+
+    - [x] **4.2.5.3 Migration 013 — claim_sync_slot() RPC + shared CORS helper** (Size: S)
+      - **Description**: Two surfaces, one slice. (a) SQL: new migration adding a `claim_sync_slot()` SECURITY DEFINER RPC that atomically claims the sync cooldown slot via a single `UPDATE sync_metadata SET last_sync_status = 'in_progress', last_sync_at = NOW() WHERE id = 1 AND (last_sync_at IS NULL OR last_sync_at < NOW() - INTERVAL '5 minutes' OR last_sync_status = 'error') RETURNING *`. Returns the updated row (caller owns the slot) or zero rows (cooldown — caller must return 429). Concurrent invocations are serialized by Postgres row-level locks on the single-row table. (b) TypeScript: shared CORS helper used by both Edge Functions — allowlist of production + staging app origins (read from env var `ALLOWED_ORIGINS`, comma-separated), returns the correct `Access-Control-Allow-Origin` header mirroring the request's `Origin` if matched, else omits the header. Exports an `ok(body, origin)` / `err(status, body, origin)` response helper plus an `optionsResponse(origin)` preflight handler with `-Methods` / `-Headers` matching actual usage.
+      - **Depends on**: 4.0.1 (sync_metadata table), 4.0.6 (existing sync-matches cooldown that this replaces)
+      - **Files**:
+        - Create `frontend/supabase/migrations/013_claim_sync_slot_rpc.sql`
+          - `CREATE FUNCTION claim_sync_slot() RETURNS sync_metadata LANGUAGE sql SECURITY DEFINER AS $$ UPDATE sync_metadata SET last_sync_status = 'in_progress', last_sync_at = NOW() WHERE id = 1 AND (last_sync_at IS NULL OR last_sync_at < NOW() - INTERVAL '5 minutes' OR last_sync_status = 'error') RETURNING * $$`
+          - Grant execute on `claim_sync_slot()` to `service_role` only
+          - Ensure `sync_metadata.last_sync_status` accepts `'in_progress'` (add CHECK constraint value or drop the existing constraint if it enumerates)
+        - Create `frontend/supabase/functions/_shared/cors.ts` (exported constants: `buildCorsHeaders(originHeader: string | null): Record<string,string>`, `optionsResponse(origin: string | null): Response`, `ALLOWED_ORIGINS = Deno.env.get('ALLOWED_ORIGINS')?.split(',').map(s => s.trim()) ?? []`)
+        - Create `frontend/supabase/functions/_shared/cors.test.ts` (Deno test: allowed origin → header present; disallowed origin → header absent; no Origin header → header absent; OPTIONS returns 204 with correct `-Methods` / `-Headers`)
+      - **Acceptance criteria**:
+        - `claim_sync_slot()` returns exactly one row when the slot is claimable and zero rows when under cooldown
+        - Two concurrent calls: the first returns a row, the second returns zero rows (row-level locks serialize)
+        - `'in_progress'` accepted by `sync_metadata.last_sync_status` (constraint or enum updated)
+        - `claim_sync_slot()` NOT granted to `authenticated` — service_role only
+        - `_shared/cors.ts` helper mirrors the request origin only when it is in the `ALLOWED_ORIGINS` env var
+        - `_shared/cors.ts` omits the `Access-Control-Allow-Origin` header entirely when the origin is not allowed (not `*`, not empty string — the header must not be set so the browser blocks the response)
+        - OPTIONS preflight returns 204 with `-Methods: POST, OPTIONS` and `-Headers: authorization, content-type, apikey` (or actual headers used)
+        - Deno test asserts all four CORS cases
+
+    - [x] **4.2.5.4 Wire sync-matches to claim_sync_slot() + CORS allowlist** (Size: S)
+      - **Description**: Replace the existing read-then-act cooldown in `sync-matches/index.ts` with a single `supabase.rpc('claim_sync_slot')` call at the top of the handler. If the RPC returns zero rows, respond HTTP 429 `{ ok: false, reason: 'cooldown', cooldownRemainingSeconds: N }` where N is computed from the current `sync_metadata.last_sync_at` (separate SELECT after the 429 branch — cheap, only on the cooldown path). If the RPC returns a row, the caller owns the slot; proceed with the existing sync logic. After sync completes (success or failure), UPDATE `sync_metadata` with the terminal status (`'ok'` / `'error'`) and `last_sync_error` as appropriate — this releases the `'in_progress'` lock by flipping the status. Replace the ad-hoc CORS headers with the shared helper from 4.2.5.3.
+      - **Depends on**: 4.2.5.3
+      - **Files**:
+        - Modify `frontend/supabase/functions/sync-matches/index.ts` (import `_shared/cors`, replace the SELECT-then-UPDATE cooldown with a single `supabase.rpc('claim_sync_slot')`, handle zero-row ⇒ 429, flip status on terminal completion)
+        - Modify `frontend/supabase/functions/sync-matches/index.test.ts` or create (Deno test asserting: claim_sync_slot returning zero ⇒ 429 with cooldownRemainingSeconds; claim_sync_slot returning a row ⇒ sync proceeds; CORS allowlist applied)
+      - **Acceptance criteria**:
+        - Cooldown enforcement is a single RPC call (no SELECT-then-UPDATE race window)
+        - Two concurrent invocations within the cooldown window: one proceeds, one returns 429 — verifiable in the Deno test with a mocked/stubbed RPC
+        - Terminal status flip (`'ok'` / `'error'`) happens after sync completes regardless of outcome
+        - CORS headers sourced from `_shared/cors.ts`; disallowed origins receive no `Access-Control-Allow-Origin` header
+        - Existing successful-sync behavior preserved (match upsert + score_match invocation from 4.1.2 still fires)
+        - No raw `service_role` key or football-data.org API key leaked in any response or log
+
+    - [x] **4.2.5.5 admin-signout — parse-before-role-check + audit writes (incl. malformed UUIDs) + CORS** (Size: M)
+      - **Description**: Rework the admin-signout Edge Function authorization and audit ordering. Today the function checks the caller's role before parsing `userId` — a forbidden caller never leaves a trace in the audit log with the target they were trying to sign out. Fix by parsing and validating `userId` FIRST, then resolving the caller's role, then writing ONE `admin_audit_log` row capturing `caller_id`, `target_user_id`, `action = 'signout'`, and `metadata.outcome` (`'allowed'` / `'forbidden'` / `'invalid_target'`), then returning the response. **Malformed UUID case**: if the body `userId` fails UUID validation, still write an audit row with `target_user_id = NULL`, `action = 'signout'`, `metadata.outcome = 'invalid_target'`, `metadata.raw_input` (truncated + sanitized) BEFORE returning HTTP 400. Reconnaissance attempts MUST leave a trace. Replace the ad-hoc CORS headers with the shared helper from 4.2.5.3.
+      - **Depends on**: 4.0.7, 4.2.5.2, 4.2.5.3
+      - **Files**:
+        - Modify `frontend/supabase/functions/admin-signout/index.ts`
+          - Reorder: (1) parse body → (2) validate `userId` as UUID → (3) resolve caller's role → (4) short-circuit decision → (5) write `admin_audit_log` row with appropriate `outcome` → (6) return response
+          - Malformed UUID branch writes the audit row with `target_user_id = NULL` before returning HTTP 400
+          - Forbidden branch (non-super-admin caller) writes the audit row with `outcome = 'forbidden'` before returning HTTP 403
+          - Allowed branch writes the audit row with `outcome = 'allowed'` AFTER `supabaseAdmin.auth.admin.signOut(userId)` resolves (so metadata can include the signout outcome)
+          - Import `_shared/cors.ts`
+        - Modify / create `frontend/supabase/functions/admin-signout/index.test.ts` (Deno tests for every branch: valid super-admin + valid target ⇒ 200 + audit row `outcome='allowed'`; non-super-admin + valid target ⇒ 403 + audit row `outcome='forbidden'` with the intended target captured; valid super-admin + malformed UUID ⇒ 400 + audit row `target_user_id=NULL` + `outcome='invalid_target'`; malformed JSON body ⇒ 400 + audit row with null target; CORS allowlist applied)
+      - **Acceptance criteria**:
+        - `userId` parsed and UUID-validated BEFORE role resolution
+        - Every invocation (success, forbidden, malformed) writes exactly ONE `admin_audit_log` row
+        - **Malformed UUID input logs an audit row with `target_user_id = null` and `action = 'signout'` before returning 400** — denied attempts ALWAYS leave a trace
+        - Forbidden caller's audit row captures the intended target so attack context is preserved for review
+        - Allowed-branch audit row is written AFTER the auth admin signOut call resolves so `metadata` can include any signOut error
+        - Response codes: 200 (allowed), 403 (forbidden), 400 (malformed)
+        - CORS headers sourced from `_shared/cors.ts`
+        - No `service_role` key echoed in responses, logs, or audit metadata
+        - Raw input fields in audit `metadata` truncated (e.g. first 256 chars) and sanitized — no full-request bodies or tokens ever written
+
+    - [x] **4.2.5.6 Session-replay / Sentry PII exclusion on users-and-groups page** (Size: S)
+      - **Description**: The super-admin users-and-groups page (4.0.9) renders user emails and activation state — sensitive PII that must not land in session-replay recordings or Sentry breadcrumbs. Configure the error-tracking / session-replay provider (whichever ships with the MVP — Sentry replay, LogRocket, or equivalent) to either exclude the `/super-admin/users-and-groups` route entirely from capture, or apply a PII masking rule covering the email column selectors. Verify via a real capture event that emails are redacted (or the page is absent from the recording). If no session-replay provider is wired at MVP, this task becomes a documented guard in the provider-integration checklist rather than code changes.
+      - **Depends on**: 4.0.9
+      - **Files**:
+        - Modify the error-tracking / session-replay init config (location depends on provider — likely `frontend/src/main.ts` or a `core/services/monitoring.service.ts` if one exists at integration time)
+        - If no provider wired yet: modify the provider-integration checklist doc (e.g. `docs/plans/mvp-plan.md` or a new `docs/ops/monitoring-integration.md`) to capture the exclusion requirement with the exact route path and CSS selectors
+      - **Acceptance criteria**:
+        - Session-replay / error-tracking provider config excludes `/super-admin/users-and-groups` route from capture OR masks every element rendering user emails on that route
+        - Verification: a captured test event from the page shows no email strings in the replay or breadcrumb trail
+        - If no provider is wired at MVP, the exclusion requirement is explicitly documented with route path + element selectors so the first integrator cannot miss it
+        - No other super-admin pages accidentally excluded — only the users-and-groups route
+
+  - **Decisions (4.2.5)**:
+    1. **`claim_sync_slot()` ships as its own migration (013), separate from the audit tables (012).** Keeps each migration focused on one concern: 011 is scoring-trigger edge cases, 012 is audit infrastructure (tables + trigger), 013 is the sync cooldown RPC. Easier to review, easier to revert independently if one causes a production issue. The shared CORS helper lives in TypeScript (`_shared/cors.ts`) and is colocated with 013's slice because both Edge Functions (4.2.5.4 sync-matches and 4.2.5.5 admin-signout) consume it together.
+    2. **`matches_audit` trigger fires on UPDATE only, not INSERT.** Rationale: INSERT events on `matches` are always `service_role` writes from the sync Edge Function — there is no human actor to attribute, so `auth.uid()` would be NULL and the audit row would be noise. The audit log exists to capture human score corrections (super-admin fixes a mis-entered score via PostgREST or a future admin UI). Excluding INSERT keeps the audit signal-to-noise high. Captured explicitly in 4.2.5.2's test file.
+    3. **admin-signout: malformed UUIDs still log the attempt with `target_user_id = null` before returning 400.** Reconnaissance attempts — someone probing the endpoint with junk payloads to map the API surface — must leave a trace so ops can detect the pattern. The audit row uses `target_user_id = NULL`, `action = 'signout'`, `metadata.outcome = 'invalid_target'`, and a truncated/sanitized `metadata.raw_input`. Denied attempts ALWAYS leave a trace; there is no silent failure path on this endpoint.
 
   - [ ] **4.2.6 AuthGuard cold-start race** (Size: S)
     - **Description**: On cold start with a persisted session, `currentSession$` has emitted but `currentProfile$` may still be null while the profile query is in flight. `AuthGuard` reads `supabaseService.currentProfile?.role` synchronously — deep-linking to `/super-admin/dashboard` in that window redirects a legitimate super-admin to `/auth/login`. Fix: switch the guard to subscribe to `profile$` with `filter(p => p !== null)`, take the first emission, and gate on a short timeout fallback (e.g. 5s) that redirects to login if the profile never arrives.
@@ -1003,6 +1112,8 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - `LoggerService.error` in prod currently prints `"[context] An error occurred"` for non-SupabaseError instances. Including `err.name` (e.g. `TypeError`, `RangeError`) would help ops distinguish error classes without leaking the raw message
     - `SupabaseDataService` dashboard path surfaces a raw `lastSyncError: string | null` field. The dashboard doesn't render it today (just the status badge), but the shape invites a future UI accident. Either drop the field from the page view model or transform to a user-safe summary in the service
     - 2 pre-existing `console.log` statements with emoji markers in `group-admin/groups.page.ts` (~lines 198, 201) — harmless but inconsistent with the Batch 2 LoggerService routing. Route through `logger.warn` or remove
+    - **Stuck sync surfacing** — if a `sync-matches` run crashes between `claim_sync_slot` (migration 013) and `recordSyncOutcome`, the 5-min cooldown is the recovery path but the dashboard shows a confusing 429. Detect `lastSyncStatus === 'in_progress'` AND elapsed time > ~4 min on the dashboard and render a "sync appears stuck — will auto-retry at <time>" hint instead of a silent cooldown
+    - **Harden `is_super_admin()` search_path** (migration 001:45-51): the function is `SECURITY DEFINER` but lacks `SET search_path = public, pg_temp`. A search_path hijack via `pg_temp.profiles` could theoretically shadow the `public.profiles` lookup. Pre-existing, but Task 4.2.5's audit tables now depend on this helper for confidentiality, expanding the blast radius. Ship as a small migration that adds the search_path setting to the existing function definition
 
 ---
 
