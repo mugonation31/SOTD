@@ -841,7 +841,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - No dev tooling (node_modules, Angular CLI) ships in the final image layer
       - Healthcheck configured so the container reports ready once Nginx is listening
 
-  - [ ] **4.2.3 Global error handling + production-aware logger** (Size: M)
+  - [x] **4.2.3 Global error handling + production-aware logger** (Size: M)
     - **Description**: Introduce a thin `LoggerService` that routes `console.log`/`console.warn`/`console.error` through an `environment.production` gate — in production, raw Supabase error objects and debug logs are suppressed, and only sanitized messages surface. Replace raw `console.error(...)` calls in pages that log Supabase errors (standings, leaderboard, matches, predictions) with `this.logger.error('Failed to load X', err)`. Wrap `SupabaseDataService` error paths in a sanitized domain error (e.g. `DataServiceError('Unable to load joker state')`) so column names, constraint names, and RLS denial reasons never reach the browser console in prod. Confirm no stray `console.log` statements remain in shipping code (or gate them on `!environment.production`).
     - **Depends on**: 4.2.1
     - **Files**:
@@ -859,7 +859,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - Network errors surface as a user-friendly toast, not a raw error object
       - Existing passing tests unchanged; new tests cover the logger gating
 
-  - [ ] **4.2.4 Loading states on all data-fetching pages** (Size: M)
+  - [x] **4.2.4 Loading states on all data-fetching pages** (Size: M)
     - **Description**: Every page that fetches from Supabase must render a loading spinner while pending, an empty state when the query returns no rows, and a user-friendly error toast on failure. Standardize the pattern (same spinner component, same toast copy conventions) so the UX is consistent across pages.
     - **Depends on**: 4.2.3
     - **Files**:
