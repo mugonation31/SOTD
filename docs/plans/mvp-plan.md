@@ -1009,18 +1009,40 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     2. **`matches_audit` trigger fires on UPDATE only, not INSERT.** Rationale: INSERT events on `matches` are always `service_role` writes from the sync Edge Function — there is no human actor to attribute, so `auth.uid()` would be NULL and the audit row would be noise. The audit log exists to capture human score corrections (super-admin fixes a mis-entered score via PostgREST or a future admin UI). Excluding INSERT keeps the audit signal-to-noise high. Captured explicitly in 4.2.5.2's test file.
     3. **admin-signout: malformed UUIDs still log the attempt with `target_user_id = null` before returning 400.** Reconnaissance attempts — someone probing the endpoint with junk payloads to map the API surface — must leave a trace so ops can detect the pattern. The audit row uses `target_user_id = NULL`, `action = 'signout'`, `metadata.outcome = 'invalid_target'`, and a truncated/sanitized `metadata.raw_input`. Denied attempts ALWAYS leave a trace; there is no silent failure path on this endpoint.
 
-  - [ ] **4.2.6 AuthGuard cold-start race** (Size: S)
-    - **Description**: On cold start with a persisted session, `currentSession$` has emitted but `currentProfile$` may still be null while the profile query is in flight. `AuthGuard` reads `supabaseService.currentProfile?.role` synchronously — deep-linking to `/super-admin/dashboard` in that window redirects a legitimate super-admin to `/auth/login`. Fix: switch the guard to subscribe to `profile$` with `filter(p => p !== null)`, take the first emission, and gate on a short timeout fallback (e.g. 5s) that redirects to login if the profile never arrives.
+  - [x] **4.2.6 AuthGuard cold-start race on super-admin deep-link** (Size: S)
+    - **Description**: On cold start with a persisted Supabase session, `currentSession$` has emitted AND `authService.currentUser` has emitted (passing the `!authResponse?.user` check in `auth.guard.ts`), but `currentProfile$` may still be null while the `SELECT role FROM profiles WHERE id = ?` query is in flight. The super-admin branch at `auth.guard.ts:42` reads `this.supabaseService.currentProfile?.role` synchronously, gets `undefined`, falls through to `redirectToLogin()`, and a legitimate super-admin deep-linking to `/super-admin/dashboard` is bounced to `/auth/login` despite holding a valid session. Workaround today: manual refresh. Fix: replace the synchronous read in the super-admin branch with a subscription to `supabaseService.profile$`, filtered for the first non-null emission, bounded by a 5s timeout that fails closed (redirect + diagnostic toast). Non-super-admin branches are out of scope — they derive role from `authResponse.user.role` which arrives synchronously with the `currentUser` emission the guard already awaits.
     - **Depends on**: 4.0.2
     - **Files**:
-      - Modify `frontend/src/app/core/guards/` (auth guard: subscribe to `profile$` + filter + timeout)
-      - Modify relevant guard spec files (new tests only — do not modify existing passing specs)
+      - Modify `frontend/src/app/core/guards/auth.guard.ts` (super-admin branch only, lines 40-48): replace synchronous `currentProfile?.role` read with async `profile$`-driven resolution. Inject `ToastController` from `@ionic/angular/standalone`. Add `PROFILE_HYDRATION_TIMEOUT_MS = 5000` and `PROFILE_TIMEOUT_MESSAGE = 'Session taking too long to load. Please sign in again.'` as private static constants so specs can reference them.
+      - Modify `frontend/src/app/core/guards/auth.guard.spec.ts`: add a NEW describe block `describe('AuthGuard cold-start race (Task 4.2.6)', ...)` AFTER the existing Task 4.0.2 block — do not modify any existing tests. Wrap `beforeEach`/`afterEach` with `jest.useFakeTimers()` / `jest.useRealTimers()` so the 5s timeout is controllable via `jest.advanceTimersByTime`. Mock `ToastController` with `create: jest.fn().mockResolvedValue({ present: jest.fn().mockResolvedValue(undefined) })`. Reuse the existing `buildRoute` helper + `profileSubject` / `profile$` mock shape (confirmed present at `supabase.service.ts:80, 195-197, 207-209`).
     - **Acceptance criteria**:
-      - Deep-linking to a role-protected route on cold start with a valid session resolves the user's role before the guard decides
-      - Legitimate super-admin deep-linking to `/super-admin/dashboard` is NOT redirected to login
-      - Profile-never-arrives case times out after 5s and redirects to login with a diagnostic toast
-      - No regression on existing guard behavior when `currentProfile$` is already populated
-      - New spec covers: (a) profile hydrates in time, (b) profile hydrates after delay, (c) profile times out
+      - Deep-linking to `/super-admin/dashboard` with `profile$` already hydrated to `{ role: 'super-admin' }` at subscription time returns `true` without a router navigation (hot-path regression).
+      - Deep-linking with `profile$` initially null, then emitting `{ role: 'super-admin' }` within 5s returns `true` and does NOT call `router.navigate`.
+      - Deep-linking with `profile$` that never emits a non-null value within 5s: guard returns `false`, calls `router.navigate(['/auth/login'], { queryParams: { returnUrl: '/super-admin/dashboard' } })`, and presents a toast via `ToastController.create` with `message === AuthGuard.PROFILE_TIMEOUT_MESSAGE`, `color: 'danger'`, `position: 'top'` (matching the `matches.page.ts:1054-1062` convention).
+      - Deep-linking with `profile$` emitting `{ role: 'player' }` (wrong role, already hydrated) returns `false` and redirects to `/auth/login` — same failure mode as today's synchronous check; no toast required (role mismatch is not a diagnostic timeout).
+      - `profile$` error emission is caught and routed to `redirectToLogin` — fail-closed; no toast.
+      - All 7 existing specs in the Task 4.0.2 describe block still pass unchanged. In particular, the "currentProfile is null" spec at `auth.guard.spec.ts:112-122` still passes: under the new implementation it resolves via the 5s timeout path (since `profileSubject.next(null)` never produces a non-null value). Accept the 5s wall-clock cost OR wrap just that `it` body with fake timers if CI regression is a concern.
+      - Non-super-admin branches (`player`, `group-admin`, no `expectedRole`, unauthenticated) are untouched and their 4 existing specs continue to pass.
+    - **Test plan (Red phase — all failing against the current implementation)**:
+      - `(a) allows access when profile is already hydrated as super-admin at guard-entry` — `profileSubject.next({ role: 'super-admin', ... })` BEFORE `canActivate`; expect `true`, no navigate, no toast.
+      - `(b) waits for late profile hydration and allows access when super-admin arrives within 5s` — call `canActivate`, advance timers 2000ms, then emit super-admin; expect `true`, no navigate, no toast.
+      - `(c) redirects to /auth/login with diagnostic toast when profile never hydrates within 5s` — advance timers 5001ms; expect `false`, `router.navigate(['/auth/login'], { queryParams: { returnUrl: '/super-admin/dashboard' } })`, toast `create` called with the exact message/color/position constants, `present()` invoked.
+      - `(d) denies wrong-role access synchronously when profile hydrates as player on a super-admin route` — emit `{ role: 'player' }` before call; expect `false`, redirect, no toast.
+      - `(e) fails closed when profile$ errors out` — `profileSubject.error(...)`; expect `false`, redirect, no toast.
+    - **Implementation sketch** (super-admin branch only):
+      - Import `filter, take, timeout, catchError, map, switchMap` from `rxjs/operators`; `of` from `rxjs`.
+      - Restructure the outer `map` into `switchMap` so the super-admin path can return an inner observable; other branches wrap their sync result in `of(...)`.
+      - Super-admin inner pipeline: `this.supabaseService.profile$.pipe( filter(p => p !== null), take(1), timeout(PROFILE_HYDRATION_TIMEOUT_MS), map(profile => { if (profile.role === 'super-admin') return true; this.redirectToLogin(route); return false; }), catchError(err => { this.redirectToLogin(route); if (err?.name === 'TimeoutError') this.presentTimeoutToast(); return of(false); }) )`.
+      - Inject `ToastController`; add `presentTimeoutToast()` mirroring `matches.page.ts:1054-1062`.
+    - **Non-goals**:
+      - Non-super-admin branches remain untouched.
+      - `NoAuthGuard` (same file, lines 83-157) is out of scope.
+      - No refactor of `SupabaseService` BehaviorSubject contract.
+      - No extension to future roles (`group-admin`) in this slice.
+    - **Risks**:
+      - `auth.guard.spec.ts:112-122` will run slower (~5s wall clock) post-change unless wrapped in fake timers — weigh against "never modify passing specs" rule.
+      - `ToastController` must resolve from `providedIn: 'root'` scope at router-resolution time — smoke test via dev app.
+      - `timeout(5000)` emits `TimeoutError` with `.name === 'TimeoutError'` in rxjs 7+ — fragile pin; acceptable for MVP.
 
   - [ ] **4.2.7 Typed service returns + remove runtime typeof guards** (Size: S)
     - **Description**: Tighten loose `any` return types and remove runtime `typeof service.method === 'function'` guards that were added as deliberate workarounds to avoid modifying existing test mocks. With the MVP stabilized, update the legacy mocks (additively) so the guards can come out. Also: replace the brittle `toString()`-based test in `season.service.spec.ts:91-97` with a source-file regex (same pattern as `matches.page.spec.ts:157`). Add the belt-and-braces `isLocked` guard at the top of `matches.page.ts onSubmit()` so direct callers fail-closed even though the button is hidden via `canSubmit()`.
@@ -1079,6 +1101,7 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - Cross-user `markJokerUsed` authorization integration test (RLS already enforces; belt-and-braces)
 
   - **Admin UX nitpicks** (single-group MVP norm):
+    - `AuthGuard redirectToLogin` drops `returnUrl` query param when guard is attached at parent route (`route.url === []` at guard-fire time → `attemptedUrl === '/'` → gate skips queryParams attach). Surfaced while writing 4.2.6 E2E tests. Irrelevant for super-admin (single user = app owner). Only affects real-user mid-session expiry on `/player/**` and `/group-admin/**` — cosmetic (land on default dashboard, one extra click to resume). Fix: switch `canActivate(route)` to `canActivate(route, state: RouterStateSnapshot)` and use `state.url`. 2 lines + test update.
     - Admin multi-group handling: `group-admin/pages/predictions/predictions.page.ts resolveAdminGroupId` picks `adminGroups[0]` silently — respect a route/selector param or document the single-group assumption
     - Dashboard client countdown (30s) vs server cooldown (300s) alignment (cosmetic; second click correctly hits 429)
     - `group-admin/pages/predictions/predictions.page.ts:197-200`: `await` or `void`-prefix the fire-and-forget `loadGameweekPredictions` (sync-in-disguise)
