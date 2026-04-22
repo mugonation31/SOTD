@@ -64,6 +64,18 @@ type SegmentValue = 'users' | 'groups';
  * `signOutUser` fails, the user is write-locked but their session token
  * is still valid until expiry. We surface this distinctly so the admin
  * knows the deactivation is not fully effective until token expiry.
+ *
+ * ## PII / session-replay masking
+ *
+ * User emails, usernames, and admin UUIDs are tagged with
+ * `data-replay-mask="true"` so future integrations (Sentry Session Replay,
+ * FullStory, LogRocket, Datadog RUM, etc.) automatically redact them from
+ * captures. Most session-replay tools support attribute-based masking via
+ * `maskAttributes` / `maskTextSelector` config — the convention here is to
+ * mark fields in the DOM once and configure the masker to honor the attribute.
+ *
+ * Related Task 4.3 item: once Sentry is wired, verify its config masks
+ * `[data-replay-mask="true"]` elements.
  */
 @Component({
   selector: 'app-users-groups',
@@ -122,8 +134,11 @@ type SegmentValue = 'users' | 'groups';
         <ion-list *ngIf="users.length > 0">
           <ion-item *ngFor="let user of users">
             <ion-label>
-              <h2>{{ user.email }}</h2>
-              <p>{{ user.username }} &middot; {{ user.role | titlecase }}</p>
+              <h2 data-replay-mask="true">{{ user.email }}</h2>
+              <p>
+                <span data-replay-mask="true">{{ user.username }}</span>
+                &middot; {{ user.role | titlecase }}
+              </p>
             </ion-label>
             <ion-badge
               slot="end"
@@ -152,7 +167,8 @@ type SegmentValue = 'users' | 'groups';
             <ion-label>
               <h2>{{ group.name }}</h2>
               <p>
-                Code: {{ group.code }} &middot; Admin: {{ group.admin_id }}
+                Code: {{ group.code }} &middot; Admin:
+                <span data-replay-mask="true">{{ group.admin_id }}</span>
                 &middot; Members: {{ group.current_members }}
               </p>
               <p class="created-at">

@@ -7,25 +7,35 @@
 //   SUPABASE_SERVICE_ROLE_KEY - Supabase service role key (bypasses RLS)
 //
 // ---------------------------------------------------------------------------
-// COOLDOWN INVARIANT (Task 4.0.6)
+// COOLDOWN INVARIANT (Task 4.0.6 / Task 4.2.5.4)
 // ---------------------------------------------------------------------------
 // A 5-minute (300s) server-side cooldown is enforced via the singleton
-// public.sync_metadata row (id = 1). Before each sync attempt:
+// public.sync_metadata row (id = 1). The cooldown is claimed atomically
+// via the `claim_sync_slot()` RPC (migration 013), which closes the TOCTOU
+// race that existed in the previous read-then-act flow:
 //
-//   1. Read sync_metadata.last_sync_at + last_sync_status.
-//   2. If last_sync_at is within the last 300s AND last_sync_status != 'error',
-//      reject with HTTP 429 and { ok: false, reason: 'cooldown',
-//      cooldownRemainingSeconds: N }. football-data.org is NOT called.
-//   3. Failed syncs (status = 'error') are exempt — the user can retry
-//      immediately. NULL last_sync_at (never run) also bypasses cooldown.
+//   1. Call `supabase.rpc('claim_sync_slot')` as the first DB op.
+//   2. RPC returns { claimed, cooldown_remaining_seconds, in_progress_since }.
+//      - `claimed=true`  → we won the race; proceed to call football-data.org.
+//      - `claimed=false` → either another caller holds the slot or the
+//        cooldown window is still active. Reject with HTTP 429 and
+//        { ok: false, reason: 'cooldown', cooldownRemainingSeconds: N }.
+//        football-data.org is NOT called.
+//   3. The RPC stamps BOTH `last_sync_status='in_progress'` AND
+//      `last_sync_at=NOW()` in a single atomic UPDATE — no follow-through
+//      is needed by this function to close the race.
+//   4. Failed syncs (status = 'error') are exempt at claim time so a user
+//      can retry immediately. NULL last_sync_at (never run) also bypasses.
 //
-// On every completed attempt (success or failure), sync_metadata is updated
-// with last_sync_at = NOW() so subsequent calls see the cooldown window.
-// Successful syncs clear last_sync_error; failed syncs record a sanitised
-// message and set last_sync_status = 'error' (re-runnable immediately).
+// On every completed attempt (success or failure), `recordSyncOutcome`
+// flips last_sync_status to 'ok' or 'error' and re-stamps last_sync_at.
+// If this function crashes between claim and completion, the row stays in
+// 'in_progress' — the 5-minute timeout on the NEXT claim attempt naturally
+// unblocks it.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
 // ---------------------------------------------------------------------------
 // Mapping functions (inlined from frontend/src/app/core/utils/football-api-mapper.ts
@@ -149,7 +159,8 @@ function groupBy<T>(items: T[], key: keyof T): Record<string, T[]> {
   }, {} as Record<string, T[]>);
 }
 
-const COOLDOWN_SECONDS = 300; // 5 minutes — see COOLDOWN INVARIANT at top.
+// Cooldown window is enforced inside the `claim_sync_slot()` RPC
+// (migration 013). See COOLDOWN INVARIANT at top of file.
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -166,16 +177,30 @@ async function recordSyncOutcome(
   status: 'ok' | 'error',
   error: string | null
 ): Promise<void> {
-  const { error: updateError } = await supabase
+  // Scope the completion write to the current holder. If status is no
+  // longer 'in_progress' (e.g. a stale crashed sync's delayed write
+  // lands after another claimer has taken over), skip the update so we
+  // never overwrite a fresh holder's state with a stale result. This
+  // closes the last race window around claim_sync_slot (migration 013).
+  const { error: updateError, data } = await supabase
     .from('sync_metadata')
     .update({
       last_sync_at: new Date().toISOString(),
       last_sync_status: status,
       last_sync_error: error,
     })
-    .eq('id', 1);
+    .eq('id', 1)
+    .eq('last_sync_status', 'in_progress')
+    .select();
   if (updateError) {
     console.error('Failed to update sync_metadata:', updateError);
+    return;
+  }
+  if (!data || data.length === 0) {
+    // Holder changed while this sync was running — log and move on.
+    console.warn(
+      'sync-matches: outcome write skipped; another claimer took over (stale completion)'
+    );
   }
 }
 
@@ -184,14 +209,25 @@ async function recordSyncOutcome(
 // ---------------------------------------------------------------------------
 
 serve(async (req: Request) => {
-  // Only allow POST requests
+  // Handle CORS preflight FIRST — browsers send OPTIONS with no Authorization
+  // header, so this must come before the auth check below. See _shared/cors.ts
+  // for the allowlist contract; `null` means origin absent or not allowed, in
+  // which case we echo no CORS headers and the browser blocks the request.
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204 });
+    const preflightCors = corsHeaders(req);
+    return new Response(null, { status: 204, headers: preflightCors ?? {} });
   }
+
+  // Hoist CORS headers once for reuse across every response site below.
+  // When `corsHeaders` returns null (no Origin header, e.g. server-to-server
+  // curl, or origin not on allowlist), we fall back to `{}` so the header
+  // spread is a no-op rather than a crash.
+  const cors = corsHeaders(req) ?? {};
+
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ success: false, error: 'Method not allowed' }),
-      { status: 405, headers: { 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   }
 
@@ -200,7 +236,7 @@ serve(async (req: Request) => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(
       JSON.stringify({ success: false, error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
+      { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   }
 
@@ -216,7 +252,7 @@ serve(async (req: Request) => {
           success: false,
           error: 'Missing required environment variables',
         }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -224,35 +260,39 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // -----------------------------------------------------------------------
-    // Cooldown check (Task 4.0.6)
+    // Atomic cooldown claim (Task 4.2.5.4 — migration 013)
     // -----------------------------------------------------------------------
-    // Read the singleton sync_metadata row. If the previous sync succeeded
-    // within COOLDOWN_SECONDS, reject with HTTP 429. Errors are exempt so a
-    // failed run can be retried immediately. A missing row or NULL
-    // last_sync_at also bypasses the cooldown.
-    const { data: meta, error: metaError } = await supabase
-      .from('sync_metadata')
-      .select('last_sync_at, last_sync_status')
-      .eq('id', 1)
-      .maybeSingle();
+    // Fences concurrent admins at the DB layer. The RPC flips
+    // sync_metadata.last_sync_status to 'in_progress' and stamps
+    // last_sync_at = NOW() in a single atomic UPDATE — if `claimed=false`,
+    // another caller holds the slot (or cooldown is still active) and we
+    // return 429 without hitting the football-data.org feed.
+    const { data: claimRows, error: claimError } = await supabase.rpc('claim_sync_slot');
 
-    if (metaError) {
-      console.error('Failed to read sync_metadata:', metaError);
+    if (claimError) {
+      console.error('sync-matches: claim_sync_slot RPC failed', claimError.message);
       return new Response(
-        JSON.stringify({ ok: false, reason: 'sync_failed', error: 'Could not read sync metadata' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          ok: false,
+          reason: 'sync_failed',
+          error: 'Unable to check sync state',
+        }),
+        { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (meta?.last_sync_at && meta.last_sync_status !== 'error') {
-      const elapsedSeconds = (Date.now() - new Date(meta.last_sync_at).getTime()) / 1000;
-      if (elapsedSeconds < COOLDOWN_SECONDS) {
-        const cooldownRemainingSeconds = Math.ceil(COOLDOWN_SECONDS - elapsedSeconds);
-        return new Response(
-          JSON.stringify({ ok: false, reason: 'cooldown', cooldownRemainingSeconds }),
-          { status: 429, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    // PostgREST returns RPC results as an array even for single-row returns.
+    const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+
+    if (!claim?.claimed) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          reason: 'cooldown',
+          cooldownRemainingSeconds: claim?.cooldown_remaining_seconds ?? 0,
+        }),
+        { status: 429, headers: { ...cors, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Fetch all PL matches for the current season
@@ -263,15 +303,16 @@ serve(async (req: Request) => {
 
     if (!response.ok) {
       const errMsg = `Football API returned ${response.status}: ${response.statusText}`;
-      await recordSyncOutcome(supabase, 'error', sanitizeError(errMsg));
+      const safeErr = sanitizeError(errMsg);
+      await recordSyncOutcome(supabase, 'error', safeErr);
       return new Response(
         JSON.stringify({
           success: false,
           ok: false,
           reason: 'sync_failed',
-          error: errMsg,
+          error: safeErr,
         }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } }
+        { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -295,15 +336,16 @@ serve(async (req: Request) => {
 
     if (!data.matches || !Array.isArray(data.matches)) {
       const errMsg = 'Unexpected API response: no matches array';
-      await recordSyncOutcome(supabase, 'error', sanitizeError(errMsg));
+      const safeErr = sanitizeError(errMsg);
+      await recordSyncOutcome(supabase, 'error', safeErr);
       return new Response(
         JSON.stringify({
           success: false,
           ok: false,
           reason: 'sync_failed',
-          error: errMsg,
+          error: safeErr,
         }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } }
+        { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -340,7 +382,10 @@ serve(async (req: Request) => {
         .single();
 
       if (gwError) {
-        errors.push(`Gameweek ${matchday}: ${gwError.message}`);
+        // Sanitize raw Postgres error text before surfacing in the response
+        // body — messages can embed constraint/schema names that leak
+        // DB internals to API consumers.
+        errors.push(`Gameweek ${matchday}: ${sanitizeError(gwError.message)}`);
         continue;
       }
 
@@ -371,7 +416,7 @@ serve(async (req: Request) => {
         .upsert(dbMatches, { onConflict: 'external_id' });
 
       if (matchError) {
-        errors.push(`Gameweek ${matchday} matches: ${matchError.message}`);
+        errors.push(`Gameweek ${matchday} matches: ${sanitizeError(matchError.message)}`);
       } else {
         totalMatchesSynced += matches.length;
       }
@@ -404,7 +449,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify(result), {
       status: errors.length === 0 ? 200 : 207, // 207 Multi-Status if partial errors
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('sync-matches error:', error);
@@ -428,7 +473,7 @@ serve(async (req: Request) => {
         reason: 'sync_failed',
         error: 'Internal server error. Check function logs for details.',
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   }
 });
