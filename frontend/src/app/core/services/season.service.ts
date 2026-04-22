@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseDataService } from './supabase-data.service';
+import { LoggerService } from './logger.service';
 
 export interface SeasonInfo {
   currentGameweek: number;
@@ -25,7 +26,10 @@ export class SeasonService {
 
   private initPromise?: Promise<void>;
 
-  constructor(private supabaseDataService: SupabaseDataService) {
+  constructor(
+    private supabaseDataService: SupabaseDataService,
+    private logger: LoggerService,
+  ) {
     // Fire-and-forget init so existing consumers don't have to await.
     void this.init();
   }
@@ -76,7 +80,11 @@ export class SeasonService {
   private async safeGetActiveGameweek(): Promise<{ number: number } | null> {
     try {
       return await this.supabaseDataService.getActiveGameweek();
-    } catch {
+    } catch (err) {
+      // Dev-only diagnostic — callers treat the null return as "no active GW"
+      // which is the same path as a legitimately empty season. A warn keeps
+      // the silent-swallow visible during development without blocking.
+      this.logger.warn('season.safeGetActiveGameweek', err);
       return null;
     }
   }
@@ -84,7 +92,8 @@ export class SeasonService {
   private async safeGetGameweeks(): Promise<Array<{ number: number }>> {
     try {
       return await this.supabaseDataService.getGameweeks();
-    } catch {
+    } catch (err) {
+      this.logger.warn('season.safeGetGameweeks', err);
       return [];
     }
   }

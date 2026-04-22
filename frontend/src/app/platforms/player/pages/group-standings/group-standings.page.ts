@@ -17,7 +17,8 @@ import {
   IonIcon,
   IonButton,
   IonButtons,
-  IonBackButton
+  IonBackButton,
+  IonSpinner,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -33,6 +34,8 @@ import { GroupService, Standing } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 import { ToastController } from '@ionic/angular/standalone';
 
 interface GroupDetails {
@@ -64,6 +67,7 @@ interface GroupDetails {
     IonButton,
     IonButtons,
     IonBackButton,
+    IonSpinner,
     CommonModule
   ],
 })
@@ -85,6 +89,7 @@ export class GroupStandingsPage implements OnInit {
     private seasonService: SeasonService,
     private supabaseDataService: SupabaseDataService,
     private toastController: ToastController,
+    private logger: LoggerService,
   ) {
     addIcons({
       trophyOutline,
@@ -101,7 +106,11 @@ export class GroupStandingsPage implements OnInit {
     this.groupId = this.route.snapshot.paramMap.get('groupId') || '';
     this.currentUserId = this.authService.getCurrentUser()?.id || null;
 
-    this.loadGroupStandings();
+    // Await so `isLoading` is cleared in the `finally` before ngOnInit
+    // resolves. Callers (and tests) that `await component.ngOnInit()`
+    // can then trust the DOM has been rendered, not still gated by the
+    // loading spinner.
+    await this.loadGroupStandings();
 
     // Skip the visibility flow if we don't have a real groupId —
     // otherwise getGroupPredictions('') would log an error and surface
@@ -130,10 +139,7 @@ export class GroupStandingsPage implements OnInit {
       const result = await this.supabaseDataService.getGameweekDeadline(gameweek);
       isPast = result.isPast;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to load gameweek deadline for gameweek ${gameweek}: ${message}`,
-      );
+      this.logger.error('group-standings.loadGameweekDeadline', err);
       // Fail-open: without a deadline, don't lock the UI and don't attempt
       // to fetch predictions (which would also fail at the RLS boundary).
       this.predictionsLocked = false;
@@ -153,12 +159,11 @@ export class GroupStandingsPage implements OnInit {
         gameweek,
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to load group predictions for gameweek ${gameweek}: ${message}`,
-      );
+      this.logger.error('group-standings.loadGroupPredictions', err);
       this.groupPredictions = [];
-      await this.showErrorToast('Unable to load group predictions');
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Unable to load group predictions';
+      await this.showErrorToast(msg);
     }
   }
 
@@ -186,7 +191,7 @@ export class GroupStandingsPage implements OnInit {
         this.router.navigate(['/player/standings']);
       }
     } catch (error) {
-      console.error('Error loading group standings:', error);
+      this.logger.error('group-standings.loadGroupStandings', error);
       this.router.navigate(['/player/standings']);
     } finally {
       this.isLoading = false;

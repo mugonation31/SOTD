@@ -1,14 +1,28 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService, PredictionGroup, Match } from '../../services/supabase.service';
+import { SupabaseError } from '../errors/supabase-error';
+import { LoggerService } from './logger.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SupabaseDataService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private supabaseService: SupabaseService,
+    private logger: LoggerService,
+  ) {}
 
   private get client() {
     return this.supabaseService.client;
+  }
+
+  /**
+   * Wraps a raw Supabase error into a `SupabaseError` carrying a
+   * user-safe message and an ops-friendly context. The raw message is
+   * preserved on `rawMessage` for logging but never reaches UI copy.
+   */
+  private toSupabaseError(context: string, userMessage: string, raw: unknown): SupabaseError {
+    return new SupabaseError({ context, userMessage, raw });
   }
 
   private async getCurrentUserId(): Promise<string> {
@@ -27,7 +41,7 @@ export class SupabaseDataService {
       .select('group_id')
       .eq('user_id', userId);
 
-    if (memberError) throw new Error(memberError.message);
+    if (memberError) throw this.toSupabaseError('supabase.getGroups', 'Unable to load groups', memberError);
     if (!memberships || memberships.length === 0) return [];
 
     const groupIds = memberships.map((m: any) => m.group_id);
@@ -37,7 +51,7 @@ export class SupabaseDataService {
       .select('*')
       .in('id', groupIds);
 
-    if (groupError) throw new Error(groupError.message);
+    if (groupError) throw this.toSupabaseError('supabase.getGroups', 'Unable to load groups', groupError);
     return groups || [];
   }
 
@@ -48,7 +62,7 @@ export class SupabaseDataService {
       .eq('id', groupId)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGroup', 'Unable to load group', error);
     return data;
   }
 
@@ -59,7 +73,7 @@ export class SupabaseDataService {
       .eq('code', code)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGroupByCode', 'Group not found', error);
     return data;
   }
 
@@ -69,7 +83,7 @@ export class SupabaseDataService {
     // Generate group code using DB function
     const { data: codeData, error: codeError } = await this.client
       .rpc('generate_group_code');
-    if (codeError) throw new Error(codeError.message);
+    if (codeError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', codeError);
 
     const currentYear = new Date().getFullYear();
     const seasonYear = new Date().getMonth() >= 7
@@ -88,14 +102,14 @@ export class SupabaseDataService {
       .select()
       .single();
 
-    if (groupError) throw new Error(groupError.message);
+    if (groupError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', groupError);
 
     // Add creator as a member
     const { error: memberError } = await this.client
       .from('group_members')
       .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]);
 
-    if (memberError) throw new Error(memberError.message);
+    if (memberError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', memberError);
 
     return group;
   }
@@ -110,7 +124,7 @@ export class SupabaseDataService {
       .eq('code', code)
       .single();
 
-    if (findError) throw new Error(findError.message);
+    if (findError) throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', findError);
 
     // Add user as member
     const { data: membership, error: joinError } = await this.client
@@ -119,7 +133,7 @@ export class SupabaseDataService {
       .select()
       .single();
 
-    if (joinError) throw new Error(joinError.message);
+    if (joinError) throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', joinError);
 
     // Note: current_members is updated automatically by the
     // increment_member_count_on_join DB trigger (see migration 005).
@@ -148,7 +162,7 @@ export class SupabaseDataService {
       .eq('user_id', userId)
       .select();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.leaveGroup', 'Unable to leave group', error);
     if (!data || data.length === 0) throw new Error('You are not a member of this group');
   }
 
@@ -159,7 +173,7 @@ export class SupabaseDataService {
       .eq('group_id', groupId)
       .order('total_points', { ascending: false });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', error);
     return data || [];
   }
 
@@ -173,7 +187,7 @@ export class SupabaseDataService {
       .select('*')
       .order('number', { ascending: true });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGameweeks', 'Unable to load gameweeks', error);
     return data || [];
   }
 
@@ -184,7 +198,7 @@ export class SupabaseDataService {
       .eq('is_active', true)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getActiveGameweek', 'Unable to load active gameweek', error);
     return data;
   }
 
@@ -195,7 +209,7 @@ export class SupabaseDataService {
       .eq('id', gameweekId)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGameweek', 'Unable to load gameweek', error);
     return data;
   }
 
@@ -218,10 +232,13 @@ export class SupabaseDataService {
       .eq('number', gameweekNumber)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getGameweekDeadline', 'Unable to load deadline', error);
 
     const deadline = data?.deadline;
-    if (!deadline) return { deadline: '', isPast: false };
+    if (!deadline) {
+      this.logger.warn('supabase.getGameweekDeadline: null deadline', { gameweekNumber });
+      return { deadline: '', isPast: false };
+    }
 
     return {
       deadline,
@@ -240,7 +257,7 @@ export class SupabaseDataService {
       .eq('gameweek', gameweek)
       .order('kickoff_time', { ascending: true });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getMatches', 'Unable to load matches', error);
     return data || [];
   }
 
@@ -251,7 +268,7 @@ export class SupabaseDataService {
       .eq('id', matchId)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getMatch', 'Unable to load match', error);
     return data;
   }
 
@@ -268,7 +285,7 @@ export class SupabaseDataService {
       .eq('user_id', userId)
       .eq('gameweek_number', gameweekNumber);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getPredictions', 'Unable to load predictions', error);
     return data || [];
   }
 
@@ -288,7 +305,7 @@ export class SupabaseDataService {
       .eq('user_id', userId)
       .eq('gameweek_number', gameweekNumber);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getPredictionsWithMatches', 'Unable to load predictions', error);
     return data || [];
   }
 
@@ -319,7 +336,7 @@ export class SupabaseDataService {
       .upsert(rows, { onConflict: 'user_id,match_id' })
       .select();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.submitPredictions', 'Unable to save predictions', error);
     return data || [];
   }
 
@@ -330,7 +347,7 @@ export class SupabaseDataService {
       .select('user_id')
       .eq('group_id', groupId);
 
-    if (memberError) throw new Error(memberError.message);
+    if (memberError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', memberError);
     if (!members || members.length === 0) return [];
 
     // Client-side deadline check: UX convenience only. The real security
@@ -342,7 +359,7 @@ export class SupabaseDataService {
       .eq('number', gameweekNumber)
       .single();
 
-    if (gwError) throw new Error(gwError.message);
+    if (gwError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', gwError);
 
     if (new Date(gameweek.deadline) > new Date()) {
       throw new Error('Predictions are not visible until after the deadline');
@@ -356,7 +373,7 @@ export class SupabaseDataService {
       .in('user_id', userIds)
       .eq('gameweek_number', gameweekNumber);
 
-    if (predError) throw new Error(predError.message);
+    if (predError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', predError);
     return predictions || [];
   }
 
@@ -387,7 +404,7 @@ export class SupabaseDataService {
       .select('jokers_used, first_joker_gameweek, second_joker_gameweek')
       .eq('user_id', userId);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getJokerUsage', 'Unable to load joker state', error);
     if (!data || data.length === 0) {
       return { usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null };
     }
@@ -433,7 +450,7 @@ export class SupabaseDataService {
       .select('number, is_special, special_type')
       .order('number', { ascending: true });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getLastRegularGameweekBeforeSpecial', 'Unable to load gameweeks', error);
 
     const rows = (data || []) as Array<{
       number: number;
@@ -484,7 +501,7 @@ export class SupabaseDataService {
       p_gameweek_number: gameweekNumber,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.markJokerUsed', 'Unable to save joker state', error);
   }
 
   // -----------------------------------------------------------------------
@@ -503,7 +520,7 @@ export class SupabaseDataService {
       .order('correct_scores', { ascending: false })
       .order('correct_results', { ascending: false });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getLeaderboard', 'Unable to load leaderboard', error);
     return data || [];
   }
 
@@ -527,8 +544,8 @@ export class SupabaseDataService {
         .select('*', { count: 'exact', head: true }),
     ]);
 
-    if (usersResult.error) throw new Error(usersResult.error.message);
-    if (groupsResult.error) throw new Error(groupsResult.error.message);
+    if (usersResult.error) throw this.toSupabaseError('supabase.getAdminCounts', 'Unable to load admin counts', usersResult.error);
+    if (groupsResult.error) throw this.toSupabaseError('supabase.getAdminCounts', 'Unable to load admin counts', groupsResult.error);
 
     return {
       userCount: usersResult.count ?? 0,
@@ -561,7 +578,7 @@ export class SupabaseDataService {
       .order('created_at', { ascending: false })
       .limit(500);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getAllUsers', 'Unable to load users', error);
     return data || [];
   }
 
@@ -590,7 +607,7 @@ export class SupabaseDataService {
       .order('created_at', { ascending: false })
       .limit(500);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getAllGroups', 'Unable to load groups', error);
     return data || [];
   }
 
@@ -610,7 +627,7 @@ export class SupabaseDataService {
       .update({ is_active: active })
       .eq('id', userId);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.toggleUserActive', 'Unable to update user', error);
   }
 
   /**
@@ -626,7 +643,7 @@ export class SupabaseDataService {
       .delete()
       .eq('id', groupId);
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.deleteGroup', 'Unable to delete group', error);
   }
 
   /**
@@ -652,7 +669,7 @@ export class SupabaseDataService {
       .eq('id', 1)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.getLastMatchSync', 'Unable to load sync status', error);
 
     if (!data) {
       return {
@@ -694,7 +711,7 @@ export class SupabaseDataService {
       body: {},
     });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.triggerMatchSync', 'Unable to trigger sync', error);
     return data;
   }
 
@@ -709,7 +726,7 @@ export class SupabaseDataService {
       body: { userId },
     });
 
-    if (error) throw new Error(error.message);
+    if (error) throw this.toSupabaseError('supabase.signOutUser', 'Unable to sign out user', error);
     return data;
   }
 }

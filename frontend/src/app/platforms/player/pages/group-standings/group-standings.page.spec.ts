@@ -6,6 +6,7 @@ import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 import { createMockRouter } from '../../../../../testing/test-utils';
 
 describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', () => {
@@ -18,6 +19,7 @@ describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', (
   let mockSupabaseDataService: any;
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const mockActivatedRoute = {
@@ -65,6 +67,8 @@ describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', (
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await TestBed.configureTestingModule({
@@ -77,6 +81,7 @@ describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', (
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -199,7 +204,10 @@ describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', (
       }),
     );
     expect(mockToast.present).toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'group-standings.loadGroupPredictions',
+      err,
+    );
   });
 
   it('should default predictionsLocked=false, log the error, and not crash when getGameweekDeadline rejects', async () => {
@@ -210,6 +218,34 @@ describe('GroupStandingsPage (Task 3.3.2 — visibility + group predictions)', (
 
     expect(component.predictionsLocked).toBe(false);
     expect(mockSupabaseDataService.getGroupPredictions).not.toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'group-standings.loadGameweekDeadline',
+      err,
+    );
+  });
+
+  it('Task 4.2.4.2 — renders a visible loading spinner while standings are being fetched and hides it after', async () => {
+    let resolveFetch!: (value: any) => void;
+    mockGroupService.getGroupWithStandings.mockReturnValue(
+      new Promise<any>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const initPromise = component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLoading).toBe(true);
+    const hostEl: HTMLElement = fixture.nativeElement;
+    const spinnerDuringLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerDuringLoad).not.toBeNull();
+
+    resolveFetch(stubGroupWithStandings);
+    await initPromise;
+    fixture.detectChanges();
+
+    expect(component.isLoading).toBe(false);
+    const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerAfterLoad).toBeNull();
   });
 });

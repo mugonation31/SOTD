@@ -68,6 +68,7 @@ import { ToastService } from '@core/services/toast.service';
 import { Router } from '@angular/router';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
+import { LoggerService } from '@core/services/logger.service';
 
 interface GroupMember {
   id: string;
@@ -176,7 +177,8 @@ export class GroupsPage implements OnInit {
     private router: Router,
     private alertController: AlertController,
     private groupService: GroupService,
-    private authService: AuthService
+    private authService: AuthService,
+    private logger: LoggerService,
   ) {
     addIcons({bugOutline,personOutline,calendarOutline,copyOutline,peopleOutline,checkmarkCircleOutline,trophyOutline,eyeOutline,trashOutline,closeOutline,settingsOutline,lockClosedOutline,createOutline,addOutline,checkmarkOutline,personAddOutline,personRemoveOutline,lockOpenOutline,removeOutline,warningOutline,});
   }
@@ -198,7 +200,7 @@ export class GroupsPage implements OnInit {
         await this.authService.markFirstLoginComplete();
         console.log('✅ GroupsPage: First login marked complete for group admin');
       } catch (error) {
-        console.error('❌ GroupsPage: Error marking first login complete:', error);
+        this.logger.error('group-admin-groups.markFirstLoginComplete', error);
       }
     }
   }
@@ -236,7 +238,7 @@ export class GroupsPage implements OnInit {
       const groups = await this.groupService.getAdminGroups();
       this.groups = groups;
     } catch (error) {
-      console.error('Error loading groups:', error);
+      this.logger.error('group-admin-groups.loadGroups', error);
     } finally {
       this.isLoading = false;
     }
@@ -262,7 +264,7 @@ export class GroupsPage implements OnInit {
         this.isCreateModalOpen = false;
         this.loadGroups();
       } catch (error) {
-        console.error('Error creating group:', error);
+        this.logger.error('group-admin-groups.createGroup', error);
         await this.toastService.showToast(
           'Failed to create group. Please try again.',
           'danger'
@@ -336,7 +338,7 @@ export class GroupsPage implements OnInit {
         'success'
       );
     } catch (error) {
-      console.error(`Error ${action}ing member:`, error);
+      this.logger.error(`group-admin-groups.${action}Member`, error);
       await this.toastService.showToast(
         `Failed to ${action} member. Please try again.`,
         'danger'
@@ -447,7 +449,7 @@ export class GroupsPage implements OnInit {
                 'success'
               );
             } catch (error) {
-              console.error('Error deleting group:', error);
+              this.logger.error('group-admin-groups.deleteGroup', error);
               await this.toastService.showToast(
                 'Failed to delete group. Please try again.',
                 'danger'

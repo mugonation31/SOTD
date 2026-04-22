@@ -16,10 +16,12 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-
+  <div class="loading-state" *ngIf="isLoading">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
 
   <!-- My Groups -->
-  <ion-card class="groups-card">
+  <ion-card class="groups-card" *ngIf="!isLoading">
     <ion-card-header>
       <ion-card-title class="section-title">
         <ion-icon name="people-outline"></ion-icon>

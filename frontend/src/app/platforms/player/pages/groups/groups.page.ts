@@ -20,6 +20,7 @@ import {
   IonInput,
   IonNote,
   IonButtons,
+  IonSpinner,
   AlertController,
 } from '@ionic/angular/standalone';
 import { NgFor, NgIf, DatePipe } from '@angular/common';
@@ -43,6 +44,8 @@ import {
 import { GroupService } from '@core/services/group.service';
 import { ToastService } from '@core/services/toast.service';
 import { AuthService } from '@core/services/auth.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 
 interface Group {
   id: string;
@@ -81,6 +84,7 @@ interface Group {
     IonInput,
     IonNote,
     IonButtons,
+    IonSpinner,
     NgFor,
     NgIf,
     DatePipe,
@@ -100,7 +104,8 @@ export class GroupsPage implements OnInit {
     private groupService: GroupService,
     private toastService: ToastService,
     private alertController: AlertController,
-    private authService: AuthService
+    private authService: AuthService,
+    private logger: LoggerService,
   ) {
     addIcons({
       peopleOutline,
@@ -129,7 +134,7 @@ export class GroupsPage implements OnInit {
     try {
       this.myGroups = await this.groupService.getUserGroups();
     } catch (error) {
-      console.error('Error loading groups:', error);
+      this.logger.error('player-groups.loadUserGroups', error);
     } finally {
       this.isLoading = false;
     }
@@ -177,10 +182,12 @@ export class GroupsPage implements OnInit {
       this.closeJoinModal();
       this.loadUserGroups();
     } catch (error) {
-      let message = 'Error joining group';
-      if (error instanceof Error) {
-        message = error.message;
-      }
+      this.logger.error('player-groups.joinGroup', error);
+      // Only SupabaseError carries a curated userMessage safe to render.
+      // Native fetch / generic Error `.message` may contain URLs, tokens,
+      // or backend hints — never echo them to the user.
+      const message =
+        error instanceof SupabaseError ? error.userMessage : 'Error joining group';
       await this.toastService.showToast(message, 'error');
     } finally {
       this.isJoining = false;

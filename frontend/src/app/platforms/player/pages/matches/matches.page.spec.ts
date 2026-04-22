@@ -6,6 +6,7 @@ import { join } from 'path';
 import { MatchesPage } from './matches.page';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 import { createMockRouter } from '../../../../../testing/test-utils';
 
 describe('MatchesPage (Task 2.2.2 — fetch matches for current gameweek)', () => {
@@ -514,6 +515,7 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
   let mockSupabaseDataService: any;
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(async () => {
@@ -534,6 +536,8 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await TestBed.configureTestingModule({
@@ -543,6 +547,7 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -599,13 +604,13 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
       expect(mockToast.present).toHaveBeenCalled();
     });
 
-    it('should log the error to console.error and not re-throw', async () => {
+    it('should log the error via LoggerService and not re-throw', async () => {
       const err = new Error('Network down');
       mockSupabaseDataService.getMatches.mockRejectedValue(err);
 
       await expect(component.ngOnInit()).resolves.not.toThrow();
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith('matches.loadMatches', err);
     });
   });
 
@@ -1287,6 +1292,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
   let mockSupabaseDataService: any;
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const NOW = new Date('2024-08-17T10:00:00Z').getTime();
@@ -1352,6 +1358,8 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(Date, 'now').mockReturnValue(NOW);
 
@@ -1362,6 +1370,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -1515,15 +1524,14 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
     expect(component.showSuccessToast).toBe(true);
   });
 
-  it('on failure: error toast shown, predictionsCompleted stays false, console.error logged', async () => {
+  it('on failure: error toast shown, predictionsCompleted stays false, logger.error called', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
       buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
     ]);
     await initWithThreeMatches();
 
-    mockSupabaseDataService.submitPredictions.mockRejectedValueOnce(
-      new Error('Network down')
-    );
+    const submitErr = new Error('Network down');
+    mockSupabaseDataService.submitPredictions.mockRejectedValueOnce(submitErr);
 
     component.matches[0].prediction.homeScore = 1;
     component.matches[0].prediction.awayScore = 0;
@@ -1541,7 +1549,10 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
         color: 'danger',
       })
     );
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'matches.submitPredictions',
+      submitErr,
+    );
   });
 
   it('does NOT write to localStorage during submit', async () => {
@@ -1575,6 +1586,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
   let mockSupabaseDataService: any;
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const NOW = new Date('2024-08-17T10:00:00Z').getTime();
@@ -1641,6 +1653,8 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(Date, 'now').mockReturnValue(NOW);
 
@@ -1651,6 +1665,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -1668,6 +1683,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     mockSupabaseDataService.getMatches.mockResolvedValue([]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect(mockSupabaseDataService.getPredictions).toHaveBeenCalledWith(7);
   });
@@ -1684,6 +1700,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     const byId = (id: string) => component.matches.find((m) => m.id === id)!;
     expect(byId('m-1').prediction.homeScore).toBe(2);
@@ -1704,6 +1721,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     ]);
 
     await expect(component.ngOnInit()).resolves.not.toThrow();
+    await expect(component.ionViewWillEnter()).resolves.not.toThrow();
 
     expect(component.matches).toHaveLength(1);
     expect(component.matches[0].prediction.homeScore).toBe(3);
@@ -1722,6 +1740,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect(component.selectedPredictionCount).toBe(2);
   });
@@ -1743,6 +1762,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect(component.predictionsCompleted).toBe(true);
   });
@@ -1762,6 +1782,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect(component.predictionsCompleted).toBe(false);
   });
@@ -1782,6 +1803,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
       )
     );
     await component.ngOnInit();
+    await component.ionViewWillEnter();
     expect(component.predictionsCompleted).toBe(false);
 
     // Re-init with 10 saved predictions → completed
@@ -1793,6 +1815,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     // Reset cache so init re-runs cleanly
     (component as any).allGameweeks = null;
     await component.ngOnInit();
+    await component.ionViewWillEnter();
     expect(component.predictionsCompleted).toBe(true);
   });
 
@@ -1801,14 +1824,17 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
       buildSupabaseMatch({ id: 'm-1' }),
       buildSupabaseMatch({ id: 'm-2' }),
     ]);
-    mockSupabaseDataService.getPredictions.mockRejectedValue(
-      new Error('Network down')
-    );
+    const hydrateErr = new Error('Network down');
+    mockSupabaseDataService.getPredictions.mockRejectedValue(hydrateErr);
 
     await expect(component.ngOnInit()).resolves.not.toThrow();
+    await expect(component.ionViewWillEnter()).resolves.not.toThrow();
 
     expect(component.matches).toHaveLength(2);
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'matches.hydratePredictions',
+      hydrateErr,
+    );
   });
 
   it('should call getPredictions(newGameweek) after navigateGameweek(+1)', async () => {
@@ -1819,6 +1845,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     mockSupabaseDataService.getMatches.mockResolvedValue([]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
     mockSupabaseDataService.getPredictions.mockClear();
 
     await component.navigateGameweek(1);
@@ -1835,6 +1862,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
     mockSupabaseDataService.getMatches.mockResolvedValueOnce([]);
     mockSupabaseDataService.getPredictions.mockResolvedValueOnce([]);
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     // Navigation target: matches exist but NO saved predictions for GW8.
     mockSupabaseDataService.getMatches.mockResolvedValueOnce([
@@ -2380,6 +2408,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect((component as any).jokerUsedThisGameweek).toBe(true);
   });
@@ -2396,6 +2425,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     ]);
 
     await component.ngOnInit();
+    await component.ionViewWillEnter();
 
     expect((component as any).jokerUsedThisGameweek).toBe(false);
   });
@@ -2686,6 +2716,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
   let mockAlertController: ReturnType<typeof createMockAlertController>;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const NOW = new Date('2024-08-17T10:00:00Z').getTime();
@@ -2774,6 +2805,8 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
 
     mockAlertController = createMockAlertController('confirm');
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.spyOn(Date, 'now').mockReturnValue(NOW);
 
@@ -2785,6 +2818,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
         { provide: AlertController, useValue: mockAlertController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -2938,9 +2972,8 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
   });
 
   it('markJokerUsed rejection: predictions still succeed — toast shown, error logged, predictionsCompleted=true', async () => {
-    mockSupabaseDataService.markJokerUsed.mockRejectedValueOnce(
-      new Error('joker write failed'),
-    );
+    const jokerErr = new Error('joker write failed');
+    mockSupabaseDataService.markJokerUsed.mockRejectedValueOnce(jokerErr);
     await initAndFillThree();
     component.jokerUsedThisGameweek = true;
 
@@ -2948,7 +2981,10 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
 
     expect(mockSupabaseDataService.submitPredictions).toHaveBeenCalledTimes(1);
     expect(component.predictionsCompleted).toBe(true);
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'matches.markJokerUsed',
+      jokerErr,
+    );
     expect(mockToastController.create).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('joker tracking failed'),
@@ -2989,5 +3025,202 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
     expect((component as any).jokerUsageUsedCount).toBe(1);
     expect((component as any).jokersRemaining).toBe(1);
     expect((component as any).jokerAlreadyLockedForGameweek).toBe(true);
+  });
+});
+
+describe('MatchesPage (Task 4.2.4.1 — hydrate lifecycle + empty-venue + null-score guard)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  const NOW = new Date('2024-08-17T10:00:00Z').getTime();
+
+  const buildGameweekRow = (overrides: Partial<any> = {}) => ({
+    id: 'gw-id-7',
+    number: 7,
+    deadline: '2024-08-17T11:00:00Z', // future relative to NOW
+    is_special: false,
+    special_type: null,
+    is_active: true,
+    ...overrides,
+  });
+
+  const buildSupabaseMatch = (overrides: Partial<any> = {}) => ({
+    id: 'match-1',
+    home_team: 'Arsenal',
+    away_team: 'Chelsea',
+    kickoff_time: '2024-08-17T14:00:00Z',
+    gameweek: 7,
+    season_id: 'season-1',
+    status: 'scheduled',
+    home_score: null,
+    away_score: null,
+    created_at: '2024-08-01T00:00:00Z',
+    updated_at: '2024-08-01T00:00:00Z',
+    ...overrides,
+  });
+
+  const buildPredictionRow = (overrides: Partial<any> = {}) => ({
+    id: 'pred-1',
+    user_id: 'user-1',
+    match_id: 'm-1',
+    home_score: 2,
+    away_score: 1,
+    gameweek_number: 7,
+    gameweek_id: 'gw-id-7',
+    joker_used: false,
+    points_earned: 0,
+    created_at: '2024-08-10T00:00:00Z',
+    updated_at: '2024-08-10T00:00:00Z',
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
+      getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = {
+      create: jest.fn().mockResolvedValue(mockToast),
+    };
+
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+  });
+
+  it('calls hydrate (getPredictions) on ionViewWillEnter — fires on cached re-entry', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+
+    // First entry: ngOnInit sets up, then ionViewWillEnter hydrates.
+    await component.ngOnInit();
+    await component.ionViewWillEnter();
+    expect(mockSupabaseDataService.getPredictions).toHaveBeenCalledTimes(1);
+
+    // Second entry: component cached by Ionic. ngOnInit does NOT re-run,
+    // but ionViewWillEnter fires again and must re-hydrate.
+    await component.ionViewWillEnter();
+    expect(mockSupabaseDataService.getPredictions).toHaveBeenCalledTimes(2);
+    expect(mockSupabaseDataService.getPredictions).toHaveBeenLastCalledWith(7);
+  });
+
+  it('ngOnInit alone does NOT call getPredictions — hydration lives in ionViewWillEnter', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+
+    await component.ngOnInit();
+
+    expect(mockSupabaseDataService.getPredictions).not.toHaveBeenCalled();
+  });
+
+  it('renders NO venue block (icon + text) when match.venue is empty string', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+
+    await component.ngOnInit();
+    await component.ionViewWillEnter();
+    // venue defaults to '' in toViewModel; be explicit for this test.
+    component.matches[0].venue = '';
+    fixture.detectChanges();
+
+    const compiled: HTMLElement = fixture.nativeElement;
+    expect(compiled.querySelector('.venue')).toBeNull();
+  });
+
+  it('renders the venue block when match.venue is non-empty', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+
+    await component.ngOnInit();
+    await component.ionViewWillEnter();
+    component.matches[0].venue = 'Old Trafford';
+    fixture.detectChanges();
+
+    const compiled: HTMLElement = fixture.nativeElement;
+    const venueEl = compiled.querySelector('.venue');
+    expect(venueEl).toBeTruthy();
+    expect(venueEl?.textContent).toContain('Old Trafford');
+  });
+
+  it('null-score guard: hydrateSavedPredictions sets homeScore=0 when saved row home_score is null', async () => {
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      buildSupabaseMatch({ id: 'm-1' }),
+    ]);
+    mockSupabaseDataService.getPredictions.mockResolvedValue([
+      buildPredictionRow({ match_id: 'm-1', home_score: null, away_score: null }),
+    ]);
+
+    await component.ngOnInit();
+    await component.ionViewWillEnter();
+
+    expect(component.matches[0].prediction.homeScore).toBe(0);
+    expect(component.matches[0].prediction.awayScore).toBe(0);
+  });
+
+  it('Task 4.2.4.2 — renders a visible loading spinner while matches are being fetched and hides it after', async () => {
+    let resolveFetch!: (value: any[]) => void;
+    mockSupabaseDataService.getMatches.mockReturnValue(
+      new Promise<any[]>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const initPromise = component.ngOnInit();
+    fixture.detectChanges();
+
+    const hostEl: HTMLElement = fixture.nativeElement;
+    const spinnerDuringLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerDuringLoad).not.toBeNull();
+
+    resolveFetch([]);
+    await initPromise;
+    fixture.detectChanges();
+
+    const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerAfterLoad).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { join } from 'path';
 import { PredictionsPage } from './predictions.page';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 import { createMockRouter } from '../../../../../testing/test-utils';
 
 describe('PredictionsPage (Task 3.2.4 — wire to Supabase)', () => {
@@ -13,6 +14,7 @@ describe('PredictionsPage (Task 3.2.4 — wire to Supabase)', () => {
   let mockRouter: ReturnType<typeof createMockRouter>;
   let mockSeasonService: any;
   let mockSupabaseDataService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
 
   const buildPredictionRow = (overrides: Partial<any> = {}) => ({
     id: 'pred-uuid-1',
@@ -48,12 +50,15 @@ describe('PredictionsPage (Task 3.2.4 — wire to Supabase)', () => {
       getPredictionsWithMatches: jest.fn().mockResolvedValue([]),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     await TestBed.configureTestingModule({
       imports: [PredictionsPage],
       providers: [
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -264,18 +269,17 @@ describe('PredictionsPage (Task 3.2.4 — wire to Supabase)', () => {
   });
 
   it('should log error and show empty state when fetch rejects', async () => {
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockSupabaseDataService.getPredictionsWithMatches.mockRejectedValue(
-      new Error('boom')
-    );
+    const err = new Error('boom');
+    mockSupabaseDataService.getPredictionsWithMatches.mockRejectedValue(err);
 
     await expect(component.ionViewWillEnter()).resolves.not.toThrow();
 
-    expect(errorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'predictions.loadPredictions',
+      err,
+    );
     expect(component.currentPredictions).toEqual([]);
     expect(component.isLoading).toBe(false);
-
-    errorSpy.mockRestore();
   });
 
   it('should produce a Prediction whose id is a string (UUID)', async () => {
@@ -306,6 +310,7 @@ describe('PredictionsPage (Task 3.2.5 — group context selector)', () => {
   let mockRouter: ReturnType<typeof createMockRouter>;
   let mockSeasonService: any;
   let mockSupabaseDataService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
 
   beforeEach(async () => {
     mockRouter = createMockRouter();
@@ -324,12 +329,15 @@ describe('PredictionsPage (Task 3.2.5 — group context selector)', () => {
       ]),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     await TestBed.configureTestingModule({
       imports: [PredictionsPage],
       providers: [
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: LoggerService, useValue: mockLogger },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => null } } },
@@ -388,15 +396,16 @@ describe('PredictionsPage (Task 3.2.5 — group context selector)', () => {
   });
 
   it('should set hasNoGroups === true and log an error when getGroups() rejects', async () => {
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockSupabaseDataService.getGroups.mockRejectedValue(new Error('network down'));
+    const err = new Error('network down');
+    mockSupabaseDataService.getGroups.mockRejectedValue(err);
 
     await expect(component.ionViewWillEnter()).resolves.not.toThrow();
 
     expect(component.hasNoGroups).toBe(true);
-    expect(errorSpy).toHaveBeenCalled();
-
-    errorSpy.mockRestore();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'predictions.loadGroups',
+      err,
+    );
   });
 
   it('should update selectedGroupId when onGroupChange is called', () => {
@@ -433,5 +442,72 @@ describe('PredictionsPage (Task 3.2.5 — group context selector)', () => {
 
     const compiled: HTMLElement = fixture.nativeElement;
     expect(compiled.querySelector('.predictions-segment')).toBeNull();
+  });
+});
+
+describe('PredictionsPage (Task 4.2.4.1 — null-score guard in toViewModel)', () => {
+  let component: PredictionsPage;
+  let fixture: ComponentFixture<PredictionsPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getPredictionsWithMatches: jest.fn().mockResolvedValue([]),
+    };
+
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [PredictionsPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PredictionsPage);
+    component = fixture.componentInstance;
+  });
+
+  it('toViewModel defaults prediction.home/away to 0 when row.home_score / away_score are null', async () => {
+    mockSupabaseDataService.getPredictionsWithMatches.mockResolvedValue([
+      {
+        id: 'pred-null-1',
+        user_id: 'user-1',
+        match_id: 'match-1',
+        home_score: null,
+        away_score: null,
+        gameweek_number: 7,
+        points_earned: 0,
+        matches: {
+          id: 'match-1',
+          home_team: 'Arsenal',
+          away_team: 'Chelsea',
+          kickoff_time: '2025-01-01T15:00:00Z',
+          status: 'scheduled',
+          home_score: null,
+          away_score: null,
+          gameweek: 7,
+        },
+      },
+    ]);
+
+    await component.ionViewWillEnter();
+
+    expect(component.currentPredictions[0].prediction.home).toBe(0);
+    expect(component.currentPredictions[0].prediction.away).toBe(0);
   });
 });

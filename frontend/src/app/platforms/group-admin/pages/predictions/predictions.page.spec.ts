@@ -6,6 +6,7 @@ import { MockDataService } from '@core/services/mock-data.service';
 import { GroupService } from '@core/services/group.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 import { createMockRouter } from '../../../../../testing/test-utils';
 
 describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () => {
@@ -18,6 +19,7 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
   let mockSupabaseDataService: any;
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const makeAdminGroup = (id = 'group-abc') => ({
@@ -70,6 +72,8 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await TestBed.configureTestingModule({
@@ -81,6 +85,7 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -173,7 +178,10 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
 
     expect(component.predictionsLocked).toBe(false);
     expect(mockSupabaseDataService.getGroupPredictions).not.toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'group-admin-predictions.loadGameweekDeadline',
+      err,
+    );
   });
 
   it('should show an error toast, set groupPredictions=[], and log the error when getGroupPredictions rejects', async () => {
@@ -195,7 +203,10 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
       }),
     );
     expect(mockToast.present).toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'group-admin-predictions.loadGroupPredictions',
+      err,
+    );
   });
 
   it('should NOT re-trigger loadVisibilityAndPredictions when switching AWAY from the "All Predictions" tab', async () => {
@@ -234,5 +245,46 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
     expect(message?.textContent).toMatch(
       /Predictions will be visible after the deadline/i,
     );
+  });
+
+  it('Task 4.2.4.2 — sets isLoading=true while resolveAdminGroupId is in flight and false after it resolves', async () => {
+    let resolveFetch!: (value: any[]) => void;
+    mockGroupService.getAdminGroups.mockReturnValue(
+      new Promise<any[]>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const initPromise = component.ngOnInit();
+
+    expect(component.isLoading).toBe(true);
+
+    resolveFetch([]);
+    await initPromise;
+
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('Task 4.2.4.2 — renders a visible loading spinner while admin groups are being fetched and hides it after', async () => {
+    let resolveFetch!: (value: any[]) => void;
+    mockGroupService.getAdminGroups.mockReturnValue(
+      new Promise<any[]>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const initPromise = component.ngOnInit();
+    fixture.detectChanges();
+
+    const hostEl: HTMLElement = fixture.nativeElement;
+    const spinnerDuringLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerDuringLoad).not.toBeNull();
+
+    resolveFetch([]);
+    await initPromise;
+    fixture.detectChanges();
+
+    const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerAfterLoad).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { DashboardPage } from './dashboard.page';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 
 describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
   let component: DashboardPage;
@@ -16,6 +18,7 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
   };
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   const baseCounts = { userCount: 2, groupCount: 1 };
@@ -40,6 +43,8 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
       create: jest.fn().mockResolvedValue(mockToast),
     };
 
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await TestBed.configureTestingModule({
@@ -47,6 +52,7 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
       providers: [
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
         { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
 
@@ -163,9 +169,9 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
       );
     });
 
-    it('error response shows toast with sanitized reason', async () => {
+    it('non-SupabaseError rejection shows a generic toast — raw .message never reaches the UI', async () => {
       mockSupabaseDataService.triggerMatchSync.mockRejectedValue(
-        new Error('Network down'),
+        new Error('Network down — https://internal.corp/health auth=Bearer xyz'),
       );
 
       await component.ionViewWillEnter();
@@ -173,8 +179,61 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
 
       expect(mockToastController.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'Sync failed: Network down',
+          message: 'Sync failed: Unknown error',
         }),
+      );
+      // Defence-in-depth: the raw message must NOT appear in any toast
+      const allCalls = mockToastController.create.mock.calls.flat();
+      for (const call of allCalls) {
+        expect(call?.message ?? '').not.toContain('internal.corp');
+        expect(call?.message ?? '').not.toContain('Bearer');
+      }
+    });
+
+    it('SupabaseError rejection renders err.userMessage (never rawMessage)', async () => {
+      mockSupabaseDataService.triggerMatchSync.mockRejectedValue(
+        new SupabaseError({
+          context: 'supabase.triggerMatchSync',
+          userMessage: 'Unable to start sync',
+          raw: { message: 'relation "public.sync_metadata" does not exist' },
+        }),
+      );
+
+      await component.ionViewWillEnter();
+      await component.onSyncClick();
+
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Sync failed: Unable to start sync',
+        }),
+      );
+      // Raw schema detail stays out of the UI
+      const allCalls = mockToastController.create.mock.calls.flat();
+      for (const call of allCalls) {
+        expect(call?.message ?? '').not.toContain('relation');
+        expect(call?.message ?? '').not.toContain('public.sync_metadata');
+      }
+    });
+
+    it('sync failure is routed through LoggerService with matches.sync context', async () => {
+      const err = new Error('Network down');
+      mockSupabaseDataService.triggerMatchSync.mockRejectedValue(err);
+
+      await component.ionViewWillEnter();
+      await component.onSyncClick();
+
+      expect(mockLogger.error).toHaveBeenCalledWith('dashboard.sync', err);
+    });
+
+    it('partial initial load failure is routed through LoggerService', async () => {
+      const err = new Error('Counts down');
+      mockSupabaseDataService.getAdminCounts.mockRejectedValue(err);
+
+      await component.ionViewWillEnter();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'dashboard.partialLoad',
+        err,
       );
     });
   });

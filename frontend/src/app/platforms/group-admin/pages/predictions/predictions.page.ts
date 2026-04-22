@@ -28,6 +28,7 @@ import {
   IonIcon,
   IonBadge,
   IonAlert,
+  IonSpinner,
   ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgIf, NgFor, TitleCasePipe } from '@angular/common';
@@ -55,6 +56,8 @@ import { MockDataService } from '../../../../core/services/mock-data.service';
 import { GroupService } from '@core/services/group.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 import { Router } from '@angular/router';
 
 interface GameWeek {
@@ -143,6 +146,7 @@ interface PredictionWithResult extends Match {
     IonSelectOption,
     IonBadge,
     IonAlert,
+    IonSpinner,
   ],
 })
 export class PredictionsPage implements OnInit {
@@ -173,6 +177,13 @@ export class PredictionsPage implements OnInit {
   adminGroupId: string | null = null;
   private allPredictionsLoaded = false;
 
+  /**
+   * Task 4.2.4.2 — true during the initial admin-group resolution fetch so
+   * the template can render a loading spinner instead of flashing the tab UI
+   * over stale state. Reset in the `finally` of `ngOnInit`.
+   */
+  isLoading = false;
+
   constructor(
     private mockDataService: MockDataService,
     private router: Router,
@@ -180,6 +191,7 @@ export class PredictionsPage implements OnInit {
     private seasonService: SeasonService,
     private supabaseDataService: SupabaseDataService,
     private toastController: ToastController,
+    private logger: LoggerService,
   ) {
     addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,lockClosedOutline,});
     
@@ -195,8 +207,13 @@ export class PredictionsPage implements OnInit {
   }
 
   async ngOnInit() {
-    this.loadGameweekPredictions();
-    await this.resolveAdminGroupId();
+    this.isLoading = true;
+    try {
+      this.loadGameweekPredictions();
+      await this.resolveAdminGroupId();
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   async tabChanged() {
@@ -252,10 +269,7 @@ export class PredictionsPage implements OnInit {
       const result = await this.supabaseDataService.getGameweekDeadline(gameweek);
       isPast = result.isPast;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to load gameweek deadline for gameweek ${gameweek}: ${message}`,
-      );
+      this.logger.error('group-admin-predictions.loadGameweekDeadline', err);
       this.predictionsLocked = false;
       this.groupPredictions = [];
       return false;
@@ -274,12 +288,11 @@ export class PredictionsPage implements OnInit {
       );
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to load group predictions for gameweek ${gameweek}: ${message}`,
-      );
+      this.logger.error('group-admin-predictions.loadGroupPredictions', err);
       this.groupPredictions = [];
-      await this.showErrorToast('Unable to load group predictions');
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Unable to load group predictions';
+      await this.showErrorToast(msg);
       return false;
     }
   }

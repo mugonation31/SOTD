@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { SupabaseDataService } from './supabase-data.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { SupabaseError } from '../errors/supabase-error';
+import { LoggerService } from './logger.service';
 
 // ---------------------------------------------------------------------------
 // Helpers: mock Supabase query builder
@@ -48,15 +50,18 @@ describe('SupabaseDataService', () => {
   let service: SupabaseDataService;
   let mockClient: ReturnType<typeof createMockSupabaseClient>;
   let mockSupabaseService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
 
   beforeEach(() => {
     mockClient = createMockSupabaseClient();
     mockSupabaseService = createMockSupabaseService(mockClient);
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         SupabaseDataService,
         { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     });
 
@@ -183,14 +188,24 @@ describe('SupabaseDataService', () => {
       expect(result).toEqual(membership);
     });
 
-    it('should throw an error when joining a group with invalid code', async () => {
+    it('should throw a SupabaseError with sanitized userMessage when joining a group with invalid code', async () => {
+      const rawMsg = 'No rows found';
       const findBuilder = createMockQueryBuilder({
         data: null,
-        error: { message: 'No rows found' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(findBuilder);
 
-      await expect(service.joinGroup('INVALID')).rejects.toThrow('No rows found');
+      try {
+        await service.joinGroup('INVALID');
+        fail('expected joinGroup to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.joinGroup');
+        expect(se.userMessage).toBe('Unable to join group');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -397,14 +412,24 @@ describe('SupabaseDataService', () => {
       expect(result).toEqual(rows);
     });
 
-    it('should throw a meaningful error when the Supabase query fails', async () => {
+    it('should throw a SupabaseError with sanitized userMessage when the Supabase query fails', async () => {
+      const rawMsg = 'join failed';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'join failed' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getPredictionsWithMatches(1)).rejects.toThrow('join failed');
+      try {
+        await service.getPredictionsWithMatches(1);
+        fail('expected getPredictionsWithMatches to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getPredictionsWithMatches');
+        expect(se.userMessage).toBe('Unable to load predictions');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
 
     it('should return an empty array when no predictions exist for the gameweek', async () => {
@@ -520,16 +545,51 @@ describe('SupabaseDataService', () => {
       expect(result).toEqual({ deadline: '', isPast: false });
     });
 
-    it('should throw Error with the Supabase error message on DB failure', async () => {
+    it('should call logger.warn when deadline is null (fail-open diagnostic)', async () => {
       const builder = createMockQueryBuilder({
-        data: null,
-        error: { message: 'gameweek not found' },
+        data: { deadline: null },
+        error: null,
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getGameweekDeadline(99)).rejects.toThrow(
-        'gameweek not found'
+      await service.getGameweekDeadline(5);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'supabase.getGameweekDeadline: null deadline',
+        { gameweekNumber: 5 },
       );
+    });
+
+    it('should NOT call logger.warn when deadline is set', async () => {
+      const builder = createMockQueryBuilder({
+        data: { deadline: '2099-12-31T23:59:59Z' },
+        error: null,
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      await service.getGameweekDeadline(6);
+
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'gameweek not found';
+      const builder = createMockQueryBuilder({
+        data: null,
+        error: { message: rawMsg },
+      });
+      mockClient.from.mockReturnValueOnce(builder);
+
+      try {
+        await service.getGameweekDeadline(99);
+        fail('expected getGameweekDeadline to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getGameweekDeadline');
+        expect(se.userMessage).toBe('Unable to load deadline');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
 
     it('should query gameweeks table, filter by number and use single()', async () => {
@@ -644,16 +704,24 @@ describe('SupabaseDataService', () => {
       });
     });
 
-    it('should throw Error with Supabase error message on DB failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'permission denied for table group_members';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'permission denied for table group_members' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getJokerUsage()).rejects.toThrow(
-        'permission denied for table group_members'
-      );
+      try {
+        await service.getJokerUsage();
+        fail('expected getJokerUsage to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getJokerUsage');
+        expect(se.userMessage).toBe('Unable to load joker state');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -729,16 +797,24 @@ describe('SupabaseDataService', () => {
       expect(result).toEqual({ beforeBoxingDay: 3, beforeFinalDay: 5 });
     });
 
-    it('should throw Error with Supabase error message on DB failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'gameweeks table is unreachable';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'gameweeks table is unreachable' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getLastRegularGameweekBeforeSpecial()).rejects.toThrow(
-        'gameweeks table is unreachable'
-      );
+      try {
+        await service.getLastRegularGameweekBeforeSpecial();
+        fail('expected getLastRegularGameweekBeforeSpecial to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getLastRegularGameweekBeforeSpecial');
+        expect(se.userMessage).toBe('Unable to load gameweeks');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -767,15 +843,23 @@ describe('SupabaseDataService', () => {
       await expect(service.markJokerUsed(18)).resolves.toBeUndefined();
     });
 
-    it('throws Error with Supabase error message when the RPC fails', async () => {
+    it('throws a SupabaseError with sanitized userMessage when the RPC fails', async () => {
+      const rawMsg = 'permission denied for function mark_joker_used';
       mockClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: { message: 'permission denied for function mark_joker_used' },
+        error: { message: rawMsg },
       });
 
-      await expect(service.markJokerUsed(10)).rejects.toThrow(
-        'permission denied for function mark_joker_used',
-      );
+      try {
+        await service.markJokerUsed(10);
+        fail('expected markJokerUsed to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.markJokerUsed');
+        expect(se.userMessage).toBe('Unable to save joker state');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
 
     it('does not query group_members directly — authorization is enforced by the RPC under auth.uid()', async () => {
@@ -826,16 +910,33 @@ describe('SupabaseDataService', () => {
   // Error handling
   // -----------------------------------------------------------------------
   describe('error handling', () => {
-    it('should throw a meaningful error when a Supabase query fails', async () => {
+    it('should throw a SupabaseError with sanitized userMessage and raw details when a Supabase query fails', async () => {
+      const rawMsg = 'relation "groups" does not exist';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'relation "groups" does not exist' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getGroup('g1')).rejects.toThrow(
-        'relation "groups" does not exist'
-      );
+      await expect(service.getGroup('g1')).rejects.toThrow(SupabaseError);
+
+      // Re-run to inspect error properties
+      const builder2 = createMockQueryBuilder({
+        data: null,
+        error: { message: rawMsg },
+      });
+      mockClient.from.mockReturnValueOnce(builder2);
+      try {
+        await service.getGroup('g1');
+        fail('expected getGroup to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getGroup');
+        expect(se.userMessage).toBe('Unable to load group');
+        expect(se.message).toBe('Unable to load group');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 });
@@ -847,16 +948,19 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
   let service: SupabaseDataService;
   let mockClient: ReturnType<typeof createMockSupabaseClient>;
   let mockSupabaseService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
 
   beforeEach(() => {
     mockClient = createMockSupabaseClient();
     mockSupabaseService = createMockSupabaseService(mockClient);
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         SupabaseDataService,
         { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     });
 
@@ -891,16 +995,24 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(result).toEqual(users);
     });
 
-    it('should throw Error with Supabase error message on DB failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'permission denied for table profiles';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'permission denied for table profiles' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getAllUsers()).rejects.toThrow(
-        'permission denied for table profiles'
-      );
+      try {
+        await service.getAllUsers();
+        fail('expected getAllUsers to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getAllUsers');
+        expect(se.userMessage).toBe('Unable to load users');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -934,16 +1046,24 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(result).toEqual(groups);
     });
 
-    it('should throw Error with Supabase error message on DB failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'permission denied for table groups';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'permission denied for table groups' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getAllGroups()).rejects.toThrow(
-        'permission denied for table groups'
-      );
+      try {
+        await service.getAllGroups();
+        fail('expected getAllGroups to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getAllGroups');
+        expect(se.userMessage).toBe('Unable to load groups');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -972,16 +1092,24 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(builder.eq).toHaveBeenCalledWith('id', 'user-42');
     });
 
-    it('should throw Error with Supabase error message on update failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on update failure', async () => {
+      const rawMsg = 'permission denied';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'permission denied' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.toggleUserActive('user-42', true)).rejects.toThrow(
-        'permission denied'
-      );
+      try {
+        await service.toggleUserActive('user-42', true);
+        fail('expected toggleUserActive to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.toggleUserActive');
+        expect(se.userMessage).toBe('Unable to update user');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -1000,16 +1128,24 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(builder.eq).toHaveBeenCalledWith('id', 'g-1');
     });
 
-    it('should throw Error with Supabase error message on delete failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on delete failure', async () => {
+      const rawMsg = 'foreign key violation';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'foreign key violation' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.deleteGroup('g-1')).rejects.toThrow(
-        'foreign key violation'
-      );
+      try {
+        await service.deleteGroup('g-1');
+        fail('expected deleteGroup to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.deleteGroup');
+        expect(se.userMessage).toBe('Unable to delete group');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -1090,16 +1226,24 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       });
     });
 
-    it('should throw Error with Supabase error message on DB failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on DB failure', async () => {
+      const rawMsg = 'sync_metadata not accessible';
       const builder = createMockQueryBuilder({
         data: null,
-        error: { message: 'sync_metadata not accessible' },
+        error: { message: rawMsg },
       });
       mockClient.from.mockReturnValueOnce(builder);
 
-      await expect(service.getLastMatchSync()).rejects.toThrow(
-        'sync_metadata not accessible'
-      );
+      try {
+        await service.getLastMatchSync();
+        fail('expected getLastMatchSync to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.getLastMatchSync');
+        expect(se.userMessage).toBe('Unable to load sync status');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -1126,15 +1270,23 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(result).toEqual(payload);
     });
 
-    it('should throw Error with invoke error message on unexpected failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on unexpected failure', async () => {
+      const rawMsg = 'edge function unreachable';
       mockClient.functions.invoke.mockResolvedValueOnce({
         data: null,
-        error: { message: 'edge function unreachable' },
+        error: { message: rawMsg },
       });
 
-      await expect(service.triggerMatchSync()).rejects.toThrow(
-        'edge function unreachable'
-      );
+      try {
+        await service.triggerMatchSync();
+        fail('expected triggerMatchSync to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.triggerMatchSync');
+        expect(se.userMessage).toBe('Unable to trigger sync');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 
@@ -1154,13 +1306,23 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
       expect(result).toEqual(payload);
     });
 
-    it('should throw Error with invoke error message on unexpected failure', async () => {
+    it('should throw a SupabaseError with sanitized userMessage on unexpected failure', async () => {
+      const rawMsg = 'forbidden';
       mockClient.functions.invoke.mockResolvedValueOnce({
         data: null,
-        error: { message: 'forbidden' },
+        error: { message: rawMsg },
       });
 
-      await expect(service.signOutUser('user-42')).rejects.toThrow('forbidden');
+      try {
+        await service.signOutUser('user-42');
+        fail('expected signOutUser to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(SupabaseError);
+        const se = err as SupabaseError;
+        expect(se.context).toBe('supabase.signOutUser');
+        expect(se.userMessage).toBe('Unable to sign out user');
+        expect(se.rawMessage).toBe(rawMsg);
+      }
     });
   });
 });

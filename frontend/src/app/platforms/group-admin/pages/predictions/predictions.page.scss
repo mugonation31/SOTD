@@ -1,5 +1,11 @@
 // Exact styling to match the screenshot
 
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
 // Header and logo styles
 .logo-container {
   display: flex;

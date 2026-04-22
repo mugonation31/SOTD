@@ -5,6 +5,7 @@ import { GroupsPage } from './groups.page';
 import { GroupService } from '@core/services/group.service';
 import { AuthService } from '@core/services/auth.service';
 import { ToastService } from '@core/services/toast.service';
+import { LoggerService } from '@core/services/logger.service';
 import { createMockRouter, createMockToastService } from '../../../../../testing/test-utils';
 
 describe('GroupsPage', () => {
@@ -47,6 +48,7 @@ describe('GroupsPage', () => {
         { provide: ToastService, useValue: mockToastService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: AlertController, useValue: mockAlertController },
+        { provide: LoggerService, useValue: { error: jest.fn(), warn: jest.fn() } },
       ],
     }).compileComponents();
 
@@ -145,5 +147,34 @@ describe('GroupsPage', () => {
 
     const leaveButtons = testFixture.nativeElement.querySelectorAll('.leave-group-btn');
     expect(leaveButtons.length).toBe(1);
+  });
+
+  it('Task 4.2.4.2 — renders a visible loading spinner while groups are being fetched and hides it after', async () => {
+    let resolveFetch!: (value: any[]) => void;
+    mockGroupService.getUserGroups.mockReturnValue(
+      new Promise<any[]>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const testFixture = TestBed.createComponent(GroupsPage);
+    const testComponent = testFixture.componentInstance;
+
+    // Trigger ngOnInit (which kicks off the async fetch) and render once.
+    testFixture.detectChanges();
+
+    expect(testComponent.isLoading).toBe(true);
+    const hostEl: HTMLElement = testFixture.nativeElement;
+    const spinnerDuringLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerDuringLoad).not.toBeNull();
+
+    resolveFetch([]);
+    // Flush microtasks so the async loadUserGroups resolves.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    testFixture.detectChanges();
+
+    expect(testComponent.isLoading).toBe(false);
+    const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
+    expect(spinnerAfterLoad).toBeNull();
   });
 });

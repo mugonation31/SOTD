@@ -12,8 +12,13 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  <!-- Spinner only when we have nothing else to show (first load) -->
+  <div class="loading-state" *ngIf="isLoading && !group">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+
   <!-- Group Info Card -->
-  <ion-card *ngIf="group" class="group-info-card">
+  <ion-card *ngIf="(!isLoading || group) && group" class="group-info-card">
     <ion-card-header>
       <ion-card-title>
         {{ group.name }}
@@ -29,7 +34,7 @@
   </ion-card>
 
   <!-- Predictions locked placeholder (pre-deadline) -->
-  <ion-card class="predictions-locked-card" *ngIf="predictionsLocked">
+  <ion-card class="predictions-locked-card" *ngIf="(!isLoading || group) && predictionsLocked">
     <ion-card-content class="predictions-locked-content">
       <ion-icon name="lock-closed-outline" class="lock-icon-large"></ion-icon>
       <p class="predictions-locked-message">
@@ -39,7 +44,7 @@
   </ion-card>
 
   <!-- Group predictions list (post-deadline) -->
-  <ion-list *ngIf="!predictionsLocked && groupPredictions.length > 0" class="group-predictions-list">
+  <ion-list *ngIf="(!isLoading || group) && !predictionsLocked && groupPredictions.length > 0" class="group-predictions-list">
     <ion-item *ngFor="let pred of groupPredictions">
       <ion-label>
         <h3>{{ pred.username || 'Player' }}</h3>
@@ -49,7 +54,7 @@
   </ion-list>
 
   <!-- Standings Table -->
-  <ion-card class="standings-card">
+  <ion-card class="standings-card" *ngIf="!isLoading || group">
     <ion-card-header>
       <ion-card-title>
         <ion-icon name="trophy-outline"></ion-icon>

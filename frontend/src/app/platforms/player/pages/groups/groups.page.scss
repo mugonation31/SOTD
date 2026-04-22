@@ -1,5 +1,11 @@
 // Groups Styles
 
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
 ion-card-header {
   ion-card-title {
     display: flex;

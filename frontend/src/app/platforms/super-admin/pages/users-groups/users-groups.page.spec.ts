@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { UsersGroupsPage } from './users-groups.page';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 import { SupabaseService } from '../../../../services/supabase.service';
 
 /**
@@ -32,6 +33,7 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
   let mockToast: { present: jest.Mock };
   let mockToastController: { create: jest.Mock };
   let mockAlertController: ReturnType<typeof createMockAlertController>;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
   let consoleErrorSpy: jest.SpyInstance;
 
   /**
@@ -119,6 +121,7 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
       create: jest.fn().mockResolvedValue(mockToast),
     };
     mockAlertController = createMockAlertController(alertRole);
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
   };
 
   const configureModule = async (currentUserId: string | null = 'admin-xyz') => {
@@ -132,6 +135,7 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
         { provide: ToastController, useValue: mockToastController },
         { provide: AlertController, useValue: mockAlertController },
         { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(UsersGroupsPage);
@@ -344,9 +348,8 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
   // 14. toggleUserActive rejection shows error toast, row state unchanged
   // -------------------------------------------------------------------------
   it('toggleUserActive rejection shows error toast and leaves is_active unchanged', async () => {
-    mockSupabaseDataService.toggleUserActive.mockRejectedValue(
-      new Error('RLS denied'),
-    );
+    const err = new Error('RLS denied');
+    mockSupabaseDataService.toggleUserActive.mockRejectedValue(err);
 
     await component.ionViewWillEnter();
     const userBefore = { ...component.users[0] };
@@ -361,6 +364,10 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
     expect(mockSupabaseDataService.signOutUser).not.toHaveBeenCalled();
     // Row state should not have flipped — local `is_active` is unchanged
     expect(component.users[0].is_active).toBe(userBefore.is_active);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'users-groups.toggleUser',
+      err,
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -368,9 +375,8 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
   //     (toggle already persisted)
   // -------------------------------------------------------------------------
   it('signOutUser rejection shows warning toast but keeps is_active flipped', async () => {
-    mockSupabaseDataService.signOutUser.mockRejectedValue(
-      new Error('Edge Function timeout'),
-    );
+    const err = new Error('Edge Function timeout');
+    mockSupabaseDataService.signOutUser.mockRejectedValue(err);
 
     await component.ionViewWillEnter();
 
@@ -392,6 +398,22 @@ describe('UsersGroupsPage (Task 4.0.9 — combined Users + Groups admin page)', 
 
     // is_active is already persisted server-side — UI must reflect the flip
     expect(component.users[0].is_active).toBe(false);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'users-groups.signOutUser',
+      err,
+    );
+  });
+
+  it('initial load rejection routes the error through LoggerService', async () => {
+    const err = new Error('Network down');
+    mockSupabaseDataService.getAllUsers.mockRejectedValue(err);
+
+    await component.ionViewWillEnter();
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'users-groups.loadUsersAndGroups',
+      err,
+    );
   });
 
   it('blocks a super-admin from deactivating their own account', async () => {

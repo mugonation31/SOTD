@@ -21,6 +21,8 @@ import {
 import { addIcons } from 'ionicons';
 import { trashOutline } from 'ionicons/icons';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 import { SupabaseService } from '../../../../services/supabase.service';
 
 interface AdminUser {
@@ -206,6 +208,7 @@ export class UsersGroupsPage {
     private toastController: ToastController,
     private alertController: AlertController,
     private supabaseService: SupabaseService,
+    private logger: LoggerService,
   ) {
     addIcons({ trashOutline });
   }
@@ -216,6 +219,12 @@ export class UsersGroupsPage {
    */
   async ionViewWillEnter(): Promise<void> {
     this.isLoading = true;
+    // Clear stale rows up-front so a failed re-load from a different
+    // admin session can't leave the previous caller's users/groups
+    // visible once `isLoading` falls back to false. Also prevents a
+    // brief flash of old data during the fetch.
+    this.users = [];
+    this.groups = [];
     try {
       const [users, groups] = await Promise.all([
         this.supabaseDataService.getAllUsers(),
@@ -224,9 +233,10 @@ export class UsersGroupsPage {
       this.users = users ?? [];
       this.groups = groups ?? [];
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to load users/groups: ${message}`);
-      await this.showToast('Failed to load users and groups');
+      this.logger.error('users-groups.loadUsersAndGroups', err);
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Failed to load users and groups';
+      await this.showToast(msg);
     } finally {
       this.isLoading = false;
     }
@@ -277,9 +287,10 @@ export class UsersGroupsPage {
     try {
       await this.supabaseDataService.toggleUserActive(user.id, newActive);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to toggle user ${user.id}: ${message}`);
-      await this.showToast(`Failed to update user: ${message}`);
+      this.logger.error('users-groups.toggleUser', err);
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Failed to update user';
+      await this.showToast(msg);
       this.isMutating = false;
       return;
     }
@@ -293,8 +304,7 @@ export class UsersGroupsPage {
         await this.supabaseDataService.signOutUser(user.id);
         await this.showToast('User deactivated and signed out');
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`Failed to sign out user ${user.id}: ${message}`);
+        this.logger.error('users-groups.signOutUser', err);
         await this.showToast(
           'User deactivated but session not terminated — they may still be active until token expires',
         );
@@ -335,9 +345,10 @@ export class UsersGroupsPage {
       await this.showToast('Group deleted');
       await this.refreshGroups();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to delete group ${group.id}: ${message}`);
-      await this.showToast(`Failed to delete group: ${message}`);
+      this.logger.error('users-groups.deleteGroup', err);
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Failed to delete group';
+      await this.showToast(msg);
     } finally {
       this.isMutating = false;
     }
@@ -348,8 +359,7 @@ export class UsersGroupsPage {
       const groups = await this.supabaseDataService.getAllGroups();
       this.groups = groups ?? [];
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to refresh groups: ${message}`);
+      this.logger.error('users-groups.refreshGroups', err);
     }
   }
 

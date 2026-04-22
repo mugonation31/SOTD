@@ -2,21 +2,25 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { SeasonService } from './season.service';
 import { SupabaseDataService } from './supabase-data.service';
+import { LoggerService } from './logger.service';
 
 describe('SeasonService', () => {
   let service: SeasonService;
   let mockSupabaseDataService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
 
   beforeEach(() => {
     mockSupabaseDataService = {
       getActiveGameweek: jest.fn(),
       getGameweeks: jest.fn(),
     };
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         SeasonService,
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: LoggerService, useValue: mockLogger },
       ],
     });
   });
@@ -94,5 +98,43 @@ describe('SeasonService', () => {
     const source = SeasonService.toString();
     expect(source).not.toMatch(/2024-08-10/);
     expect(source).not.toMatch(/2025-05-19/);
+  });
+
+  it('should call logger.warn with the active-gameweek context and raw error when getActiveGameweek rejects', async () => {
+    const rawErr = new Error('No rows');
+    mockSupabaseDataService.getActiveGameweek.mockRejectedValue(rawErr);
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
+
+    service = TestBed.inject(SeasonService);
+    await service.init();
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'season.safeGetActiveGameweek',
+      rawErr,
+    );
+  });
+
+  it('should call logger.warn with the gameweeks context and raw error when getGameweeks rejects', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
+    const rawErr = new Error('table unreachable');
+    mockSupabaseDataService.getGameweeks.mockRejectedValue(rawErr);
+
+    service = TestBed.inject(SeasonService);
+    await service.init();
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'season.safeGetGameweeks',
+      rawErr,
+    );
+  });
+
+  it('should not call logger.warn when both calls succeed', async () => {
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
+
+    service = TestBed.inject(SeasonService);
+    await service.init();
+
+    expect(mockLogger.warn).not.toHaveBeenCalled();
   });
 });

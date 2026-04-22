@@ -24,6 +24,8 @@ import {
   timeOutline,
 } from 'ionicons/icons';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 
 type SyncStatus = 'ok' | 'error' | 'in_progress' | null;
 
@@ -224,6 +226,7 @@ export class DashboardPage implements OnDestroy {
   constructor(
     private supabaseDataService: SupabaseDataService,
     private toastController: ToastController,
+    private logger: LoggerService,
   ) {
     addIcons({
       cloudDownloadOutline,
@@ -279,9 +282,7 @@ export class DashboardPage implements OnDestroy {
       (r) => r.status === 'rejected',
     ) as PromiseRejectedResult[];
     for (const r of rejected) {
-      const message =
-        r.reason instanceof Error ? r.reason.message : 'Unknown error';
-      console.error(`Dashboard partial load failure: ${message}`);
+      this.logger.error('dashboard.partialLoad', r.reason);
     }
     // Only surface a toast if EVERY stat failed — otherwise the UI shows
     // what it can and stays quiet about transient single-card misses.
@@ -323,8 +324,12 @@ export class DashboardPage implements OnDestroy {
       const reason = result?.reason ?? 'unknown error';
       await this.showToast(`Sync failed: ${reason}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Sync failed: ${message}`);
+      this.logger.error('dashboard.sync', err);
+      // Only SupabaseError carries a curated `userMessage` that is safe
+      // to render. Native fetch/CORS errors surface `.message` with URLs,
+      // auth hints, or backend detail — never echo them into a toast.
+      const message =
+        err instanceof SupabaseError ? err.userMessage : 'Unknown error';
       await this.showToast(`Sync failed: ${message}`);
     } finally {
       this.isSyncing = false;

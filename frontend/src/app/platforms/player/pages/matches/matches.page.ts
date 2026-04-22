@@ -20,6 +20,7 @@ import {
   IonToast,
   IonToggle,
   IonLabel,
+  IonSpinner,
   AlertController,
   ToastController,
 } from '@ionic/angular/standalone';
@@ -42,6 +43,8 @@ import { SeasonService } from '@core/services/season.service';
 import {
   SupabaseDataService,
 } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
+import { SupabaseError } from '@core/errors/supabase-error';
 import { Match as SupabaseMatch } from '../../../../services/supabase.service';
 import { CountdownTimerComponent } from '../../../../shared/components/countdown-timer/countdown-timer.component';
 
@@ -96,6 +99,15 @@ interface GameWeek {
     </ion-header>
 
     <ion-content class="ion-padding">
+      <!--
+        Spinner shows only when there's genuinely nothing else to render.
+        On cached re-entries (or mid-page refreshes) we keep the existing
+        grid visible so the user never sees content blank out.
+      -->
+      <div class="loading-state" *ngIf="isLoading && matches.length === 0">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+
       <ion-grid>
         <ion-row class="ion-justify-content-center">
           <ion-col size="12" size-md="10" size-lg="8">
@@ -242,7 +254,7 @@ interface GameWeek {
 
               <div class="match-card" *ngFor="let match of matches">
                 <div class="match-header">
-                  <div class="venue">
+                  <div class="venue" *ngIf="match.venue">
                     <ion-icon name="football-outline"></ion-icon>
                     {{ match.venue }}
                   </div>
@@ -328,6 +340,12 @@ interface GameWeek {
 
       ion-content {
         --background: #f4f5f8;
+      }
+
+      .loading-state {
+        display: flex;
+        justify-content: center;
+        padding: 32px;
       }
 
       .header-content {
@@ -756,6 +774,7 @@ interface GameWeek {
     IonText,
     IonToggle,
     IonLabel,
+    IonSpinner,
     NgFor,
     NgIf,
     DatePipe,
@@ -868,6 +887,7 @@ export class MatchesPage implements OnInit {
     private supabaseDataService: SupabaseDataService,
     private toastController: ToastController,
     private alertController: AlertController,
+    private logger: LoggerService,
   ) {
     addIcons({
       timeOutline,
@@ -900,7 +920,22 @@ export class MatchesPage implements OnInit {
     await this.applyGameweekMeta(gameweekNumber);
 
     await this.loadMatchesForGameweek(gameweekNumber);
-    await this.hydrateSavedPredictions(gameweekNumber);
+    // Hydration intentionally lives in `ionViewWillEnter` (Task 4.2.4.1) so
+    // cached component re-entries also re-hydrate. See that method below.
+  }
+
+  /**
+   * Ionic lifecycle hook — fires on every entry, including cached re-entry
+   * after back-navigation. We re-hydrate saved predictions here so stale
+   * state from a previous visit is always refreshed against the server.
+   *
+   * `ngOnInit` runs once per component creation and handles setup that
+   * doesn't need to re-run (season init, joker season context, match list,
+   * gameweek meta). Hydration is the only thing that must re-fire on every
+   * re-entry — keeping it isolated here avoids duplicate fetches.
+   */
+  async ionViewWillEnter(): Promise<void> {
+    await this.hydrateSavedPredictions(this.currentGameweek.number);
   }
 
   /**
@@ -929,8 +964,7 @@ export class MatchesPage implements OnInit {
       this.beforeBoxingDay = deadlines?.beforeBoxingDay ?? null;
       this.beforeFinalDay = deadlines?.beforeFinalDay ?? null;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to load joker context: ${message}`);
+      this.logger.error('matches.loadJokerContext', err);
       this.jokerUsageUsedCount = 0;
       this.jokersRemaining = 2;
       this.beforeBoxingDay = null;
@@ -1007,10 +1041,11 @@ export class MatchesPage implements OnInit {
       const rows = await this.supabaseDataService.getMatches(gameweek);
       this.matches = rows.map((row) => this.toViewModel(row));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to load matches for gameweek ${gameweek}: ${message}`);
+      this.logger.error('matches.loadMatches', err);
       this.matches = [];
-      await this.showErrorToast('Unable to load matches. Please try again.');
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Unable to load matches. Please try again.';
+      await this.showErrorToast(msg);
     } finally {
       this.isLoading = false;
     }
@@ -1051,7 +1086,7 @@ export class MatchesPage implements OnInit {
    * server.
    *
    * Errors are swallowed — a hydration failure must not prevent the page
-   * from rendering. The underlying error is logged to `console.error` so
+   * from rendering. The underlying error is logged via `LoggerService` so
    * it surfaces in dev without breaking the user.
    */
   private async hydrateSavedPredictions(gameweekNumber: number): Promise<void> {
@@ -1063,8 +1098,11 @@ export class MatchesPage implements OnInit {
         if ((row as any).joker_used === true) anyJoker = true;
         const match = byId.get(row.match_id);
         if (!match) continue;
-        match.prediction.homeScore = row.home_score;
-        match.prediction.awayScore = row.away_score;
+        // Defensive `?? 0`: saved rows always carry scores post-submit,
+        // but a partial sync could leave a null slipping through. Coerce
+        // to 0 so the number input bindings never receive null.
+        match.prediction.homeScore = row.home_score ?? 0;
+        match.prediction.awayScore = row.away_score ?? 0;
       }
       this.jokerUsedThisGameweek = anyJoker;
       // If the saved predictions already have joker=true, the choice is
@@ -1075,10 +1113,7 @@ export class MatchesPage implements OnInit {
       this.predictionsCompleted =
         this.selectedPredictionCount >= this.getRequiredPredictionCount();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to hydrate predictions for gameweek ${gameweekNumber}: ${message}`,
-      );
+      this.logger.error('matches.hydratePredictions', err);
     }
   }
 
@@ -1234,8 +1269,7 @@ export class MatchesPage implements OnInit {
             this.jokerAlreadyLockedForGameweek = true;
           }
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Unknown error';
-          console.error(`Failed to mark joker as used: ${message}`);
+          this.logger.error('matches.markJokerUsed', err);
           await this.showErrorToast(
             'Predictions saved but joker tracking failed. Contact support.',
           );
@@ -1246,9 +1280,10 @@ export class MatchesPage implements OnInit {
       this.predictionsCompleted = true;
       this.showSuccessToast = true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to submit predictions: ${message}`);
-      await this.showErrorToast('Unable to save predictions. Please try again.');
+      this.logger.error('matches.submitPredictions', err);
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Unable to save predictions. Please try again.';
+      await this.showErrorToast(msg);
     } finally {
       this.isSubmitting = false;
     }
@@ -1311,8 +1346,11 @@ export class MatchesPage implements OnInit {
       )
       .map((match) => ({
         match_id: match.id,
-        home_score: match.prediction.homeScore!,
-        away_score: match.prediction.awayScore!,
+        // Belt-and-braces `?? 0`: the filter above excludes null, but if a
+        // hydrated row ever lands here with a falsy-but-defined value, the
+        // DB column (NOT NULL) would reject it.
+        home_score: match.prediction.homeScore ?? 0,
+        away_score: match.prediction.awayScore ?? 0,
         gameweek_number: this.currentGameweek.number,
         gameweek_id: this.currentGameweekId,
         joker_used: jokerUsed,
@@ -1369,8 +1407,7 @@ export class MatchesPage implements OnInit {
       const match = (this.allGameweeks ?? []).find((gw) => gw.number === target);
       this.setGameweekMeta(match?.id, match?.deadline, match?.is_special);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to load gameweek meta for ${target}: ${message}`);
+      this.logger.error('matches.loadGameweekMeta', err);
       this.setGameweekMeta(null, null, false);
     }
   }

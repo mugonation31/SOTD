@@ -37,6 +37,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
+import { LoggerService } from '@core/services/logger.service';
 
 /**
  * View model bound to the predictions template. `id` is a UUID string from
@@ -116,6 +117,7 @@ export class PredictionsPage {
     private router: Router,
     private seasonService: SeasonService,
     private supabaseDataService: SupabaseDataService,
+    private logger: LoggerService,
   ) {
     addIcons({
       footballOutline,
@@ -148,8 +150,7 @@ export class PredictionsPage {
         try {
           groups = (await this.supabaseDataService.getGroups()) ?? [];
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Unknown error';
-          console.error(`Failed to load groups: ${message}`);
+          this.logger.error('predictions.loadGroups', err);
           groups = [];
         }
 
@@ -183,8 +184,7 @@ export class PredictionsPage {
         await this.updateHistoricalPredictions();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`Failed to load predictions: ${message}`);
+      this.logger.error('predictions.loadPredictions', err);
       this.currentPredictions = [];
     } finally {
       this.isLoading = false;
@@ -224,8 +224,12 @@ export class PredictionsPage {
           : null,
       },
       prediction: {
-        home: row.home_score,
-        away: row.away_score,
+        // Defensive `?? 0` (Task 4.2.4.1): saved rows should always carry
+        // scores, but a partial sync could leave a null slipping through.
+        // Keep the `Prediction.prediction.home/away` shape as `number` so
+        // template bindings never receive null.
+        home: row.home_score ?? 0,
+        away: row.away_score ?? 0,
       },
       points,
       status: this.deriveStatus(match.status, points),
@@ -275,10 +279,7 @@ export class PredictionsPage {
       );
       this.historicalPredictions = rows.map((row) => this.toViewModel(row));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error(
-        `Failed to load historical predictions for gameweek ${this.selectedHistoryGameweek}: ${message}`,
-      );
+      this.logger.error('predictions.loadHistoricalPredictions', err);
       this.historicalPredictions = [];
     }
   }
