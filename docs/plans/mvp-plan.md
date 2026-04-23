@@ -1157,6 +1157,56 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - **"Never modify existing passing specs" rule**: the `season.service.spec.ts:95-101` replacement IS a modification of a passing spec. Justification: the test's intent (guard against date-driven gameweek calc) is preserved; only the implementation mechanism changes. Flag this in the commit message so a reviewer can sanity-check. All other spec edits are strictly additive (new mock methods, new describe block).
       - **Regression-lock spec for `onSubmit`**: the task scope originally included ADDING the guard, but the guard is already there. The regression spec protects future refactors but adds no production behaviour. If a future task intentionally removes the guard (unlikely — it's fail-closed security), the spec will need to be deleted along with it.
 
+  - [x] **4.2.7.1 Fix `special_type` dash/underscore enum mismatch** (Size: XS)
+    - **Description**: Pre-existing silent bug surfaced during 4.2.7 review. `getLastRegularGameweekBeforeSpecial()` in `supabase-data.service.ts:483-484` compares `special_type` against `'boxing_day'` / `'final_day'` (underscores), but the DB CHECK constraint (`migrations/002_gameweeks_table.sql:22`), the mapper (`football-api-mapper.ts:27,34`), and the sync Edge Function (`supabase/functions/sync-matches/index.ts:71,78`) all write **dashes**: `'boxing-day'` / `'final-day'`. Runtime result: `findBefore()` never matches any row, the method always returns `{ beforeBoxingDay: null, beforeFinalDay: null }`, and the joker-2nd-auto-assign warning at the Final Day (GW38) deadline never fires. The existing spec at `supabase-data.service.spec.ts:731-819` passes today only because the fixtures use the same broken underscore form — the tests validate the bug against itself. Pure find-replace scope.
+    - **Depends on**: None (orthogonal to 4.2.7; production code change is 2 string literals)
+
+    - **Pre-verified scope (from codebase scan, 2026-04-22)**:
+      - Underscore form `'boxing_day'` / `'final_day'` appears in `frontend/` at exactly these sites:
+        1. `frontend/src/app/core/services/supabase-data.service.ts:483` — `findBefore('boxing_day')` (production bug)
+        2. `frontend/src/app/core/services/supabase-data.service.ts:484` — `findBefore('final_day')` (production bug)
+        3. `frontend/src/app/core/services/supabase-data.service.ts:443` — doc-comment lists `` `boxing_day`, `final_day` `` as the known special types (stale doc; must match the dash-form literals)
+        4. `frontend/src/app/core/services/supabase-data.service.spec.ts:732` — describe title text `"GW 19 is boxing_day and GW 38 is final_day"` (cosmetic, update for consistency with the real enum)
+        5. `frontend/src/app/core/services/supabase-data.service.spec.ts:736, 738, 756, 759, 788, 790` — 6 fixture literals across 3 test cases (`should return beforeBoxingDay=18...`, `should return beforeBoxingDay=null when Boxing Day is GW 1`, `should ignore other special_type values if present`)
+      - `'mystery_cup'` at `supabase-data.service.spec.ts:786` is an intentional junk value in the "ignore other special_type values" test — leave untouched; its role is to not match either known type.
+      - Dash form `'boxing-day'` / `'final-day'` is the canonical shape, confirmed at `migrations/002_gameweeks_table.sql:22`, `football-api-mapper.ts:27,34`, `supabase/functions/sync-matches/index.ts:71,78`. Sync pipeline is already correct — do not touch.
+      - No TypeScript enum / union type exists for `special_type`; it is typed as `string | null` at `supabase-data.service.ts:467`. Introducing a typed enum is **4.3 scope** (see "Typed interfaces" bucket) — not this task.
+
+    - **Files**:
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts`:
+        - Line 483: `findBefore('boxing_day')` → `findBefore('boxing-day')`
+        - Line 484: `findBefore('final_day')` → `findBefore('final-day')`
+        - Line 443 (doc-comment): update `` `boxing_day`, `final_day` `` → `` `boxing-day`, `final-day` ``
+      - Modify `frontend/src/app/core/services/supabase-data.service.spec.ts`:
+        - Line 732: describe title `boxing_day` / `final_day` → `boxing-day` / `final-day`
+        - Lines 736, 738, 756, 759, 788, 790: fixture string literals underscore → dash (6 replacements)
+        - Leave line 786 (`'mystery_cup'`) untouched.
+
+    - **Acceptance criteria**:
+      1. Both production-code literals at `supabase-data.service.ts:483-484` use dash form (`'boxing-day'`, `'final-day'`), matching the DB CHECK constraint and the sync pipeline writers.
+      2. All 6 underscore-form spec fixtures at `supabase-data.service.spec.ts:736, 738, 756, 759, 788, 790` updated to dash form. The existing assertions (`{ beforeBoxingDay: 18, beforeFinalDay: 37 }`, `{ beforeBoxingDay: null, beforeFinalDay: 3 }`, `{ beforeBoxingDay: 3, beforeFinalDay: 5 }`) stand unchanged — the fixture shape is what moves, the expected output is identical because the bug masked itself symmetrically.
+      3. `grep -rn "'boxing_day'\\|'final_day'" frontend/src/` returns zero hits in `.ts` / `.spec.ts` files.
+      4. `cd frontend && npm test` passes with zero new failures. The 5 tests in the `getLastRegularGameweekBeforeSpecial` describe block all pass against dash-form fixtures.
+      5. `cd frontend && npm run build:prod` completes with zero errors.
+      6. Doc-comment at `supabase-data.service.ts:443` matches the actual literal values the function compares against.
+
+    - **Test plan (Red phase — write the failing test FIRST, before touching production code)**:
+      - The 5 existing tests at `supabase-data.service.spec.ts:731-819` already cover every branch of `getLastRegularGameweekBeforeSpecial()`. They currently pass against underscore fixtures because the service also uses underscores (both broken, symmetrically). **The Red step is flipping the fixtures first**: change the 6 underscore literals at lines 736, 738, 756, 759, 788, 790 to dash form WITHOUT touching the service. Run `npm test` — the first test (`should return beforeBoxingDay=18, beforeFinalDay=37...`) must now fail with `Expected: { beforeBoxingDay: 18, beforeFinalDay: 37 }, Received: { beforeBoxingDay: null, beforeFinalDay: null }`. That failure proves the production bug is real. Then apply the 2-line service fix (+ the doc-comment update). Re-run — Green.
+      - If for any reason the existing test infrastructure is skipped (e.g. `mockClient.from.mockReturnValueOnce(builder)` fails to wire), fall back to a single new minimal spec: "returns beforeBoxingDay=18 when a row with `special_type: 'boxing-day'` exists at GW 19 and regular rows precede it". Assert non-null return. This is the same assertion as the existing first test, just isolated.
+      - No changes to any other spec file. No new production code beyond the 2 string literals.
+
+    - **Non-goals (out of scope for this slice — do NOT scope-creep into these)**:
+      - Introducing a TypeScript `type SpecialType = 'boxing-day' | 'final-day'` or enum — queued in 4.3 "Typed interfaces" bucket alongside `PredictionWithMatch` and `GroupPrediction`.
+      - Fixing the stale `Prediction.is_locked` column usage or the missing-column references on `GroupMember` surfaced in the 4.2.7 code review — already queued to 4.3.
+      - Touching the sync pipeline (`football-api-mapper.ts`, `supabase/functions/sync-matches/index.ts`) or migration 002 — all three already emit/enforce dashes correctly. Any edit there would be a reverse bug.
+      - Adding a migration to rename the enum values — the DB is already on the correct form; only the reader was wrong.
+      - Refactoring `findBefore()` to accept a stricter parameter type — structural change beyond scope.
+
+    - **Risks**:
+      - **Other consumers of `special_type`**: verified via grep — the only frontend reader is `getLastRegularGameweekBeforeSpecial()`. No page component or service directly reads `special_type` off a gameweek row. If a future grep surfaces a second reader, this task expands by one file; flag immediately rather than silently adding to scope.
+      - **Spec-title update is cosmetic**: line 732's describe string contains `boxing_day` / `final_day`. Leaving it would be grep-confusing six months from now; updating it is a pure text change with no behavioural impact.
+      - **"Never modify passing specs" tension**: the 6 fixture updates technically modify a passing spec. Justified because the current pass is a false positive (bug ↔ bug symmetry); the fix restores the spec's intended semantics (simulate the real DB row shape). Flag this in the commit message so a reviewer can sanity-check.
+
   - [ ] **4.2.8 Test stability — fake timers around countdown specs** (Size: S)
     - **Description**: Prevent `CountdownTimerComponent` intervals from leaking into the real clock between tests and causing flakes. Wrap the 3.1.4 lock-UI spec block in `matches.page.spec.ts` with `jest.useFakeTimers()` / `jest.useRealTimers()`. Tighten the `countdown-timer.component.spec.ts` "clean up interval on destroy" test: snapshot the `clearInterval` call count before `fixture.destroy()` and assert it increments after (current assertion passes spuriously if deadline logic changes). Add an inline comment in `matches.page.ts` pinning `CountdownTimerComponent.deadlinePassed` as the runtime source of truth for the `isLocked` transition so future readers don't add a second deadline-check that desyncs.
     - **Depends on**: 3.1.4 (the specs being stabilized)
