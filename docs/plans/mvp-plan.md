@@ -1286,6 +1286,113 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - **Risks**:
       - **Silent consumer miss**: if any other component (spec, service, template) reads `groupStats.prizePool` / `groupStats.paidMembers` off the removed interface fields, TS compile catches it. `npm run build:prod` is the safety net — a successful compile proves no hidden reader remains.
 
+  - [x] **4.2.11 Wire group-admin predictions page to real Supabase data** (Size: M) — LAUNCH BLOCKER
+    - **Description**: The group-admin "View Group Predictions" page (`frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.ts`) has 11 `mockDataService.*` call sites that feed fake seeded data into the admin's view of real users' predictions. GW34–38 admins will see mock data, not what their players submitted. The player-side equivalent at `group-standings.page.ts:133-168` already uses the correct Supabase pattern (`loadVisibilityAndPredictions` → `getGameweekDeadline` → `getGroupPredictions`); the same pattern is partially present on this page (L263-298) but parallel legacy mock pipelines still populate `allPredictions`, `currentMatches`, `historicalMatches`, and the legacy template block. This task purges the 11 mock call sites, removes the redundant legacy template section, keeps the already-correct `groupPredictions` list, and wires matches + gameweek resolution through `SupabaseDataService`. Pure wiring — no new service methods.
+    - **Depends on**: 4.2.4 (loading-spinner pattern), 4.2.7 (typed service returns — `getGroupPredictions: Promise<Prediction[]>` and `getMatches: Promise<Match[]>` already tightened), 3.3.3 (existing `loadVisibilityAndPredictions` in this file)
+
+    - **Pre-verified scope (from codebase scan, 2026-04-22)**:
+      - 11 `mockDataService.*` call sites in `predictions.page.ts`: L199, 205, 598, 759, 762, 775, 790, 793, 797, 801, 805. Full audit in task intake; mapping preserved below.
+      - `getGroupPredictions(groupId, gameweekNumber): Promise<Prediction[]>` already typed (4.2.7). Returns raw `predictions` rows, no `matches` join; same shape the existing `groupPredictions` list in the template already renders (`pred.username || 'Player'`, `pred.gameweek_number`, `pred.home_score`, `pred.away_score` — L127-134 of `.html`). **The simple list rendering is preserved; the rich legacy block that reads `allPredictions[*].predictions[*].{homeTeam, homeScore, isCorrectScore, ...}` is redundant and gets deleted.**
+      - `getMatches(gameweek: number): Promise<Match[]>` (supabase-data.service.ts:262) returns DB-shape rows (snake_case columns: `home_team`, `away_team`, `kickoff_time`, `home_score`, `away_score`, `status: 'scheduled'|'live'|'completed'|'cancelled'`). Local `Match` interface in this file uses camelCase (`homeTeam`, `kickoff`, `homeScore`, status `'finished'`). **Shape mapping required** — add a private `toMatchViewModel(row: Match): LocalMatch` helper that translates snake→camel and maps `status === 'completed' → 'finished'`. The `matches` table has no `venue` column (migration 003); set `venue: ''` — template already tolerates empty strings.
+      - `getActiveGameweek(): Promise<Gameweek>` (L203) returns the active row; throws on no-rows (consumers catch). Useful for seeding `currentGameWeek` shape + deadline on init.
+      - `getGameweeks(): Promise<Gameweek[]>` (L193) returns all gameweeks ordered by `gameweek_number`. Filter `is_completed === true` to derive `historicalGameweeks: number[]` (replaces `getAvailableHistoricalGameweeks()`).
+      - `seasonService.getCurrentGameweek(): number` already live and already used at L236 for the All Predictions tab. Use it consistently at L199 (replacing the mock call).
+      - `resolveAdminGroupId()` (L247-256) + the `adminGroupId`/`allPredictionsLoaded` state machine are ALREADY CORRECT. Not touching.
+      - `loadVisibilityAndPredictions()` (L263-298) is ALREADY CORRECT and mirrors the player-side pattern. Not touching.
+      - `liveScoreUpdateInterval` timer at `startLiveScoreUpdates` (L778-786) fires `updateLiveScores` (L788-794) every 60s, which calls `mockDataService.updateLiveScores()` + `getMatchesForGameweek()`. **Deleting `updateLiveScores` requires deleting the `startLiveScoreUpdates` method AND removing the `ionViewWillEnter` call to it at L747.** The `ionViewWillLeave` `clearInterval` guard at L750-755 stays (idempotent if the field is always null — harmless).
+      - `getMatchTime` / `isMatchFinished` / `isMatchLive` (L796-806) are thin delegates. Inline them as local utilities reading the DB-shape or the local view-model:
+        - `isMatchFinished(m) → m.status === 'finished'` (post-mapping) or `m.status === 'completed'` (pre-mapping)
+        - `isMatchLive(m) → m.status === 'live'`
+        - `getMatchTime(m) → m.liveScore?.minute ? `${minute}'` : ''` — but the DB `Match` shape has no `liveScore` column (live-minute tracking not in MVP). Returning `''` is correct for MVP; template only uses it in contexts where empty is a valid render. Flag inline with a TODO for 4.3 if live-minute becomes a requirement.
+      - Spec file (`predictions.page.spec.ts`) exists with 12 passing tests. All assertions focus on the Supabase flow (`getGameweekDeadline`/`getGroupPredictions`/`adminGroupId`/`isLoading` spinner). Removing the `MockDataService` TestBed provider + its mock stubs is purely scaffolding cleanup — zero assertion edits, zero `it`-body changes.
+      - `MockDataService` is still consumed elsewhere (player dashboard, player predictions page during mock dev paths). **Not removing from codebase** — only removing from this one file.
+
+    - **Files**:
+      - Modify `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.ts`:
+        - Remove `import { MockDataService } from '../../../../core/services/mock-data.service';` (L55).
+        - Remove `private mockDataService: MockDataService,` from the constructor param list (L188).
+        - Remove the constructor body's synchronous mock seeding: `this.currentGameweek = this.mockDataService.getCurrentGameweek();` (L199), `this.currentGameWeek = this.mockDataService.getCurrentGameweekData();` (L205). Relocate to an `async loadCurrentGameweek()` invoked in `ngOnInit`. Replace with `seasonService.getCurrentGameweek()` for the number + a synthesized `GameWeek` shape (or null-default and populate post-fetch).
+        - Rewrite `loadGameweekPredictions()` (L596-600) to no-op OR delete entirely — the `allPredictions` population it performs feeds the legacy template block that is being deleted. Cleanest path: delete the method and its two callers (`ngOnInit` L212 + `previousGameweek`/`nextGameweek` L473, L481). Preserve `filterPredictions()` is NOT needed (it filters `allPredictions` which becomes unpopulated); delete the `(ionInput)="filterPredictions()"` handler and the method body.
+        - Rewrite `loadMatches()` (L757-771) to call `this.supabaseDataService.getMatches(this.currentGameweek)` and map via a new private `toMatchViewModel(row): Match` helper (snake→camel + status `completed→finished`). Wrap in try/catch with `logger.error` + `showErrorToast('Unable to load matches')`. Set `this.currentMatches = mapped`.
+        - Rewrite `getAvailableHistoricalGameweeks` replacement (L762): call `await this.supabaseDataService.getGameweeks()`, filter `gw.is_completed === true`, map to `gameweek_number`, sort descending so the most-recent completed round is index 0 (matches current selector default behaviour).
+        - Rewrite `updateHistoricalMatches()` (L773-776) to `await this.supabaseDataService.getMatches(this.selectedHistoryGameweek)` + same view-model mapping. Same try/catch + toast pattern.
+        - Delete `startLiveScoreUpdates()` (L778-786) entirely.
+        - Delete `updateLiveScores()` (L788-794) entirely.
+        - Delete the `ionViewWillEnter` call to `this.startLiveScoreUpdates()` at L747. Keep the `this.loadMatches()` call (now async — wrap in `void` or make the lifecycle method async). Keep `ionViewWillLeave` as-is (`clearInterval` on a null field is a no-op).
+        - Rewrite `getMatchTime(match)` / `isMatchFinished(match)` / `isMatchLive(match)` (L796-806) as inline local utilities reading `match.status` directly. `getMatchTime` returns `''` for MVP (no live-minute data in DB); TODO-comment for 4.3.
+        - Add a class-level doc comment at `resolveAdminGroupId` (L247) reinforcing the multi-group MVP assumption: "picks adminGroups[0] silently; multi-group selector is 4.3 backlog". Already mentioned in 4.3 admin-UX nitpicks; this is just a belt-and-braces inline note.
+        - Keep: `loadVisibilityAndPredictions`, `resolveAdminGroupId`, `tabChanged`, all the "Make Predictions" tab code (admin's own predictions — scope-separate), `onSubmitPredictions`, `onScoreChange`, `resetPredictions`, `validateScore`, `getShortTeamName`, `navigateGameweek`, etc. Only the 11 mock call sites + `loadGameweekPredictions`/`filterPredictions`/`startLiveScoreUpdates`/`updateLiveScores` change.
+      - Modify `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.html`:
+        - Delete the legacy "Players Predictions List" block (L187-284 — the `<div class="players-list">` and its contents rendering `filteredPredictions[*]`). Redundant with the simple `groupPredictions` list at L127-134.
+        - Delete the search + filter controls at L164-184 (`ion-searchbar` + `ion-select`) — they filter `allPredictions` which no longer populates. 4.3 can add a typed player-name filter over `groupPredictions[*].username` if surfaced by user feedback.
+        - Delete the "All Predictions" tab's inner gameweek navigation (L136-162) — this navigates `gameweeks[]` which is seeded from the mock `getSampleGameweeks()`. The "All Predictions" tab should show only the current gameweek's predictions; historical navigation is a 4.3 feature. If keeping a live/historical toggle is desired for MVP, wire to `historicalGameweeks` + `selectedHistoryGameweek` but this is optional polish; simpler to strip for launch.
+        - Keep: logo/header, segment tabs, loading spinner (L30-32), "Make Predictions" tab (admin's own — L34-112), predictions-locked card (L116-124), simple `groupPredictions` list (L127-134), the `<ion-alert>` at L288-294.
+      - Modify `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.spec.ts`:
+        - Remove `import { MockDataService } from '@core/services/mock-data.service';` (L5).
+        - Remove the entire `mockMockDataService = {...}` object (L36-52).
+        - Remove `{ provide: MockDataService, useValue: mockMockDataService },` from the TestBed providers array (L83).
+        - Keep every `it` block unchanged. Keep all assertions unchanged. The `afterEach` clearInterval guard stays (idempotent on a null field).
+        - Add a NEW describe block at the end: `describe('PredictionsPage (Task 4.2.11 — Supabase-backed matches + gameweeks)')` with three additive specs:
+          - "loadMatches populates currentMatches from supabaseDataService.getMatches with camelCase mapping" — stub `getMatches` returning a DB-shape row, assert `component.currentMatches[0].homeTeam === row.home_team` + `component.currentMatches[0].status === 'finished'` when DB returns `'completed'`.
+          - "loadMatches surfaces a toast and empties currentMatches when getMatches rejects" — stub `getMatches` to reject with SupabaseError, assert `mockToastController.create` called + `component.currentMatches === []` + `mockLogger.error` called.
+          - "historicalGameweeks is derived from getGameweeks filtered by is_completed" — stub `getGameweeks` returning mixed completed/pending rows, assert `component.historicalGameweeks` contains only the completed `gameweek_number`s sorted descending.
+
+    - **Acceptance criteria**:
+      1. Zero `mockDataService.` references remain in `frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.ts`. Verify: `grep -n "mockDataService\." frontend/src/app/platforms/group-admin/pages/predictions/predictions.page.ts` returns zero hits.
+      2. Zero `MockDataService` imports remain in `predictions.page.ts` and `predictions.page.spec.ts`. Verify: `grep -rn "MockDataService" frontend/src/app/platforms/group-admin/pages/predictions/` returns zero hits.
+      3. `cd frontend && npm test -- --testPathPattern=group-admin/pages/predictions/predictions.page.spec` passes with zero failures. All 12 pre-existing specs still pass; the 3 new specs also pass.
+      4. `cd frontend && npm test` (full suite) passes — no cross-file regressions.
+      5. `cd frontend && npm run build:prod` completes with zero TypeScript errors. This is the type-safety gate: snake-case DB fields on `Match` vs camelCase local shape will trip any missed mapping site at compile time.
+      6. RLS deadline gate preserved: if `getGameweekDeadline.isPast === false`, `groupPredictions` stays `[]` and `predictionsLocked === true`, identical to player-side behaviour. Already true in the existing `loadVisibilityAndPredictions` — no regression introduced.
+      7. Template renders cleanly: no runtime "undefined is not an object" errors when a gameweek has no completed matches or no predictions (empty-state handled by the `*ngIf` guards at `predictions.page.html:127`).
+      8. **Manual smoke checklist** (cannot E2E without seeded Supabase data — documented for the implementer to run against a staging DB with a seeded admin + 2-3 test players submitting predictions for a past-deadline gameweek):
+         - Admin opens `/group-admin/predictions` → sees loading spinner, then the "Make Predictions" tab with real gameweek + real matches.
+         - Admin switches to "All Predictions" tab BEFORE deadline → sees locked-card placeholder.
+         - Admin switches to "All Predictions" AFTER deadline → sees `groupPredictions` list with real player usernames + scores.
+         - Multi-group admin (if applicable) silently lands on `adminGroups[0]` — acceptable MVP behaviour (documented 4.3 backlog).
+         - No console errors; no mock data visible anywhere.
+
+    - **Test plan (Red-Green)**:
+      - **Red phase**: the 3 NEW specs at the end of `predictions.page.spec.ts` will fail against the current implementation:
+        - `loadMatches from getMatches` fails because `loadMatches` currently calls `mockDataService.getMatchesForGameweek` (not `supabaseDataService.getMatches`). Mock `getMatches` will be stubbed but never called → assertion fails.
+        - `loadMatches error path` fails for the same reason.
+        - `historicalGameweeks from getGameweeks` fails because `loadMatches` currently calls `mockDataService.getAvailableHistoricalGameweeks` (not derived from `getGameweeks`).
+      - **Green phase**: implement the 4 replacements (L759 matches, L762 historical gameweeks, L775 historical matches, the mapping helper) and the 3 new specs pass. Pre-existing specs unchanged and still pass.
+      - **Order of operations is critical** (see Implementation order below): update the mock TestBed setup BEFORE removing the `MockDataService` provider to keep the pre-existing 12 specs green throughout.
+
+    - **Implementation order (strict — each step must leave the suite Green before proceeding)**:
+      1. **Add `getMatches` + `getGameweeks` stubs additively** to the existing `beforeEach` in `predictions.page.spec.ts` (do not touch anything else in the spec yet): `mockSupabaseDataService.getMatches = jest.fn().mockResolvedValue([]); mockSupabaseDataService.getGameweeks = jest.fn().mockResolvedValue([]);`. Run `npm test -- --testPathPattern=group-admin.*predictions.page.spec` — still Green.
+      2. **Replace gameweek resolution (L199, L205)** — delete the mock constructor-body seeding; add an async `loadCurrentGameweek()` called from `ngOnInit` that uses `seasonService.getCurrentGameweek()` for the number and synthesizes a minimal `currentGameWeek` shape with `deadline: null` + `matches: []`. Run the focused spec + `npm run build:prod`. Green.
+      3. **Replace match fetching (L759 `loadMatches`)** — wire `supabaseDataService.getMatches(this.currentGameweek)` + add the `toMatchViewModel` mapping helper. Wrap in try/catch. Run focused spec — 2 of the 3 new specs now pass (current + error). Green.
+      4. **Replace historical matches fetching (L775 `updateHistoricalMatches`)** — same `getMatches` + mapping. Green.
+      5. **Replace historical gameweeks (L762 — inside `loadMatches`)** — call `getGameweeks()`, filter, sort. Run focused spec — 3rd new spec passes. Green.
+      6. **Delete `updateLiveScores` (L788) + `startLiveScoreUpdates` (L778)** and the `ionViewWillEnter` call to `startLiveScoreUpdates` (L747). Run focused spec — Green (no spec exercises the timer).
+      7. **Inline `getMatchTime` / `isMatchFinished` / `isMatchLive` (L796-806)** as local utilities reading DB/view-model `status`. Green.
+      8. **Delete `loadGameweekPredictions` (L596-600) + callers** (`ngOnInit` L212, navigateGameweek `previousGameweek`/`nextGameweek` L473, L481). Delete `filterPredictions`. Green.
+      9. **Delete the legacy template block** in `predictions.page.html` (L136-284 — gameweek nav + search/filter + players-list). Green.
+      10. **Remove `MockDataService` import + constructor param + TestBed provider + `mockMockDataService` object** from both files. Run full suite: `npm test`. All 12 pre-existing specs + 3 new specs pass. Green.
+      11. **Final gate**: `npm run build:prod` + `npm test`. Both Green = done.
+
+    - **Risks**:
+      - **Template binding breakage at runtime** (highest): Angular templates fail silently on undefined property reads — a missed `homeScore → home_score` mapping won't surface in `build:prod`. Mitigation: the 3 new specs assert the mapped view-model shape; also, the "Make Predictions" tab template (L69-106) already binds the camelCase fields so preserving the local `Match` interface + mapping at the service boundary keeps template bindings valid.
+      - **Polling timer zombie**: if `startLiveScoreUpdates` is called anywhere besides `ionViewWillEnter` (grep confirms it's not), deleting the method without clearing the interval leaves a dangling timer. Mitigated by the `ionViewWillLeave` `clearInterval` guard — safe even if the field is null.
+      - **Multi-group admin silent default**: `resolveAdminGroupId` picks `adminGroups[0]`. Real admins with 2+ groups see only the first. Documented inline + in 4.3 backlog. Accept for MVP.
+      - **Historical gameweeks pre-4.2.7 column name bug**: verified clean — `getGameweeks` orders by `gameweek_number` (correct column), not the stale `number` (4.2.7 fixed all stale refs). No regression risk.
+      - **RLS deadline gate on admin vs player**: same RLS policy applies to both (migration 005 — group membership + deadline). Admin IS a group member (admin_id = user_id + membership row inserted on `createGroup`). No admin-specific RLS path, so visibility semantics match player-side exactly. Covered by the existing `getGameweekDeadline` pre-check.
+      - **Spec mock scaffolding cleanup fallout**: removing the `MockDataService` provider from TestBed only works if the component no longer injects it. Step 10 of the implementation order is intentionally last to avoid test breakage mid-refactor.
+      - **"Never modify passing tests" tension**: removing the `MockDataService` provider from TestBed IS a modification, but zero assertions change — the provider removal is purely scaffolding. Analogous to the 4.2.7 additive-mock pattern, inverted. Flag in commit message.
+      - **Dead legacy template removal could confuse a reviewer**: the L187-284 block represents 97 lines of template deletion. Commit message must explicitly name it as "redundant with the `groupPredictions` list at L127 since 3.3.3 rolled out the simple renderer; rich renderer was mock-only and duplicated the data".
+
+    - **Non-goals (out of scope for this slice — do NOT scope-creep into these)**:
+      - NOT extracting `PredictionVisibilityService.load(groupId, gameweek)` to collapse the duplicated `loadVisibilityAndPredictions` between player group-standings + group-admin predictions pages — queued in 4.3 Architecture / refactors.
+      - NOT removing `MockDataService` from the entire codebase — still consumed by player pages' mock dev paths. This task removes it from ONE file only.
+      - NOT fixing the multi-group admin selector (`resolveAdminGroupId` picks `adminGroups[0]` silently) — queued in 4.3 Admin UX nitpicks. MVP accepts the single-group default with an inline doc comment.
+      - NOT adding live-score auto-refresh. The sync Edge Function (4.0.6) handles server-side match status updates; UI refresh via polling was a mock-era affordance. If user feedback post-MVP demands live updates, that's a separate slice (probably Supabase realtime subscription, not `setInterval`).
+      - NOT typing `groupPredictions: any[]` to `GroupPrediction { username?: string; gameweek_number: number; home_score: number; away_score: number }[]` — queued in 4.3 Typed interfaces.
+      - NOT replacing the 1..N historical-gameweeks iteration pattern elsewhere in the codebase — this task derives from `getGameweeks()` for this page only.
+      - NOT fixing the `currentGameweek: number` vs `currentGameWeek: GameWeek` camelCase/PascalCase typo — cosmetic; queued in 4.3 dead-code/test-hygiene if it ever bites. Keeps the diff minimal.
+      - NOT adding a `ngOnDestroy` hook to the page for timer cleanup — the existing `ionViewWillLeave` suffices.
+
   - [x] **4.2.10 Purge debug + dead auth surface** (Size: XS)
     - **Description**: `/debug-auth` is routed at `frontend/src/app/app.routes.ts:6-9` with zero guards and publicly reachable — it exposes the current user/session, a prefilled test email, and buttons for Emergency Reset / Clear Auth Locks / Test Login. Launch-blocker: must be gone before real users hit the app. Deletes 3 orphan files (debug page, `FirstLoginFixer` utility, superseded `SuperAdminAuthService`) and removes the route + import.
     - **Depends on**: None (orthogonal cleanup)
