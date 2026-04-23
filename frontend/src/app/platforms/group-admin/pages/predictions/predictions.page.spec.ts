@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import { PredictionsPage } from './predictions.page';
-import { MockDataService } from '@core/services/mock-data.service';
 import { GroupService } from '@core/services/group.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
@@ -13,7 +12,6 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
   let component: PredictionsPage;
   let fixture: ComponentFixture<PredictionsPage>;
   let mockRouter: ReturnType<typeof createMockRouter>;
-  let mockMockDataService: any;
   let mockGroupService: any;
   let mockSeasonService: any;
   let mockSupabaseDataService: any;
@@ -33,24 +31,6 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
   beforeEach(async () => {
     mockRouter = createMockRouter();
 
-    mockMockDataService = {
-      getCurrentGameweek: jest.fn().mockReturnValue(7),
-      getCurrentGameweekData: jest.fn().mockReturnValue({
-        number: 7,
-        isSpecial: false,
-        status: 'active',
-        deadline: new Date('2024-08-17T14:00:00Z'),
-        matches: [],
-      }),
-      getGroupAdminPredictions: jest.fn().mockReturnValue([]),
-      getMatchesForGameweek: jest.fn().mockReturnValue([]),
-      getAvailableHistoricalGameweeks: jest.fn().mockReturnValue([]),
-      updateLiveScores: jest.fn(),
-      getMatchTime: jest.fn().mockReturnValue(''),
-      isMatchFinished: jest.fn().mockReturnValue(false),
-      isMatchLive: jest.fn().mockReturnValue(false),
-    };
-
     mockGroupService = {
       getAdminGroups: jest.fn().mockResolvedValue([makeAdminGroup()]),
     };
@@ -65,6 +45,8 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
         .fn()
         .mockResolvedValue({ deadline: '2024-08-17T14:00:00Z', isPast: false }),
       getGroupPredictions: jest.fn().mockResolvedValue([]),
+      getMatches: jest.fn().mockResolvedValue([]),
+      getGameweeks: jest.fn().mockResolvedValue([]),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -80,7 +62,6 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
       imports: [PredictionsPage],
       providers: [
         { provide: Router, useValue: mockRouter },
-        { provide: MockDataService, useValue: mockMockDataService },
         { provide: GroupService, useValue: mockGroupService },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
@@ -286,5 +267,140 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
 
     const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
     expect(spinnerAfterLoad).toBeNull();
+  });
+});
+
+describe('PredictionsPage (Task 4.2.11 — Supabase-backed matches + gameweeks)', () => {
+  let component: PredictionsPage;
+  let fixture: ComponentFixture<PredictionsPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockGroupService: any;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+  let consoleErrorSpy: jest.SpyInstance;
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockGroupService = {
+      getAdminGroups: jest.fn().mockResolvedValue([
+        { id: 'group-abc', name: 'Admin Group', code: 'ADM123', admin_id: 'admin-1', members: [] },
+      ]),
+    };
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+    };
+
+    mockSupabaseDataService = {
+      getGameweekDeadline: jest
+        .fn()
+        .mockResolvedValue({ deadline: '2024-08-17T14:00:00Z', isPast: false }),
+      getGroupPredictions: jest.fn().mockResolvedValue([]),
+      getMatches: jest.fn().mockResolvedValue([]),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = { create: jest.fn().mockResolvedValue(mockToast) };
+
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await TestBed.configureTestingModule({
+      imports: [PredictionsPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: GroupService, useValue: mockGroupService },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PredictionsPage);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    if ((component as any).liveScoreUpdateInterval) {
+      clearInterval((component as any).liveScoreUpdateInterval);
+    }
+  });
+
+  it('loadMatches populates currentMatches from supabaseDataService.getMatches with camelCase mapping and status completed->finished', async () => {
+    mockSeasonService.getCurrentGameweek.mockReturnValue(7);
+    mockSupabaseDataService.getMatches.mockResolvedValue([
+      {
+        id: 'm1',
+        home_team: 'Arsenal',
+        away_team: 'Chelsea',
+        kickoff_time: '2024-08-17T14:00:00Z',
+        gameweek: 7,
+        season_id: 's',
+        status: 'completed',
+        home_score: 2,
+        away_score: 1,
+        created_at: 'x',
+        updated_at: 'x',
+      },
+    ]);
+
+    await component.ngOnInit();
+    await component.loadMatches();
+
+    expect(mockSupabaseDataService.getMatches).toHaveBeenCalledWith(7);
+    expect(component.currentMatches.length).toBe(1);
+    expect(component.currentMatches[0].homeTeam).toBe('Arsenal');
+    expect(component.currentMatches[0].awayTeam).toBe('Chelsea');
+    expect(component.currentMatches[0].kickoff).toBe('2024-08-17T14:00:00Z');
+    expect(component.currentMatches[0].homeScore).toBe(2);
+    expect(component.currentMatches[0].awayScore).toBe(1);
+    expect(component.currentMatches[0].status).toBe('finished');
+  });
+
+  it('surfaces a toast and empties currentMatches when getMatches rejects during hydration', async () => {
+    const err = new Error('Network down');
+    mockSupabaseDataService.getMatches.mockRejectedValueOnce(err);
+
+    // Review-fix for 4.2.11: match fetching moved from loadMatches() into
+    // hydrateGameweekView() so that currentGameWeek.matches (template-bound)
+    // is populated alongside currentMatches. ngOnInit triggers
+    // loadCurrentGameweek → hydrateGameweekView → getMatches → reject here.
+    await component.ngOnInit();
+
+    expect(component.currentMatches).toEqual([]);
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Unable to load matches',
+      }),
+    );
+    expect(mockToast.present).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'group-admin-predictions.hydrateGameweekView.matches',
+      err,
+    );
+  });
+
+  it('historicalGameweeks is derived from getGameweeks filtered by is_completed and sorted descending', async () => {
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([
+      { id: 'g1', gameweek_number: 1, is_completed: true },
+      { id: 'g2', gameweek_number: 2, is_completed: false },
+      { id: 'g3', gameweek_number: 3, is_completed: true },
+      { id: 'g4', gameweek_number: 4, is_completed: false },
+      { id: 'g5', gameweek_number: 5, is_completed: true },
+    ]);
+
+    await component.ngOnInit();
+    await component.loadMatches();
+
+    expect(component.historicalGameweeks).toEqual([5, 3, 1]);
   });
 });

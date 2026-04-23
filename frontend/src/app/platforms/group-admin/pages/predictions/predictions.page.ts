@@ -52,12 +52,12 @@ import {
   checkmarkCircleOutline,
   lockClosedOutline,
 } from 'ionicons/icons';
-import { MockDataService } from '../../../../core/services/mock-data.service';
 import { GroupService } from '@core/services/group.service';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { LoggerService } from '@core/services/logger.service';
 import { SupabaseError } from '@core/errors/supabase-error';
+import { Match as SupabaseMatch } from '../../../../services/supabase.service';
 import { Router } from '@angular/router';
 
 interface GameWeek {
@@ -185,7 +185,6 @@ export class PredictionsPage implements OnInit {
   isLoading = false;
 
   constructor(
-    private mockDataService: MockDataService,
     private router: Router,
     private groupService: GroupService,
     private seasonService: SeasonService,
@@ -194,34 +193,108 @@ export class PredictionsPage implements OnInit {
     private logger: LoggerService,
   ) {
     addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,lockClosedOutline,});
-    
-    // Initialize current gameweek from MockDataService
-    this.currentGameweek = this.mockDataService.getCurrentGameweek();
-    
+
+    // Task 4.2.11: seed sane defaults synchronously so the template can render
+    // immediately. Real values are hydrated asynchronously from SupabaseData /
+    // SeasonService in `ngOnInit` → `loadCurrentGameweek()`.
+    this.currentGameweek = 1;
     this.gameweeks = this.getSampleGameweeks();
     this.selectedGameweek = this.gameweeks[0];
     this.allPredictions = [];
     this.filteredPredictions = [];
-    this.currentGameWeek = this.mockDataService.getCurrentGameweekData();
+    this.currentGameWeek = {
+      number: 1,
+      isSpecial: false,
+      status: 'active',
+      deadline: new Date(0),
+      matches: [],
+    };
     this.pastPredictions = [];
   }
 
   async ngOnInit() {
     this.isLoading = true;
     try {
-      this.loadGameweekPredictions();
+      await this.loadCurrentGameweek();
       await this.resolveAdminGroupId();
     } finally {
       this.isLoading = false;
     }
   }
 
+  /**
+   * Task 4.2.11: resolve the current gameweek number via `SeasonService` so
+   * downstream match fetches hit the real season state. Falls back silently
+   * to `1` on any error — the page stays usable with an empty matches state.
+   */
+  private async loadCurrentGameweek(): Promise<void> {
+    try {
+      await this.seasonService.init();
+      this.currentGameweek = this.seasonService.getCurrentGameweek();
+      await this.hydrateGameweekView(this.currentGameweek);
+    } catch (err) {
+      this.logger.error('group-admin-predictions.loadCurrentGameweek', err);
+    }
+  }
+
+  /**
+   * Task 4.2.11: hydrate `currentGameWeek` (the template-bound view-model)
+   * from real DB state for a given gameweek number — deadline, is_special,
+   * and the fixtures list all come from Supabase here. Called by
+   * `loadCurrentGameweek` on init and by `navigateGameweek` when the admin
+   * steps through weeks. Keeping the deadline + matches hydration in ONE
+   * helper prevents the "1970-01-01 deadline + empty matches list" regression
+   * that surfaced in review (template binds `currentGameWeek.matches`, not
+   * `currentMatches`, so the fields must move together).
+   */
+  private async hydrateGameweekView(gameweekNumber: number): Promise<void> {
+    // Find the gameweek row so we can read deadline + is_special.
+    let gameweekRow: { deadline?: string; is_special?: boolean } | null = null;
+    try {
+      const gameweeks = await this.supabaseDataService.getGameweeks();
+      gameweekRow =
+        (gameweeks || []).find(
+          (gw: { gameweek_number: number }) =>
+            gw.gameweek_number === gameweekNumber
+        ) || null;
+    } catch (err) {
+      this.logger.error('group-admin-predictions.hydrateGameweekView.gw', err);
+    }
+
+    // Fetch matches for this gameweek.
+    let matches: Match[] = [];
+    try {
+      const rows = await this.supabaseDataService.getMatches(gameweekNumber);
+      matches = rows.map((row) => this.toMatchViewModel(row));
+    } catch (err) {
+      this.logger.error(
+        'group-admin-predictions.hydrateGameweekView.matches',
+        err
+      );
+      const msg =
+        err instanceof SupabaseError
+          ? err.userMessage
+          : 'Unable to load matches';
+      await this.showErrorToast(msg);
+    }
+
+    this.currentGameweek = gameweekNumber;
+    this.currentMatches = matches;
+    this.currentGameWeek = {
+      ...this.currentGameWeek,
+      number: gameweekNumber,
+      isSpecial: gameweekRow?.is_special ?? false,
+      deadline: gameweekRow?.deadline
+        ? new Date(gameweekRow.deadline)
+        : new Date(0),
+      matches,
+    };
+  }
+
   async tabChanged() {
     if (this.selectedTab !== 'all') {
       return;
     }
-
-    this.filterPredictions();
 
     if (this.allPredictionsLoaded) {
       return;
@@ -244,6 +317,12 @@ export class PredictionsPage implements OnInit {
     this.allPredictionsLoaded = loaded;
   }
 
+  /**
+   * MVP single-group assumption: picks `adminGroups[0]` silently. A multi-
+   * group admin UI (selector / route param) is queued for 4.3 ("admin
+   * multi-group handling" in Admin UX nitpicks). Acceptable for MVP because
+   * the first real cohort is a single-admin-single-group setup.
+   */
   private async resolveAdminGroupId(): Promise<void> {
     try {
       const adminGroups = await this.groupService.getAdminGroups();
@@ -466,73 +545,6 @@ export class PredictionsPage implements OnInit {
     };
   }
 
-  previousGameweek() {
-    if (this.currentGameweekIndex > 0) {
-      this.currentGameweekIndex--;
-      this.selectedGameweek = this.gameweeks[this.currentGameweekIndex];
-      this.loadGameweekPredictions();
-    }
-  }
-
-  nextGameweek() {
-    if (this.currentGameweekIndex < this.gameweeks.length - 1) {
-      this.currentGameweekIndex++;
-      this.selectedGameweek = this.gameweeks[this.currentGameweekIndex];
-      this.loadGameweekPredictions();
-    }
-  }
-
-  getGameweekStatusColor(status: string): string {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'completed':
-        return 'primary';
-      default:
-        return 'medium';
-    }
-  }
-
-  getSpecialWeekLabel(type: string | undefined): string {
-    if (!type) return 'Special Week';
-
-    switch (type) {
-      case 'christmas':
-        return 'Christmas Special';
-      case 'endOfSeason':
-        return 'End of Season Special';
-      default:
-        return 'Special Week';
-    }
-  }
-
-  filterPredictions() {
-    this.filteredPredictions = this.allPredictions.filter((player) => {
-      const nameMatch = player.playerName
-        .toLowerCase()
-        .includes(this.searchTerm.toLowerCase());
-
-      let statusMatch = true;
-      switch (this.filterStatus) {
-        case 'my':
-          statusMatch = player.isCurrentUser === true;
-          break;
-        case 'submitted':
-          statusMatch = player.predictions.length > 0;
-          break;
-        case 'pending':
-          statusMatch = player.predictions.length === 0;
-          break;
-        default: // 'all'
-          statusMatch = true;
-      }
-
-      return nameMatch && statusMatch;
-    });
-  }
-
   onSubmitPredictions() {
     // Get only the matches that have predictions
     const predictedMatches = this.currentGameWeek.matches
@@ -574,11 +586,6 @@ export class PredictionsPage implements OnInit {
 
     // Reset submit button state
     this.canSubmit = false;
-
-    // Force UI update
-    this.filterPredictions();
-
-
   }
 
   resetPredictions() {
@@ -591,12 +598,6 @@ export class PredictionsPage implements OnInit {
     // Reset states
     this.canSubmit = false;
     this.showTooManyPredictionsWarning = false;
-  }
-
-  private loadGameweekPredictions() {
-    // Load group admin predictions from MockDataService
-    this.allPredictions = this.mockDataService.getGroupAdminPredictions(this.selectedGameweek.number);
-    this.filterPredictions();
   }
 
   private getSampleGameweeks(): GameWeek[] {
@@ -727,82 +728,123 @@ export class PredictionsPage implements OnInit {
   navigateGameweek(delta: number) {
     const newGameweek = this.currentGameWeek.number + delta;
     if (newGameweek >= 1 && newGameweek <= 38) {
-      // TODO: Load gameweek data from service
-      this.currentGameWeek = {
-        ...this.currentGameWeek,
-        number: newGameweek,
-      };
-      this.loadGameweekMatches(newGameweek);
+      // Fire-and-forget: hydration updates `currentGameWeek` (deadline +
+      // is_special + matches) for the new gameweek. Admin clicks prev/next
+      // and sees the real fixtures for that week.
+      void this.hydrateGameweekView(newGameweek);
     }
   }
 
-  loadGameweekMatches(gameweek: number) {
-    // TODO: Implement service call to load matches for the gameweek
-
-  }
-
-  ionViewWillEnter() {
-    this.loadMatches();
-    // Start live score updates
-    this.startLiveScoreUpdates();
+  async ionViewWillEnter() {
+    // Re-hydrate the current gameweek view (deadline + is_special + matches)
+    // on every entry so navigating away and back picks up any new matches
+    // synced by the Edge Function. Also refresh the historical selector list.
+    await this.hydrateGameweekView(this.currentGameweek);
+    await this.loadMatches();
   }
 
   ionViewWillLeave() {
-    // Clean up interval when leaving the page
+    // Clean up interval when leaving the page. `liveScoreUpdateInterval` is
+    // never scheduled post-4.2.11 (live polling was a mock-era affordance),
+    // so this is an idempotent no-op today. Leaving the guard in place keeps
+    // the page defensive if live polling ever returns via realtime.
     if (this.liveScoreUpdateInterval) {
       clearInterval(this.liveScoreUpdateInterval);
     }
   }
 
-  loadMatches() {
-    // Load current matches from MockDataService
-    this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);
+  /**
+   * Task 4.2.11: derive the historical-gameweek selector list from completed
+   * rows in the `gameweeks` table + seed `selectedHistoryGameweek` to the
+   * most recent completed one. Current-gameweek fixtures are handled by
+   * `hydrateGameweekView` — this method only covers the history sidebar.
+   * Errors fail-open (empty history) so the main "Make Predictions" tab is
+   * unaffected.
+   */
+  async loadMatches(): Promise<void> {
+    try {
+      const gameweeks = await this.supabaseDataService.getGameweeks();
+      this.historicalGameweeks = (gameweeks || [])
+        .filter((gw: any) => gw.is_completed === true)
+        .map((gw: any) => gw.gameweek_number)
+        .sort((a: number, b: number) => b - a);
+    } catch (err) {
+      this.logger.error('group-admin-predictions.loadHistoricalGameweeks', err);
+      this.historicalGameweeks = [];
+    }
 
-    // Get available historical gameweeks from MockDataService
-    this.historicalGameweeks = this.mockDataService.getAvailableHistoricalGameweeks();
-
-    // If we have historical gameweeks, set the selected one
     if (this.historicalGameweeks.length > 0) {
       this.selectedHistoryGameweek = this.historicalGameweeks[0];
     }
 
-    // Get matches for selected historical gameweek
-    this.updateHistoricalMatches();
+    await this.updateHistoricalMatches();
   }
 
-  updateHistoricalMatches() {
-    // Get historical matches from MockDataService
-    this.historicalMatches = this.mockDataService.getMatchesForGameweek(this.selectedHistoryGameweek);
+  async updateHistoricalMatches(): Promise<void> {
+    if (!this.selectedHistoryGameweek || this.historicalGameweeks.length === 0) {
+      this.historicalMatches = [];
+      return;
+    }
+    try {
+      const rows = await this.supabaseDataService.getMatches(this.selectedHistoryGameweek);
+      this.historicalMatches = rows.map((row) => this.toMatchViewModel(row));
+    } catch (err) {
+      this.logger.error('group-admin-predictions.updateHistoricalMatches', err);
+      this.historicalMatches = [];
+      const msg =
+        err instanceof SupabaseError ? err.userMessage : 'Unable to load historical matches';
+      await this.showErrorToast(msg);
+    }
   }
 
-  startLiveScoreUpdates() {
-    // Update live scores every minute
-    this.liveScoreUpdateInterval = setInterval(() => {
-      this.updateLiveScores();
-    }, 60000); // 60000ms = 1 minute
-
-    // Initial update
-    this.updateLiveScores();
+  /**
+   * Translate a Supabase DB-shape `matches` row into the camelCase local
+   * view-model the template binds to (`homeTeam`, `awayTeam`, `kickoff`,
+   * `homeScore`, `awayScore`). Also maps `status: 'completed'` →
+   * `'finished'` to match the legacy template contract. The DB table has no
+   * `venue` column (migration 003), so `venue` is set to the empty string
+   * — template bindings tolerate empty strings via `*ngIf` guards.
+   */
+  private toMatchViewModel(row: SupabaseMatch): Match {
+    // Map DB status union to the local view-model status. The DB's
+    // `'cancelled'` (per migration 003) is collapsed to `'scheduled'` — the
+    // local view-model union has no dedicated cancelled state yet. Admins
+    // should recognize a cancelled match by the empty final-score column.
+    // If PL cancellations/postponements during GW34-38 surface as a real UX
+    // issue, extend the local `Match['status']` union in 4.3 to carry
+    // `'cancelled'` explicitly.
+    const status: Match['status'] =
+      row.status === 'completed'
+        ? 'finished'
+        : row.status === 'live'
+          ? 'live'
+          : 'scheduled';
+    return {
+      id: Number(row.id) || 0,
+      gameweek: row.gameweek,
+      homeTeam: row.home_team,
+      awayTeam: row.away_team,
+      kickoff: row.kickoff_time,
+      venue: '',
+      homeScore: row.home_score ?? null,
+      awayScore: row.away_score ?? null,
+      status,
+    };
   }
 
-  updateLiveScores() {
-    // Update live scores using MockDataService
-    this.mockDataService.updateLiveScores();
-    
-    // Reload current matches with updated live scores
-    this.currentMatches = this.mockDataService.getMatchesForGameweek(this.currentGameweek);
-  }
-
-  getMatchTime(match: any): string {
-    return this.mockDataService.getMatchTime(match);
+  // Task 4.2.11 — live-minute tracking is not in the MVP DB schema. Returning
+  // an empty string is correct for MVP; revisit for a 4.3 realtime feature if
+  // user feedback demands in-match status strings.
+  getMatchTime(_match: any): string {
+    return '';
   }
 
   isMatchFinished(match: any): boolean {
-    return this.mockDataService.isMatchFinished(match);
+    return match?.status === 'finished' || match?.status === 'completed';
   }
 
   isMatchLive(match: any): boolean {
-    return this.mockDataService.isMatchLive(match);
+    return match?.status === 'live';
   }
 
   getScoreClass(match: any): string {
