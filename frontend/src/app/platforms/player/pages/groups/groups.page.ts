@@ -37,7 +37,6 @@ import {
   footballOutline,
   personOutline,
   eyeOutline,
-  cashOutline,
   hourglassOutline,
   logOutOutline,
 } from 'ionicons/icons';
@@ -117,7 +116,6 @@ export class GroupsPage implements OnInit {
       footballOutline,
       personOutline,
       eyeOutline,
-      cashOutline,
       hourglassOutline,
       logOutOutline,
     });

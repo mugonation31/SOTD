@@ -1264,6 +1264,28 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - **The 3.1.4 wrap's value is probabilistic** — see test plan (b). No single deterministic assertion proves "no flake ever". The suite-completes-without-hang signal is the practical bar. Accept that this task's value shows up months from now when a future refactor to `CountdownTimerComponent` would have caused a flake cascade; today it's preventive.
       - **Doc-comment drift** — the inline comment pinning `deadlinePassed` as source of truth will rot if someone refactors `onDeadlinePassed` into a derived getter or moves the `isLocked` flip elsewhere. Mitigation: the cross-reference in the `isLocked` field docblock doubles as a second tripwire; a grep for `deadlinePassed` surfaces both.
 
+  - [x] **4.2.9 Remove phantom prize-pool UI** (Size: XS)
+    - **Description**: Migration 004 stripped all entry-fee / prize-money columns from the `groups` table ("Prediction groups - simplified, no prize money", `frontend/supabase/migrations/004_groups_table.sql:32`) and the terms page already states Predict3 is a prediction-only platform (`frontend/src/app/platforms/auth/pages/terms/terms.page.html:118`). Three frontend UI sites still reference prize pools / entry fees and read `undefined` off real Supabase `groups` rows — the group-admin dashboard silently renders a `£0` "Prize Pool" card and the welcome landing page advertises "Prize Pools" as a feature, contradicting positioning. Pure mechanical deletion; no new tests.
+    - **Depends on**: None (orthogonal cleanup)
+    - **Files**:
+      - Modify `frontend/src/app/platforms/welcome/welcome.page.ts`: remove the `{ icon: 'cash-outline', title: 'Prize Pools', description: 'Optional entry fees and prize distributions' }` object from the `features` array (L81-85); also drop the now-dead `cashOutline` import (L27) and its entry in `addIcons({...})` (L99) — verified sole usage.
+      - Modify `frontend/src/app/platforms/group-admin/pages/dashboard/dashboard.page.ts`: remove `prizePool: number;` + `paidMembers: number;` from the `GroupStats` interface (L80-81); remove `prizePool: 0,` + `paidMembers: 0,` from the `groupStats` init (L194-195); remove the `let prizePool = 0; let paidMembers = 0;` declarations, the dead `if (group.type === 'prize') { ... }` branch (L288-291 — `group.type` / `group.entryFee` don't exist on real Supabase rows), and the `prizePool,` / `paidMembers,` emissions in the returned object inside `calculateGroupStats` (L278-307); also drop the now-dead `CurrencyPipe` import (L23) and its entry in the component's `imports` array (L171) — verified sole usage was the removed template line.
+      - Modify `frontend/src/app/platforms/group-admin/pages/dashboard/dashboard.page.html`: remove the full `<ion-col size="12" size-md="6" size-lg="3">` block containing the "Prize Pool" stat card (L317-330).
+    - **Acceptance criteria**:
+      1. `grep -rnE "prizePool|entryFee|entry_fee|Prize Pool|paidMembers|type.*'prize'" frontend/src/` returns ZERO hits outside `frontend/src/app/platforms/auth/pages/terms/terms.page.html:118` (the legal disclaimer, which is in scope to preserve unchanged).
+      2. `cd frontend && npm test` passes with zero new failures (no `dashboard.page.spec.ts` exists to touch; `welcome.page.spec.ts` has no assertions on the `features` array — verified).
+      3. `cd frontend && npm run build:prod` completes with zero TypeScript errors — this is the safety net for any missed consumer of `groupStats.prizePool` / `groupStats.paidMembers`.
+      4. Group-admin dashboard renders without the Prize Pool stat card; welcome page "Why Predict3" features section no longer advertises Prize Pools.
+    - **Test plan**: Zero new tests — mechanical deletion. No existing passing spec asserts on the removed surface (verified: no `dashboard.page.spec.ts`; `welcome.page.spec.ts` has no `features` assertions). The TS compile (`npm run build:prod`) is the correctness gate.
+    - **Non-goals**:
+      - NOT touching `frontend/src/app/platforms/auth/pages/terms/terms.page.html:118` — the legal disclaimer is correct as-is and must stay untouched.
+      - NOT modifying migration 004 — the DB already has no fee/prize columns; this task only syncs the UI.
+      - NOT adding an off-platform prize tracker, entry-fee capture field, or "prizes handled elsewhere" UI affordance — the terms page copy is sufficient for MVP.
+      - NOT fixing the pre-existing dead `CurrencyPipe` import in `group-admin/pages/members/members.page.ts` (surfaced during this audit) — unrelated housekeeping, queue in 4.3.
+      - NOT introducing a typed `GroupStats` cleanup beyond removing the two offending fields.
+    - **Risks**:
+      - **Silent consumer miss**: if any other component (spec, service, template) reads `groupStats.prizePool` / `groupStats.paidMembers` off the removed interface fields, TS compile catches it. `npm run build:prod` is the safety net — a successful compile proves no hidden reader remains.
+
 - [ ] **4.3 Post-launch polish** (Size: L)
   - **Description**: Maintainability, typing, performance, edge-case, and cleanup items accumulated during MVP development. Intentionally deferred from 4.2 because each works correctly today and MVP shipping is gated on real-user feedback, not these. Triage after launch based on what actually bites.
   - **Depends on**: 4.2 (MVP live)

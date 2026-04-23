@@ -20,12 +20,11 @@ import {
   IonLabel,
   IonProgressBar,
 } from '@ionic/angular/standalone';
-import { NgFor, NgIf, DatePipe, CurrencyPipe, TitleCasePipe } from '@angular/common';
+import { NgFor, NgIf, DatePipe, TitleCasePipe } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
-  cashOutline,
   trophyOutline,
   statsChartOutline,
   timeOutline,
@@ -77,8 +76,6 @@ interface CurrentGameweek {
 interface GroupStats {
   activeMembers: number;
   totalMembers: number;
-  prizePool: number;
-  paidMembers: number;
   jokersAvailable: number;
   jokersUsed: number;
   engagementRate: number;
@@ -168,7 +165,6 @@ interface CommunityMilestone {
     IonProgressBar,
     RouterLink,
     DatePipe,
-    CurrencyPipe,
     TitleCasePipe,
     NgFor,
     NgIf,
@@ -191,8 +187,6 @@ export class DashboardPage implements OnInit {
   groupStats: GroupStats = {
     activeMembers: 0,
     totalMembers: 0,
-    prizePool: 0,
-    paidMembers: 0,
     jokersAvailable: 0,
     jokersUsed: 0,
     engagementRate: 0,
@@ -230,7 +224,6 @@ export class DashboardPage implements OnInit {
       timeOutline,
       mailOutline,
       peopleOutline,
-      cashOutline,
       starOutline,
       statsChartOutline,
       flashOutline,
@@ -278,24 +271,15 @@ export class DashboardPage implements OnInit {
   private calculateGroupStats(groups: any[]) {
     let totalMembers = 0;
     let activeMembers = 0;
-    let prizePool = 0;
-    let paidMembers = 0;
 
     groups.forEach(group => {
       totalMembers += group.members.length;
       activeMembers += group.members.filter((m: any) => m.status === 'active').length;
-      
-      if (group.type === 'prize') {
-        prizePool += (group.entryFee || 0) * (group.paidMembers || 0);
-        paidMembers += group.paidMembers || 0;
-      }
     });
 
     this.groupStats = {
       activeMembers,
       totalMembers,
-      prizePool,
-      paidMembers,
       jokersAvailable: totalMembers * 2, // Assuming 2 jokers per member
       jokersUsed: Math.floor(totalMembers * 0.6), // Mock calculation
       engagementRate: totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0,

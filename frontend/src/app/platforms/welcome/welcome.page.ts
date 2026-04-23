@@ -24,7 +24,6 @@ import {
   footballOutline,
   trophyOutline,
   starOutline,
-  cashOutline,
   logInOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
@@ -78,11 +77,6 @@ export class WelcomePage implements OnInit {
       title: 'Multiple Groups',
       description: 'Join different groups with friends or colleagues',
     },
-    {
-      icon: 'cash-outline',
-      title: 'Prize Pools',
-      description: 'Optional entry fees and prize distributions',
-    },
   ];
 
   constructor(
@@ -96,7 +90,6 @@ export class WelcomePage implements OnInit {
       footballOutline,
       trophyOutline,
       starOutline,
-      cashOutline,
       logInOutline,
     });
   }
