@@ -825,7 +825,7 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   it('should set currentGameweek.isSpecial from the current gameweek is_special flag', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing-day' }),
     ]);
 
     await component.ngOnInit();
@@ -1823,7 +1823,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('on a special gameweek with 10 matches, predictionsCompleted=true only when hydrated count=10', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing-day' }),
     ]);
     const matches = Array.from({ length: 10 }, (_, i) =>
       buildSupabaseMatch({ id: `m-${i + 1}` })
@@ -2271,7 +2271,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
 
   it('canUseJoker() returns false on a special gameweek', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing-day' }),
     ]);
 
     await component.ngOnInit();
@@ -2619,7 +2619,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('does NOT render .joker-toggle-row when currentGameweek.isSpecial is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing-day' }),
     ]);
 
     await component.ngOnInit();
@@ -2699,7 +2699,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('renders .joker-disabled-note when currentGameweek.isSpecial is true and not locked', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing-day' }),
     ]);
 
     await component.ngOnInit();

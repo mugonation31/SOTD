@@ -440,7 +440,7 @@ export class SupabaseDataService {
   }
 
   /**
-   * For each known special gameweek type (`boxing_day`, `final_day`),
+   * For each known special gameweek type (`boxing-day`, `final-day`),
    * returns the highest-numbered regular gameweek strictly preceding it.
    *
    * Used by the auto-joker flow: when a player has unspent jokers heading
@@ -480,8 +480,8 @@ export class SupabaseDataService {
     };
 
     return {
-      beforeBoxingDay: findBefore('boxing_day'),
-      beforeFinalDay: findBefore('final_day'),
+      beforeBoxingDay: findBefore('boxing-day'),
+      beforeFinalDay: findBefore('final-day'),
     };
   }
 

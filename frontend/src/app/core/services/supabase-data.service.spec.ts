@@ -729,13 +729,13 @@ describe('SupabaseDataService', () => {
   // Last regular gameweek before special
   // -----------------------------------------------------------------------
   describe('getLastRegularGameweekBeforeSpecial', () => {
-    it('should return beforeBoxingDay=18, beforeFinalDay=37 when GW 19 is boxing_day and GW 38 is final_day', async () => {
+    it('should return beforeBoxingDay=18, beforeFinalDay=37 when GW 19 is boxing-day and GW 38 is final-day', async () => {
       const rows: Array<{ gameweek_number: number; is_special: boolean; special_type: string | null }> = [];
       for (let n = 1; n <= 38; n++) {
         if (n === 19) {
-          rows.push({ gameweek_number: n, is_special: true, special_type: 'boxing_day' });
+          rows.push({ gameweek_number: n, is_special: true, special_type: 'boxing-day' });
         } else if (n === 38) {
-          rows.push({ gameweek_number: n, is_special: true, special_type: 'final_day' });
+          rows.push({ gameweek_number: n, is_special: true, special_type: 'final-day' });
         } else {
           rows.push({ gameweek_number: n, is_special: false, special_type: null });
         }
@@ -753,10 +753,10 @@ describe('SupabaseDataService', () => {
 
     it('should return beforeBoxingDay=null when Boxing Day is GW 1 (no prior regular)', async () => {
       const rows = [
-        { gameweek_number: 1, is_special: true, special_type: 'boxing_day' },
+        { gameweek_number: 1, is_special: true, special_type: 'boxing-day' },
         { gameweek_number: 2, is_special: false, special_type: null },
         { gameweek_number: 3, is_special: false, special_type: null },
-        { gameweek_number: 4, is_special: true, special_type: 'final_day' },
+        { gameweek_number: 4, is_special: true, special_type: 'final-day' },
       ];
       const builder = createMockQueryBuilder({ data: rows, error: null });
       mockClient.from.mockReturnValueOnce(builder);
@@ -785,9 +785,9 @@ describe('SupabaseDataService', () => {
         { gameweek_number: 1, is_special: false, special_type: null },
         { gameweek_number: 2, is_special: true, special_type: 'mystery_cup' },
         { gameweek_number: 3, is_special: false, special_type: null },
-        { gameweek_number: 4, is_special: true, special_type: 'boxing_day' },
+        { gameweek_number: 4, is_special: true, special_type: 'boxing-day' },
         { gameweek_number: 5, is_special: false, special_type: null },
-        { gameweek_number: 6, is_special: true, special_type: 'final_day' },
+        { gameweek_number: 6, is_special: true, special_type: 'final-day' },
       ];
       const builder = createMockQueryBuilder({ data: rows, error: null });
       mockClient.from.mockReturnValueOnce(builder);
