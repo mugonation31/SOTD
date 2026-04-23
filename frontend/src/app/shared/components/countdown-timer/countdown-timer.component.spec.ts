@@ -136,7 +136,7 @@ describe('CountdownTimerComponent', () => {
     expect(getText()).toContain('Predictions Locked');
   });
 
-  it('should clean up the interval on destroy so no more ticks fire', () => {
+  it('should call clearInterval exactly once more on destroy (not just whatever stopTicker fired naturally)', () => {
     // Arrange: a future deadline so the ticker is running
     component.deadline = new Date(NOW + 60_000).toISOString();
     fixture.detectChanges();
@@ -145,12 +145,21 @@ describe('CountdownTimerComponent', () => {
     const emitSpy = jest.fn();
     component.deadlinePassed.subscribe(emitSpy);
 
+    // Baseline: capture any clearInterval calls that happened before
+    // destroy (e.g. stopTicker() firing naturally when the deadline
+    // passes). The strict assertion below is "destroy adds exactly one
+    // more call", which catches a regression where ngOnDestroy forgets
+    // to clear the interval — the old `toHaveBeenCalled()` would pass
+    // spuriously in that case because stopTicker() on natural deadline
+    // also clears the interval.
+    const baselineCallCount = clearSpy.mock.calls.length;
+
     // Act: destroy the component, then advance past the deadline
     fixture.destroy();
     jest.advanceTimersByTime(120_000);
 
-    // Assert: clearInterval was called during teardown
-    expect(clearSpy).toHaveBeenCalled();
+    // Assert: destroy triggered exactly one additional clearInterval
+    expect(clearSpy.mock.calls.length).toBe(baselineCallCount + 1);
     // And no "deadlinePassed" event fires after destroy
     expect(emitSpy).not.toHaveBeenCalled();
     // And the rendered text hasn't changed (component's view is torn down,

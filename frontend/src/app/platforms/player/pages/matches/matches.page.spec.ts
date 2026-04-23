@@ -1146,6 +1146,19 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
   });
 
   beforeEach(async () => {
+    // Task 4.2.8 — stabilise countdown-driven specs in this block. The
+    // `CountdownTimerComponent` under the deadline card starts a 1s
+    // setInterval in ngOnInit. Without fake timers that interval keeps
+    // firing across test boundaries, which flakes locked-state specs.
+    // `now: NOW` keeps the fake clock coherent with the existing
+    // `Date.now()` spy below. `doNotFake` preserves microtasks so the
+    // `fixture.whenStable()` call inside the disabled-input test does
+    // not stall waiting for a never-resolving promise.
+    jest.useFakeTimers({
+      now: new Date(NOW),
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
+
     mockRouter = createMockRouter();
 
     mockSeasonService = {
@@ -1182,6 +1195,12 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
   afterEach(() => {
     consoleErrorSpy.mockRestore();
     jest.restoreAllMocks();
+    // Task 4.2.8 — clear any outstanding fake timers (the countdown
+    // component's 1s interval on future-deadline specs where the
+    // fixture was never explicitly destroyed) before swapping back to
+    // real timers, so they do not bleed into subsequent describes.
+    jest.clearAllTimers();
+    jest.useRealTimers();
   });
 
   it('renders <app-countdown-timer> inside the deadline card', async () => {

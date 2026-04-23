@@ -809,6 +809,11 @@ export class MatchesPage implements OnInit {
    * emits its `deadlinePassed` event. Gates `canSubmit()` and
    * `isInputDisabled()`. When the deadline is unknown (null/empty) we
    * intentionally do NOT block — safer default than a false positive.
+   *
+   * Runtime source of truth for the false → true transition is the
+   * `CountdownTimerComponent.deadlinePassed` output event (see
+   * `onDeadlinePassed` below). Do not add a second deadline-check path
+   * without updating both sites — they must stay in lock-step.
    */
   isLocked: boolean = false;
 
@@ -1444,6 +1449,11 @@ export class MatchesPage implements OnInit {
    * or re-fetch. Safe to call multiple times.
    */
   onDeadlinePassed(): void {
+    // Single source of truth for the false → true `isLocked` transition
+    // at runtime: the `CountdownTimerComponent.deadlinePassed` output.
+    // Keep this the ONLY imperative flip site — adding a second
+    // deadline-check (e.g. a separate setInterval in this page) would
+    // desync the UI with the timer component.
     this.isLocked = true;
   }
 
