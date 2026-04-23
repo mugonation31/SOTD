@@ -1044,22 +1044,118 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
       - `ToastController` must resolve from `providedIn: 'root'` scope at router-resolution time — smoke test via dev app.
       - `timeout(5000)` emits `TimeoutError` with `.name === 'TimeoutError'` in rxjs 7+ — fragile pin; acceptable for MVP.
 
-  - [ ] **4.2.7 Typed service returns + remove runtime typeof guards** (Size: S)
-    - **Description**: Tighten loose `any` return types and remove runtime `typeof service.method === 'function'` guards that were added as deliberate workarounds to avoid modifying existing test mocks. With the MVP stabilized, update the legacy mocks (additively) so the guards can come out. Also: replace the brittle `toString()`-based test in `season.service.spec.ts:91-97` with a source-file regex (same pattern as `matches.page.spec.ts:157`). Add the belt-and-braces `isLocked` guard at the top of `matches.page.ts onSubmit()` so direct callers fail-closed even though the button is hidden via `canSubmit()`.
-    - **Depends on**: None (pure refactor, can run any time in 4.2)
+  - [x] **4.2.7 Typed service returns + remove runtime typeof guards** (Size: S)
+    - **Description**: Tighten loose `any` return types on `SupabaseDataService`, remove the runtime `typeof service.method === 'function'` guards that were added as deliberate workarounds to avoid modifying existing test mocks (additively extend the mocks instead), and replace the brittle `SeasonService.toString()`-based assertion with a source-file regex matching the pattern already used at `matches.page.spec.ts:157-162`. The `isLocked` short-circuit at the top of `matches.page.ts onSubmit()` (lines 1202-1208) is already in place from an earlier pass — this task's scope reduces to **adding a regression spec that locks the behaviour in**, not adding new production code for it.
+    - **Depends on**: None (pure refactor; can run any time in 4.2)
+
+    - **Pre-verified scope (from codebase scan, 2026-04-22)**:
+      - `SupabaseDataService` public methods returning `any` / `any[]`: `joinGroup` (L117), `getGroupMembers` (L169), `getGameweeks` (L184), `getActiveGameweek` (L194), `getGameweek` (L205), `getPredictions` (L279), `getPredictionsWithMatches` (L299), `submitPredictions` (L321), `getGroupPredictions` (L343), `getLeaderboard` (L511). **10 methods total.**
+      - `Gameweek` interface does NOT exist yet — `Match`, `PredictionGroup`, `GroupMember`, `Profile` all live in `frontend/src/app/services/supabase.service.ts` (L9-71). Convention: colocate new DB-row interfaces there, not a new `core/interfaces/` dir.
+      - The existing `Prediction` interface in `supabase.service.ts:52-62` has a `group_id` field that does **NOT** exist on the real `predictions` table (migration 006 columns: `user_id`, `match_id`, `gameweek_id`, `gameweek_number`, `home_score`, `away_score`, `points_earned`, `joker_used`). Must not be reused as-is — either rewrite in place or add a new `PredictionRow` interface and leave the stale one to 4.3 triage (recommended: rewrite in place since keeping two names is worse than fixing one; flag the change in commit message).
+      - `typeof` guards in page code: exactly 3 sites.
+        1. `predictions.page.ts:148` — `typeof this.supabaseDataService.getGroups === 'function'` (wraps the entire group-selector block L148-168).
+        2. `matches.page.ts:953` — `typeof service.getJokerUsage === 'function'` (inside `loadJokerContext`).
+        3. `matches.page.ts:956` — `typeof service.getLastRegularGameweekBeforeSpecial === 'function'` (same method).
+      - `isLocked` short-circuit at `matches.page.ts:1202-1208` **is already present** — no new production code needed for 4.2-point-4.
+      - The `Function.prototype.toString()` assertion lives at `season.service.spec.ts:95-101` (not 91-97 as originally noted — off by 4 lines). Calls `SeasonService.toString()` on the class constructor, not a method body.
+      - **Spec-mock risk — predictions.page.spec.ts Task 3.2.4 block (L11-305) does NOT stub `getGroups`.** It relies on the `typeof` guard falling through. Removing the guard breaks every test in that block (~15 tests) unless `getGroups` is stubbed additively in the 3.2.4 `beforeEach` (L40-66). The 3.2.5 block (L307+) and 4.2.4.1 block (L448+) already stub it or don't need it.
+
     - **Files**:
-      - Modify `frontend/src/app/core/services/supabase-data.service.ts` (tighten `getGameweeks()` → `Gameweek[]`, `getActiveGameweek()` → `Gameweek | null`, other remaining `any` returns)
-      - Modify `frontend/src/app/core/services/season.service.ts` (consume typed returns)
-      - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.ts` (remove `typeof getGroups === 'function'` guard; update mocks instead)
-      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts` (`loadJokerContext` — remove `typeof getJokerUsage === 'function'` / `getLastRegularGameweekBeforeSpecial` guards; add `isLocked` guard at top of `onSubmit()`)
-      - Modify `frontend/src/app/core/services/season.service.spec.ts` (replace `toString()` regex test with source-file regex — follow `matches.page.spec.ts:157` pattern)
-      - Update legacy test mocks additively to stub the methods the guards used to protect
+      - Modify `frontend/src/app/services/supabase.service.ts`:
+        - ADD `Gameweek` interface near L50 (columns from migration 005: `id`, `number`, `season_id`, `deadline`, `is_active`, `is_special`, `special_type`, `created_at`, `updated_at`). Export it.
+        - REWRITE `Prediction` interface (L52-62) to match the actual DB schema: drop `group_id`, add `match_id`, `gameweek_id`, `gameweek_number`, `joker_used`. Keep export name `Prediction` so `SupabaseDataService` can import it. Commit-message note: "drops stale `group_id` field from `Prediction` interface — column never existed on the `predictions` table (see migration 006)".
+        - ADD `PredictionWithMatch = Prediction & { matches: Match }` for the `getPredictionsWithMatches` return. (Narrow enough for this task; the fuller view-model work is 4.3.)
+        - ADD `GroupMemberWithProfile = GroupMember & { profiles: Pick<Profile, 'username' | 'avatar_url'> | null }` for `getGroupMembers` + `getLeaderboard` return shape.
+      - Modify `frontend/src/app/core/services/supabase-data.service.ts`:
+        - Import `Gameweek`, `Prediction`, `PredictionWithMatch`, `GroupMember`, `GroupMemberWithProfile` from `../../services/supabase.service` (extend existing import line at L2).
+        - Tighten returns, method by method:
+          - `joinGroup(code): Promise<GroupMember>` (L117)
+          - `getGroupMembers(groupId): Promise<GroupMemberWithProfile[]>` (L169)
+          - `getGameweeks(): Promise<Gameweek[]>` (L184)
+          - `getActiveGameweek(): Promise<Gameweek>` (L194) — keep throwing on no-rows (current behaviour); consumer `safeGetActiveGameweek` catches and returns null.
+          - `getGameweek(gameweekId): Promise<Gameweek>` (L205)
+          - `getPredictions(gameweekNumber): Promise<Prediction[]>` (L279)
+          - `getPredictionsWithMatches(gameweekNumber): Promise<PredictionWithMatch[]>` (L299)
+          - `submitPredictions(...): Promise<Prediction[]>` (L321)
+          - `getGroupPredictions(groupId, gameweekNumber): Promise<Prediction[]>` (L343)
+          - `getLeaderboard(groupId): Promise<GroupMemberWithProfile[]>` (L511)
+        - The existing `const groupIds = memberships.map((m: any) => m.group_id);` (L47) and `userIds = members.map((m: any) => m.user_id);` (L368) can be tightened to the inline PostgREST-selected shape — low priority, fold in if cheap, skip otherwise.
+      - Modify `frontend/src/app/core/services/season.service.ts`:
+        - `safeGetActiveGameweek()` return type can relax to `Promise<Gameweek | null>` (L80); the single caller only reads `.number` so no narrowing needed. Import `Gameweek` from `../../services/supabase.service`.
+        - `safeGetGameweeks()` return type becomes `Promise<Gameweek[]>` (L92).
+      - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.ts`:
+        - Remove the `typeof` guard at L148 and restructure L148-168 so the group-selector block is now unconditional. The inner `try/catch` at L150-155 remains (it handles fetch rejection).
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.ts`:
+        - Remove the `const service = this.supabaseDataService as any;` cast (L951) and the two `typeof` guards (L953, L956) inside `loadJokerContext`. Call the methods directly. The `try/catch` at L950/L966 remains as the safety net.
+        - Update the method-level doc comment (L942-948) to drop the "Uses `typeof === 'function'` guards" sentence.
+        - **No change to `onSubmit`** — the `isLocked` guard (L1202-1208) is already in place.
+      - Modify `frontend/src/app/platforms/player/pages/predictions/predictions.page.spec.ts`:
+        - Task 3.2.4 describe block at L11-305 — add `getGroups: jest.fn().mockResolvedValue([{ id: 'g-default', name: 'Default Group' }])` to the `beforeEach` mock at L49-51. Additive only: no existing assertion in that block touches `availableGroups` / `selectedGroupId` / `hasNoGroups`, so this is a pure scaffolding add. After the guard is removed, the page code always calls `getGroups` first, so the stub must resolve to a non-empty array (empty would trigger the `hasNoGroups` short-circuit and skip `getPredictionsWithMatches`, breaking every existing assertion).
+      - Modify `frontend/src/app/platforms/player/pages/matches/matches.page.spec.ts`:
+        - Find every `mockSupabaseDataService` `beforeEach` block that does NOT stub `getJokerUsage` / `getLastRegularGameweekBeforeSpecial` / `getGameweeks` (used by `applyGameweekMeta`) and add additive stubs. Use this exact shape to match the real service contract:
+          ```ts
+          getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+          getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
+          getGameweeks: jest.fn().mockResolvedValue([]),
+          getPredictions: jest.fn().mockResolvedValue([]),
+          ```
+        - Count expected blocks affected: 2.2.2, 2.2.3, 2.2.4 (existing `beforeEach` blocks at L34, L199, L374 and onward). Do NOT modify the assertions.
+      - Modify `frontend/src/app/core/services/season.service.spec.ts`:
+        - Replace L95-101 (`SeasonService.toString()` block) with the source-file regex pattern from `matches.page.spec.ts:157-162`:
+          ```ts
+          it('should not reference hardcoded SEASON_START / SEASON_END dates', () => {
+            const source = readFileSync(join(__dirname, 'season.service.ts'), 'utf-8');
+            expect(source).not.toMatch(/2024-08-10/);
+            expect(source).not.toMatch(/2025-05-19/);
+          });
+          ```
+        - Add the imports at the top of the spec file: `import { readFileSync } from 'fs';` and `import { join } from 'path';`.
+      - Add a NEW describe block at the end of `matches.page.spec.ts` (do NOT modify existing blocks):
+        ```
+        describe('MatchesPage (Task 4.2.7 — isLocked short-circuit regression)', ...)
+        ```
+        This block exists to lock the existing `onSubmit` `isLocked` guard in place so a future refactor cannot silently drop it.
+
     - **Acceptance criteria**:
-      - No `any` return types remain on `SupabaseDataService` public methods
-      - No `typeof svc.method === 'function'` runtime guards remain in page code
-      - `season.service.spec.ts:91-97` test no longer relies on `Function.prototype.toString()` — uses a source-file regex
-      - `matches.page.ts onSubmit()` short-circuits with a locked toast if `isLocked` is true (independent of `canSubmit()`)
-      - All existing passing tests still pass; updated mocks are purely additive
+      1. Zero `any` / `Promise<any>` / `Promise<any[]>` return types remain on any public method of `SupabaseDataService`. (Verify with `grep -n "Promise<any" frontend/src/app/core/services/supabase-data.service.ts` — expect no matches.)
+      2. Zero `typeof svc.method === 'function'` or `(service as any).method` bypass casts remain in `predictions.page.ts` or `matches.page.ts`. (Verify with `grep -rn "typeof.*=== 'function'" frontend/src/app/platforms/player/pages/` — expect no matches in `.ts` files.)
+      3. `season.service.spec.ts` no longer calls `SeasonService.toString()`. The date-absence assertion still passes and still fails if `2024-08-10` or `2025-05-19` is added back to `season.service.ts`.
+      4. `matches.page.ts onSubmit()` continues to early-return when `isLocked === true`, with a new spec proving it: invoking `component.onSubmit()` with `component.isLocked = true` does NOT call `supabaseDataService.submitPredictions`.
+      5. Every pre-existing passing spec still passes. Updated mocks are purely additive (new method stubs only, no assertion edits, no existing-stub modifications). In particular, the 3.2.4 block's ~15 tests, the 3.2.5 block's ~10 tests, and every `matches.page.spec.ts` describe block continue to pass unchanged.
+      6. Production build (`cd frontend && npm run build:prod`) completes with zero TypeScript errors. This is the compile-time gate for the typing work.
+      7. Full test suite (`cd frontend && npm test`) passes with zero new failures.
+
+    - **Test plan (Red phase — write these specs FIRST, before touching implementation)**:
+      - **(a) `season.service.spec.ts` source-file regex replacement** — rewrite L95-101 in place as a Red test (will fail before source-file regex imports are added, then Green once the spec file is updated). Intentionally a functional-equivalent replacement, not a new test — this one IS the TDD-reddened case.
+      - **(b) NEW `matches.page.spec.ts` block**: `describe('MatchesPage (Task 4.2.7 — isLocked short-circuit regression)')` with a single spec: "onSubmit returns without calling submitPredictions when isLocked is true". Set up a minimal component with `component.isLocked = true`, `component.currentGameweekId = 'gw-uuid-1'`, `component.selectedPredictionCount = 3`, `component.predictionsCompleted = false`, one valid match in `component.matches`. Assert `mockSupabaseDataService.submitPredictions` is NOT called after `await component.onSubmit()`. This spec passes immediately against the current code (the guard is already there) — it is a **regression lock**, not a Red/Green step. Label it as such in a code comment.
+      - **(c) `predictions.page.spec.ts` Task 3.2.4 mock extension** — NOT a new spec; add `getGroups` to the existing `beforeEach` at L49-51. This will be a Red step only if the mock is added BEFORE the page-code guard removal: the existing 3.2.4 tests start calling `getGroups` through the page code (previously skipped via guard) and would fail with "getGroups is not a function" IF the mock were missing. Order of operations (see below): update mock first (still passes), then remove guard, then re-run (still passes).
+      - **(d) `matches.page.spec.ts` mock extensions** — same pattern as (c): additive stubs for `getJokerUsage`, `getLastRegularGameweekBeforeSpecial`, `getGameweeks`, `getPredictions` in every existing `beforeEach`. No new assertions.
+      - **Type-check step (not a Jest test)**: after each file edit in implementation order, run `cd frontend && npm run build:prod` as the compile-time gate. Fail-fast on the first type error surfaces the dependency chain.
+
+    - **Implementation order (strict — each step must leave the suite Green before proceeding)**:
+      1. **Interfaces first** — add `Gameweek`, rewrite `Prediction`, add `PredictionWithMatch`, add `GroupMemberWithProfile` in `supabase.service.ts`. Run `npm run build:prod`. Anything downstream that consumed the stale `Prediction.group_id` field will fail to compile — grep the repo for `\.group_id` on a `Prediction` to pre-flight this. If hits appear in non-task code, scope creep — stop and flag.
+      2. **Tighten `SupabaseDataService` returns** — one method at a time. Run `npm run build:prod` after each. The first few will be trivial; `getPredictionsWithMatches` is the riskiest because the joined `matches` payload's shape must match `PredictionWithMatch`.
+      3. **Update `season.service.ts`** consumer types. Run `npm run build:prod`. Should be a zero-diff type-level change since `Gameweek` is a structural superset of `{ number: number }`.
+      4. **Update legacy specs (additive mock extensions)**: `predictions.page.spec.ts` 3.2.4 block + `matches.page.spec.ts` all three `beforeEach` blocks (2.2.2, 2.2.3, 2.2.4). Run `npm test` — all existing tests should still pass because the new mocks are invoked but their return values aren't asserted against.
+      5. **Remove `typeof` guards** — `predictions.page.ts:148` first (simplest; one site), then `matches.page.ts:951-959` (drop the `as any` cast + two `typeof` checks). Run `npm test` — should still pass because step 4 already provisioned the mocks.
+      6. **Replace the `SeasonService.toString()` spec** in `season.service.spec.ts:95-101`. Run `npm test` — the replacement is functionally equivalent.
+      7. **Add the new `MatchesPage (Task 4.2.7 — isLocked short-circuit regression)` describe block** at the end of `matches.page.spec.ts`. Run `npm test` — passes immediately (regression lock).
+      8. Final full-suite run: `npm test` then `npm run build:prod`. Both Green = done.
+
+    - **Non-goals (out of scope for this slice — do NOT scope-creep into these)**:
+      - Typed `PredictionWithMatch` deep view-model refactor replacing `toViewModel(row: any)` in `predictions.page.ts:209` — queued in 4.3 "Typed interfaces" bucket. This task only tightens the **service return type**; the page's internal `toViewModel(row: any)` stays `any` for now.
+      - Typed `GroupPrediction { username?: string; gameweek_number: number; home_score: number; away_score: number }` on group-standings + group-admin predictions pages — queued in 4.3.
+      - Extraction of `AdminService` from `SupabaseDataService` — queued in 4.3 "Architecture / refactors".
+      - Pagination work on `getAllUsers` / `getAllGroups` — queued in 4.3.
+      - Adding a toast on the `onSubmit` `isLocked` short-circuit — the current behaviour is silent no-op (the button is also hidden, so a user never hits this path). Adding a toast would change UX semantics; 4.3 decision if surfaced by user feedback.
+      - Any `DeepReadonly<T>` / branded type / `satisfies` polish — this is plain-interface tightening only.
+
+    - **Risks**:
+      - **Mock-extension ordering** (primary risk): if the `typeof` guard is removed before the spec mocks are extended, ~25 tests break. Implementation order step 4 MUST precede step 5. The TDD agent must NOT reorder.
+      - **Stale `Prediction` interface rewrite** (secondary risk): dropping the `group_id` field is technically a breaking change to a public-ish interface exported from `supabase.service.ts`. Grep must confirm no other consumer reads `.group_id` off a `Prediction`-typed value. If hits surface outside the task's file list, stop and flag — that's a separate slice.
+      - **`npm run build:prod` triggers a full Angular compile** (~60s) which the TDD agent may be tempted to skip in favour of `npm test`. Skipping it misses type-only errors that Jest's transformer can silently let through in some configurations. The agent must run it at each implementation-order checkpoint, not just at the end.
+      - **"Never modify existing passing specs" rule**: the `season.service.spec.ts:95-101` replacement IS a modification of a passing spec. Justification: the test's intent (guard against date-driven gameweek calc) is preserved; only the implementation mechanism changes. Flag this in the commit message so a reviewer can sanity-check. All other spec edits are strictly additive (new mock methods, new describe block).
+      - **Regression-lock spec for `onSubmit`**: the task scope originally included ADDING the guard, but the guard is already there. The regression spec protects future refactors but adds no production behaviour. If a future task intentionally removes the guard (unlikely — it's fail-closed security), the spec will need to be deleted along with it.
 
   - [ ] **4.2.8 Test stability — fake timers around countdown specs** (Size: S)
     - **Description**: Prevent `CountdownTimerComponent` intervals from leaking into the real clock between tests and causing flakes. Wrap the 3.1.4 lock-UI spec block in `matches.page.spec.ts` with `jest.useFakeTimers()` / `jest.useRealTimers()`. Tighten the `countdown-timer.component.spec.ts` "clean up interval on destroy" test: snapshot the `clearInterval` call count before `fixture.destroy()` and assert it increments after (current assertion passes spuriously if deadline logic changes). Add an inline comment in `matches.page.ts` pinning `CountdownTimerComponent.deadlinePassed` as the runtime source of truth for the `isLocked` transition so future readers don't add a second deadline-check that desyncs.
