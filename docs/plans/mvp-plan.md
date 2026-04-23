@@ -1286,6 +1286,28 @@ Payments, prize money, announcements, audit trails, user suspension, feature fla
     - **Risks**:
       - **Silent consumer miss**: if any other component (spec, service, template) reads `groupStats.prizePool` / `groupStats.paidMembers` off the removed interface fields, TS compile catches it. `npm run build:prod` is the safety net — a successful compile proves no hidden reader remains.
 
+  - [x] **4.2.10 Purge debug + dead auth surface** (Size: XS)
+    - **Description**: `/debug-auth` is routed at `frontend/src/app/app.routes.ts:6-9` with zero guards and publicly reachable — it exposes the current user/session, a prefilled test email, and buttons for Emergency Reset / Clear Auth Locks / Test Login. Launch-blocker: must be gone before real users hit the app. Deletes 3 orphan files (debug page, `FirstLoginFixer` utility, superseded `SuperAdminAuthService`) and removes the route + import.
+    - **Depends on**: None (orthogonal cleanup)
+    - **Files**:
+      - Delete `frontend/src/app/debug-auth.page.ts` (sole consumer is the route block being removed)
+      - Delete `frontend/src/app/debug-fix-first-login.ts` (class `FirstLoginFixer` — zero consumers verified)
+      - Delete `frontend/src/app/core/services/super-admin-auth.service.ts` (class `SuperAdminAuthService` — superseded by Task 4.0.2 unified super-admin login; zero consumers verified)
+      - Modify `frontend/src/app/app.routes.ts`: remove `import { DebugAuthPage } from './debug-auth.page';` (L3) and the `{ path: 'debug-auth', component: DebugAuthPage }` block (L6-9)
+    - **Acceptance criteria**:
+      1. `grep -rnE "DebugAuthPage\|debug-auth\|FirstLoginFixer\|fixAllUsersFirstLoginStatus\|SuperAdminAuthService\|super-admin-auth\.service" frontend/src/` returns ZERO hits.
+      2. `cd frontend && npm test` passes — no existing `.spec.ts` imports any deleted file (pre-verify via grep before deletion).
+      3. `cd frontend && npm run build:prod` completes with zero TypeScript errors.
+      4. Navigating to `/debug-auth` in the running app hits the `**` catch-all at `app.routes.ts:52-55`, which redirects to `/auth/login`.
+    - **Test plan**: Zero new tests. Pre-delete grep sweep for each symbol across `frontend/src/**/*.spec.ts` — if any spec imports a to-be-deleted file, Jest will fail; verify clean grep before deletion.
+    - **Non-goals**:
+      - NOT touching `supabase/archive/*.sql` — archive cleanup queued to 4.3.
+      - NOT fixing the pre-existing dead `CurrencyPipe` import at `group-admin/pages/members/members.page.ts:33` — unrelated housekeeping already queued (surfaced in 4.2.9 audit).
+      - NOT addressing `MockDataService` in group-admin/predictions — that is Task 4.2.11's scope.
+      - NOT updating `docs/`, `README*`, `SETUP_GUIDE*`, or `CLAUDE.md` references to `/debug-auth` if any — not a deletion blocker; fold into 4.3 doc-hygiene if surfaced.
+    - **Risks**:
+      - **Spec import of deleted file**: if any `.spec.ts` imports `debug-auth.page`, `debug-fix-first-login`, or `super-admin-auth.service`, Jest fails on the next run. Pre-delete grep sweep is mandatory — zero spec hits is the go/no-go gate.
+
 - [ ] **4.3 Post-launch polish** (Size: L)
   - **Description**: Maintainability, typing, performance, edge-case, and cleanup items accumulated during MVP development. Intentionally deferred from 4.2 because each works correctly today and MVP shipping is gated on real-user feedback, not these. Triage after launch based on what actually bites.
   - **Depends on**: 4.2 (MVP live)
