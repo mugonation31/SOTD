@@ -876,7 +876,7 @@ export class MatchesPage implements OnInit {
    */
   private allGameweeks: Array<{
     id: string;
-    number: number;
+    gameweek_number: number;
     deadline: string | null;
     is_special: boolean;
   }> | null = null;
@@ -941,21 +941,19 @@ export class MatchesPage implements OnInit {
   /**
    * Fetch the season-scoped joker context (current usage + auto-apply
    * deadlines) and cache it on the component. Called once per load/init.
-   * Uses `typeof === 'function'` guards so existing specs that do not mock
-   * these helpers keep working — in a real Supabase environment both
-   * methods are always present. Errors are swallowed with safe defaults
-   * so a joker fetch failure never blocks the matches page.
+   * Errors are swallowed with safe defaults so a joker fetch failure never
+   * blocks the matches page.
+   *
+   * Task 4.2.7: previously this used `typeof svc.method === 'function'`
+   * guards to bypass legacy test doubles that didn't stub these helpers.
+   * Those guards have been removed now that every spec stubs the methods
+   * additively — the real service always exposes both methods.
    */
   private async loadJokerContext(): Promise<void> {
     try {
-      const service = this.supabaseDataService as any;
       const [usage, deadlines] = await Promise.all([
-        typeof service.getJokerUsage === 'function'
-          ? service.getJokerUsage()
-          : Promise.resolve({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
-        typeof service.getLastRegularGameweekBeforeSpecial === 'function'
-          ? service.getLastRegularGameweekBeforeSpecial()
-          : Promise.resolve({ beforeBoxingDay: null, beforeFinalDay: null }),
+        this.supabaseDataService.getJokerUsage(),
+        this.supabaseDataService.getLastRegularGameweekBeforeSpecial(),
       ]);
 
       const usedCount = usage?.usedCount ?? 0;
@@ -1404,7 +1402,7 @@ export class MatchesPage implements OnInit {
       if (this.allGameweeks === null) {
         this.allGameweeks = await this.supabaseDataService.getGameweeks();
       }
-      const match = (this.allGameweeks ?? []).find((gw) => gw.number === target);
+      const match = (this.allGameweeks ?? []).find((gw) => gw.gameweek_number === target);
       this.setGameweekMeta(match?.id, match?.deadline, match?.is_special);
     } catch (err) {
       this.logger.error('matches.loadGameweekMeta', err);

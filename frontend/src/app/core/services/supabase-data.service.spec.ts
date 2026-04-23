@@ -250,8 +250,8 @@ describe('SupabaseDataService', () => {
   describe('getGameweeks', () => {
     it('should return all gameweeks when getGameweeks is called', async () => {
       const gameweeks = [
-        { id: 'gw1', number: 1, deadline: '2026-01-10T12:00:00Z' },
-        { id: 'gw2', number: 2, deadline: '2026-01-17T12:00:00Z' },
+        { id: 'gw1', gameweek_number: 1, deadline: '2026-01-10T12:00:00Z' },
+        { id: 'gw2', gameweek_number: 2, deadline: '2026-01-17T12:00:00Z' },
       ];
       const builder = createMockQueryBuilder({ data: gameweeks, error: null });
       mockClient.from.mockReturnValueOnce(builder);
@@ -260,14 +260,14 @@ describe('SupabaseDataService', () => {
 
       expect(mockClient.from).toHaveBeenCalledWith('gameweeks');
       expect(builder.select).toHaveBeenCalledWith('*');
-      expect(builder.order).toHaveBeenCalledWith('number', { ascending: true });
+      expect(builder.order).toHaveBeenCalledWith('gameweek_number', { ascending: true });
       expect(result).toEqual(gameweeks);
     });
   });
 
   describe('getActiveGameweek', () => {
     it('should return the active gameweek when getActiveGameweek is called', async () => {
-      const activeGw = { id: 'gw2', number: 2, is_active: true };
+      const activeGw = { id: 'gw2', gameweek_number: 2, is_active: true };
       const builder = createMockQueryBuilder({ data: activeGw, error: null });
       mockClient.from.mockReturnValueOnce(builder);
 
@@ -282,7 +282,7 @@ describe('SupabaseDataService', () => {
 
   describe('getGameweek', () => {
     it('should return a single gameweek by id when getGameweek is called', async () => {
-      const gw = { id: 'gw1', number: 1 };
+      const gw = { id: 'gw1', gameweek_number: 1 };
       const builder = createMockQueryBuilder({ data: gw, error: null });
       mockClient.from.mockReturnValueOnce(builder);
 
@@ -456,7 +456,7 @@ describe('SupabaseDataService', () => {
       });
       // 2nd call: get gameweek to check deadline
       const gameweekBuilder = createMockQueryBuilder({
-        data: { id: 'gw1', number: 1, deadline: '2020-01-01T00:00:00Z' }, // past deadline
+        data: { id: 'gw1', gameweek_number: 1, deadline: '2020-01-01T00:00:00Z' }, // past deadline
         error: null,
       });
       // 3rd call: get predictions for those users
@@ -481,7 +481,7 @@ describe('SupabaseDataService', () => {
         error: null,
       });
       const gameweekBuilder = createMockQueryBuilder({
-        data: { id: 'gw1', number: 1, deadline: '2099-12-31T23:59:59Z' }, // future deadline
+        data: { id: 'gw1', gameweek_number: 1, deadline: '2099-12-31T23:59:59Z' }, // future deadline
         error: null,
       });
 
@@ -603,7 +603,7 @@ describe('SupabaseDataService', () => {
 
       expect(mockClient.from).toHaveBeenCalledWith('gameweeks');
       expect(builder.select).toHaveBeenCalledWith('deadline');
-      expect(builder.eq).toHaveBeenCalledWith('number', 7);
+      expect(builder.eq).toHaveBeenCalledWith('gameweek_number', 7);
       expect(builder.single).toHaveBeenCalled();
     });
   });
@@ -730,14 +730,14 @@ describe('SupabaseDataService', () => {
   // -----------------------------------------------------------------------
   describe('getLastRegularGameweekBeforeSpecial', () => {
     it('should return beforeBoxingDay=18, beforeFinalDay=37 when GW 19 is boxing_day and GW 38 is final_day', async () => {
-      const rows: Array<{ number: number; is_special: boolean; special_type: string | null }> = [];
+      const rows: Array<{ gameweek_number: number; is_special: boolean; special_type: string | null }> = [];
       for (let n = 1; n <= 38; n++) {
         if (n === 19) {
-          rows.push({ number: n, is_special: true, special_type: 'boxing_day' });
+          rows.push({ gameweek_number: n, is_special: true, special_type: 'boxing_day' });
         } else if (n === 38) {
-          rows.push({ number: n, is_special: true, special_type: 'final_day' });
+          rows.push({ gameweek_number: n, is_special: true, special_type: 'final_day' });
         } else {
-          rows.push({ number: n, is_special: false, special_type: null });
+          rows.push({ gameweek_number: n, is_special: false, special_type: null });
         }
       }
       const builder = createMockQueryBuilder({ data: rows, error: null });
@@ -746,17 +746,17 @@ describe('SupabaseDataService', () => {
       const result = await service.getLastRegularGameweekBeforeSpecial();
 
       expect(mockClient.from).toHaveBeenCalledWith('gameweeks');
-      expect(builder.select).toHaveBeenCalledWith('number, is_special, special_type');
-      expect(builder.order).toHaveBeenCalledWith('number', { ascending: true });
+      expect(builder.select).toHaveBeenCalledWith('gameweek_number, is_special, special_type');
+      expect(builder.order).toHaveBeenCalledWith('gameweek_number', { ascending: true });
       expect(result).toEqual({ beforeBoxingDay: 18, beforeFinalDay: 37 });
     });
 
     it('should return beforeBoxingDay=null when Boxing Day is GW 1 (no prior regular)', async () => {
       const rows = [
-        { number: 1, is_special: true, special_type: 'boxing_day' },
-        { number: 2, is_special: false, special_type: null },
-        { number: 3, is_special: false, special_type: null },
-        { number: 4, is_special: true, special_type: 'final_day' },
+        { gameweek_number: 1, is_special: true, special_type: 'boxing_day' },
+        { gameweek_number: 2, is_special: false, special_type: null },
+        { gameweek_number: 3, is_special: false, special_type: null },
+        { gameweek_number: 4, is_special: true, special_type: 'final_day' },
       ];
       const builder = createMockQueryBuilder({ data: rows, error: null });
       mockClient.from.mockReturnValueOnce(builder);
@@ -768,9 +768,9 @@ describe('SupabaseDataService', () => {
 
     it('should return both null when no special gameweeks exist', async () => {
       const rows = [
-        { number: 1, is_special: false, special_type: null },
-        { number: 2, is_special: false, special_type: null },
-        { number: 3, is_special: false, special_type: null },
+        { gameweek_number: 1, is_special: false, special_type: null },
+        { gameweek_number: 2, is_special: false, special_type: null },
+        { gameweek_number: 3, is_special: false, special_type: null },
       ];
       const builder = createMockQueryBuilder({ data: rows, error: null });
       mockClient.from.mockReturnValueOnce(builder);
@@ -782,12 +782,12 @@ describe('SupabaseDataService', () => {
 
     it('should ignore other special_type values if present', async () => {
       const rows = [
-        { number: 1, is_special: false, special_type: null },
-        { number: 2, is_special: true, special_type: 'mystery_cup' },
-        { number: 3, is_special: false, special_type: null },
-        { number: 4, is_special: true, special_type: 'boxing_day' },
-        { number: 5, is_special: false, special_type: null },
-        { number: 6, is_special: true, special_type: 'final_day' },
+        { gameweek_number: 1, is_special: false, special_type: null },
+        { gameweek_number: 2, is_special: true, special_type: 'mystery_cup' },
+        { gameweek_number: 3, is_special: false, special_type: null },
+        { gameweek_number: 4, is_special: true, special_type: 'boxing_day' },
+        { gameweek_number: 5, is_special: false, special_type: null },
+        { gameweek_number: 6, is_special: true, special_type: 'final_day' },
       ];
       const builder = createMockQueryBuilder({ data: rows, error: null });
       mockClient.from.mockReturnValueOnce(builder);

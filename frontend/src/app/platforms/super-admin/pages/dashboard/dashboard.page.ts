@@ -265,7 +265,7 @@ export class DashboardPage implements OnDestroy {
     }
     this.activeGameweekNumber =
       gameweekResult.status === 'fulfilled'
-        ? gameweekResult.value?.number ?? null
+        ? gameweekResult.value?.gameweek_number ?? null
         : null;
     if (syncResult.status === 'fulfilled') {
       const sync = syncResult.value;

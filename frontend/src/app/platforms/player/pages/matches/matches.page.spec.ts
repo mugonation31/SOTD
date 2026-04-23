@@ -42,6 +42,11 @@ describe('MatchesPage (Task 2.2.2 — fetch matches for current gameweek)', () =
 
     mockSupabaseDataService = {
       getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(null),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     await TestBed.configureTestingModule({
@@ -207,6 +212,11 @@ describe('MatchesPage (Task 2.2.3 — gameweek prev/next navigation fetches from
 
     mockSupabaseDataService = {
       getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(null),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     await TestBed.configureTestingModule({
@@ -382,6 +392,11 @@ describe('MatchesPage (Task 2.2.4 — match status display)', () => {
 
     mockSupabaseDataService = {
       getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(null),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     await TestBed.configureTestingModule({
@@ -529,6 +544,11 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
 
     mockSupabaseDataService = {
       getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(null),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -739,7 +759,7 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z',
     is_special: false,
     special_type: null,
@@ -760,14 +780,17 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
       getMatches: jest.fn().mockResolvedValue([]),
       getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
       getGameweeks: jest.fn().mockResolvedValue([
-        buildGameweekRow({ id: 'gw-id-7', number: 7, deadline: '2024-08-17T11:00:00Z' }),
+        buildGameweekRow({ id: 'gw-id-7', gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
         buildGameweekRow({
           id: 'gw-id-8',
-          number: 8,
+          gameweek_number: 8,
           deadline: '2024-08-24T11:00:00Z',
           is_active: false,
         }),
       ]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -791,7 +814,7 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   it('should populate currentGameweek.deadline from the current gameweek row', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-09-01T12:30:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-09-01T12:30:00Z' }),
     ]);
 
     await component.ngOnInit();
@@ -802,7 +825,7 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   it('should set currentGameweek.isSpecial from the current gameweek is_special flag', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
     ]);
 
     await component.ngOnInit();
@@ -812,12 +835,12 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   it('should update currentGameweek.deadline when navigating to the next gameweek', async () => {
     mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' })
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' })
     );
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
       buildGameweekRow({
-        number: 8,
+        gameweek_number: 8,
         deadline: '2024-08-24T11:00:00Z',
         is_special: false,
       }),
@@ -846,7 +869,7 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
 
   it('should default deadline to empty string when current gameweek has no deadline field', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: null }),
+      buildGameweekRow({ gameweek_number: 7, deadline: null }),
     ]);
 
     await component.ngOnInit();
@@ -867,7 +890,7 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW
     is_special: false,
     special_type: null,
@@ -902,13 +925,16 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
       getMatches: jest.fn().mockResolvedValue([]),
       getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
       getGameweeks: jest.fn().mockResolvedValue([
-        buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+        buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
         buildGameweekRow({
-          number: 8,
+          gameweek_number: 8,
           deadline: '2024-08-24T11:00:00Z',
           is_active: false,
         }),
       ]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -938,7 +964,7 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
 
   it('isLocked is false after init with a deadline in the future', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // 1 hour in future
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }), // 1 hour in future
     ]);
 
     await component.ngOnInit();
@@ -948,7 +974,7 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
 
   it('isLocked is true after init with a deadline in the past', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // 1 hour in past
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // 1 hour in past
     ]);
 
     await component.ngOnInit();
@@ -958,7 +984,7 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
 
   it('isLocked is false after init with an empty deadline (safe default)', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: null }),
+      buildGameweekRow({ gameweek_number: 7, deadline: null }),
     ]);
 
     await component.ngOnInit();
@@ -968,12 +994,12 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
 
   it('navigateGameweek to a future-deadline gameweek sets isLocked=false; to a past-deadline gameweek sets isLocked=true', async () => {
     mockSupabaseDataService.getActiveGameweek.mockResolvedValue(
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' })
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' })
     );
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 6, deadline: '2024-08-10T11:00:00Z' }), // past
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
-      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }), // future
+      buildGameweekRow({ gameweek_number: 6, deadline: '2024-08-10T11:00:00Z' }), // past
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
+      buildGameweekRow({ gameweek_number: 8, deadline: '2024-08-24T11:00:00Z' }), // future
     ]);
 
     await component.ngOnInit();
@@ -1042,7 +1068,7 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
       },
     ]);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }), // future
     ]);
 
     await component.ngOnInit();
@@ -1096,7 +1122,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // 1h in future relative to NOW
     is_special: false,
     special_type: null,
@@ -1132,6 +1158,9 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
       getMatches: jest.fn().mockResolvedValue([]),
       getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
       getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -1157,7 +1186,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('renders <app-countdown-timer> inside the deadline card', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
     ]);
 
     await component.ngOnInit();
@@ -1171,7 +1200,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('binds the countdown timer [deadline] to currentGameweek.deadline', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-09-01T12:30:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-09-01T12:30:00Z' }),
     ]);
 
     await component.ngOnInit();
@@ -1206,7 +1235,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('renders the lock icon in the gameweek title when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
     ]);
 
     await component.ngOnInit();
@@ -1235,7 +1264,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('renders the "Predictions Locked" banner when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
     ]);
 
     await component.ngOnInit();
@@ -1250,7 +1279,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('disables score inputs when isLocked is true (even for a scheduled match)', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
     ]);
     mockSupabaseDataService.getMatches.mockResolvedValue([
       buildSupabaseMatch({ id: 'm-1', status: 'scheduled' }),
@@ -1272,7 +1301,7 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
 
   it('hides the RESET ALL button when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
     ]);
 
     await component.ngOnInit();
@@ -1299,7 +1328,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW
     is_special: false,
     special_type: null,
@@ -1351,6 +1380,9 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
       getActiveGameweek: jest.fn().mockResolvedValue(buildGameweekRow()),
       getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
       submitPredictions: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -1385,8 +1417,8 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('should populate currentGameweekId from the matching gameweek row after init', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
-      buildGameweekRow({ id: 'gw-uuid-8', number: 8, is_active: false }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-8', gameweek_number: 8, is_active: false }),
     ]);
 
     await component.ngOnInit();
@@ -1396,7 +1428,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('onSubmit() calls submitPredictions with rows shaped {match_id, home_score, away_score, gameweek_number, gameweek_id, joker_used:false}', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
     ]);
     await initWithThreeMatches();
 
@@ -1442,7 +1474,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('onSubmit() only sends rows where BOTH home+away scores are non-null', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
     ]);
     await initWithThreeMatches();
 
@@ -1463,7 +1495,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('onSubmit() is a no-op when isLocked is true — submitPredictions NOT called', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
     ]);
     await initWithThreeMatches();
 
@@ -1504,7 +1536,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('on success: predictionsCompleted becomes true and showSuccessToast becomes true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
     ]);
     await initWithThreeMatches();
 
@@ -1526,7 +1558,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('on failure: error toast shown, predictionsCompleted stays false, logger.error called', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
     ]);
     await initWithThreeMatches();
 
@@ -1557,7 +1589,7 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
 
   it('does NOT write to localStorage during submit', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+      buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
     ]);
     await initWithThreeMatches();
 
@@ -1593,7 +1625,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW
     is_special: false,
     special_type: null,
@@ -1646,6 +1678,8 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
       getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
       submitPredictions: jest.fn().mockResolvedValue([]),
       getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -1747,7 +1781,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('should set predictionsCompleted=true when hydrated count equals 3 on a regular gameweek', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: false }),
+      buildGameweekRow({ gameweek_number: 7, is_special: false }),
     ]);
     mockSupabaseDataService.getMatches.mockResolvedValue([
       buildSupabaseMatch({ id: 'm-1' }),
@@ -1769,7 +1803,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('should set predictionsCompleted=false when hydrated count is less than 3 on a regular gameweek', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: false }),
+      buildGameweekRow({ gameweek_number: 7, is_special: false }),
     ]);
     mockSupabaseDataService.getMatches.mockResolvedValue([
       buildSupabaseMatch({ id: 'm-1' }),
@@ -1789,7 +1823,7 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('on a special gameweek with 10 matches, predictionsCompleted=true only when hydrated count=10', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
     ]);
     const matches = Array.from({ length: 10 }, (_, i) =>
       buildSupabaseMatch({ id: `m-${i + 1}` })
@@ -1839,8 +1873,8 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('should call getPredictions(newGameweek) after navigateGameweek(+1)', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
-      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 8, deadline: '2024-08-24T11:00:00Z' }),
     ]);
     mockSupabaseDataService.getMatches.mockResolvedValue([]);
 
@@ -1855,8 +1889,8 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
 
   it('should leave inputs blank (all null) when navigating to a gameweek with zero saved predictions', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T11:00:00Z' }),
-      buildGameweekRow({ number: 8, deadline: '2024-08-24T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 8, deadline: '2024-08-24T11:00:00Z' }),
     ]);
     // Initial load: no matches, no predictions.
     mockSupabaseDataService.getMatches.mockResolvedValueOnce([]);
@@ -1897,7 +1931,7 @@ describe('MatchesPage (Task 3.2.3 — regular vs special gating)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW
     is_special: false,
     special_type: null,
@@ -1963,6 +1997,8 @@ describe('MatchesPage (Task 3.2.3 — regular vs special gating)', () => {
       getGameweeks: jest.fn().mockResolvedValue([buildGameweekRow()]),
       submitPredictions: jest.fn().mockResolvedValue([]),
       getPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({ beforeBoxingDay: null, beforeFinalDay: null }),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -2097,7 +2133,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW → unlocked
     is_special: false,
     special_type: null,
@@ -2235,7 +2271,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
 
   it('canUseJoker() returns false on a special gameweek', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
     ]);
 
     await component.ngOnInit();
@@ -2246,7 +2282,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
 
   it('canUseJoker() returns false when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
     ]);
 
     await component.ngOnInit();
@@ -2291,7 +2327,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     // currentGW = 16, beforeBoxingDay = 18 → diff = 2
     mockSeasonService.getCurrentGameweek.mockReturnValue(16);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 16, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 16, deadline: '2024-08-17T11:00:00Z' }),
     ]);
     mockSupabaseDataService.getJokerUsage.mockResolvedValue({
       usedCount: 0,
@@ -2316,7 +2352,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     // approaching the Final Day deadline (diff to 37 is 20).
     mockSeasonService.getCurrentGameweek.mockReturnValue(17);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 17, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 17, deadline: '2024-08-17T11:00:00Z' }),
     ]);
     mockSupabaseDataService.getJokerUsage.mockResolvedValue({
       usedCount: 1,
@@ -2338,7 +2374,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     // the 2nd-joker warning.
     mockSeasonService.getCurrentGameweek.mockReturnValue(35);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 35, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 35, deadline: '2024-08-17T11:00:00Z' }),
     ]);
     mockSupabaseDataService.getJokerUsage.mockResolvedValue({
       usedCount: 1,
@@ -2361,7 +2397,7 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     // currentGW = 10, beforeBoxingDay = 18 → diff = 8, beforeFinalDay = 37 → diff = 27
     mockSeasonService.getCurrentGameweek.mockReturnValue(10);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 10, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 10, deadline: '2024-08-17T11:00:00Z' }),
     ]);
 
     await component.ngOnInit();
@@ -2373,8 +2409,8 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
     // Start well clear of any special deadline (GW 10 → no warning).
     mockSeasonService.getCurrentGameweek.mockReturnValue(10);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 10, deadline: '2024-08-17T11:00:00Z' }),
-      buildGameweekRow({ number: 16, deadline: '2024-09-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 10, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 16, deadline: '2024-09-17T11:00:00Z' }),
     ]);
     mockSupabaseDataService.getJokerUsage.mockResolvedValue({
       usedCount: 0,
@@ -2445,7 +2481,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW → unlocked
     is_special: false,
     special_type: null,
@@ -2519,7 +2555,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('does NOT render .joker-indicator when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past → locked
     ]);
 
     await component.ngOnInit();
@@ -2583,7 +2619,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('does NOT render .joker-toggle-row when currentGameweek.isSpecial is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
     ]);
 
     await component.ngOnInit();
@@ -2611,7 +2647,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('does NOT render .joker-toggle-row when isLocked is true', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
+      buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T09:00:00Z' }), // past
     ]);
 
     await component.ngOnInit();
@@ -2634,7 +2670,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
   it('renders .joker-warning with the correct text when jokerDeadlineWarning is non-null', async () => {
     mockSeasonService.getCurrentGameweek.mockReturnValue(16);
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 16, deadline: '2024-08-17T11:00:00Z' }),
+      buildGameweekRow({ gameweek_number: 16, deadline: '2024-08-17T11:00:00Z' }),
     ]);
 
     await component.ngOnInit();
@@ -2663,7 +2699,7 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
 
   it('renders .joker-disabled-note when currentGameweek.isSpecial is true and not locked', async () => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
-      buildGameweekRow({ number: 7, is_special: true, special_type: 'boxing_day' }),
+      buildGameweekRow({ gameweek_number: 7, is_special: true, special_type: 'boxing_day' }),
     ]);
 
     await component.ngOnInit();
@@ -2723,7 +2759,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW → unlocked
     is_special: false,
     special_type: null,
@@ -2752,7 +2788,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
    * so `canSubmit()` is true.
    */
   const initAndFillThree = async (
-    gameweekRow: any = buildGameweekRow({ id: 'gw-uuid-7', number: 7 }),
+    gameweekRow: any = buildGameweekRow({ id: 'gw-uuid-7', gameweek_number: 7 }),
   ) => {
     mockSupabaseDataService.getGameweeks.mockResolvedValue([gameweekRow]);
     mockSupabaseDataService.getMatches.mockResolvedValue([
@@ -2760,7 +2796,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
       buildSupabaseMatch({ id: 'm-2' }),
       buildSupabaseMatch({ id: 'm-3' }),
     ]);
-    mockSeasonService.getCurrentGameweek.mockReturnValue(gameweekRow.number);
+    mockSeasonService.getCurrentGameweek.mockReturnValue(gameweekRow.gameweek_number);
     await component.ngOnInit();
     component.matches[0].prediction.homeScore = 2;
     component.matches[0].prediction.awayScore = 1;
@@ -2853,7 +2889,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
 
   it('auto-assigns 1st joker (no dialog) when currentGameweek=beforeBoxingDay and usedCount=0', async () => {
     await initAndFillThree(
-      buildGameweekRow({ id: 'gw-uuid-18', number: 18 }),
+      buildGameweekRow({ id: 'gw-uuid-18', gameweek_number: 18 }),
     );
     // Sanity: cached state matches
     expect((component as any).beforeBoxingDay).toBe(18);
@@ -2876,7 +2912,7 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
       secondJokerGameweek: null,
     });
     await initAndFillThree(
-      buildGameweekRow({ id: 'gw-uuid-37', number: 37 }),
+      buildGameweekRow({ id: 'gw-uuid-37', gameweek_number: 37 }),
     );
     expect((component as any).beforeFinalDay).toBe(37);
     expect((component as any).jokerUsageUsedCount).toBe(1);
@@ -3043,7 +3079,7 @@ describe('MatchesPage (Task 4.2.4.1 — hydrate lifecycle + empty-venue + null-s
 
   const buildGameweekRow = (overrides: Partial<any> = {}) => ({
     id: 'gw-id-7',
-    number: 7,
+    gameweek_number: 7,
     deadline: '2024-08-17T11:00:00Z', // future relative to NOW
     is_special: false,
     special_type: null,
@@ -3222,5 +3258,111 @@ describe('MatchesPage (Task 4.2.4.1 — hydrate lifecycle + empty-venue + null-s
 
     const spinnerAfterLoad = hostEl.querySelector('.loading-state ion-spinner');
     expect(spinnerAfterLoad).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 4.2.7 — isLocked short-circuit regression lock
+// ---------------------------------------------------------------------------
+// Tripwire: onSubmit() MUST fail closed when the deadline has passed. The UI
+// already hides the submit button when isLocked=true, but any direct caller
+// (test harness, keyboard shortcut, future refactor) must never reach
+// SupabaseDataService.submitPredictions once the gameweek is locked. If this
+// spec starts failing it means someone removed or reordered the `if
+// (this.isLocked) return;` guard at the top of onSubmit() — DO NOT relax the
+// assertion; fix the guard.
+//
+// Sanity-tested during Phase 2 by temporarily deleting the guard; this spec
+// correctly flipped to red.
+// ---------------------------------------------------------------------------
+describe('MatchesPage (Task 4.2.7 — isLocked short-circuit regression)', () => {
+  let component: MatchesPage;
+  let fixture: ComponentFixture<MatchesPage>;
+  let mockRouter: ReturnType<typeof createMockRouter>;
+  let mockSeasonService: any;
+  let mockSupabaseDataService: any;
+  let mockToast: { present: jest.Mock };
+  let mockToastController: { create: jest.Mock };
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+
+  beforeEach(async () => {
+    mockRouter = createMockRouter();
+
+    mockSeasonService = {
+      init: jest.fn().mockResolvedValue(undefined),
+      getCurrentGameweek: jest.fn().mockReturnValue(7),
+      getTotalGameweeks: jest.fn().mockReturnValue(38),
+    };
+
+    mockSupabaseDataService = {
+      getMatches: jest.fn().mockResolvedValue([]),
+      getActiveGameweek: jest.fn().mockResolvedValue(null),
+      getGameweeks: jest.fn().mockResolvedValue([]),
+      getPredictions: jest.fn().mockResolvedValue([]),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest.fn().mockResolvedValue({
+        usedCount: 0,
+        firstJokerGameweek: null,
+        secondJokerGameweek: null,
+      }),
+      getLastRegularGameweekBeforeSpecial: jest.fn().mockResolvedValue({
+        beforeBoxingDay: null,
+        beforeFinalDay: null,
+      }),
+    };
+
+    mockToast = { present: jest.fn().mockResolvedValue(undefined) };
+    mockToastController = {
+      create: jest.fn().mockResolvedValue(mockToast),
+    };
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [MatchesPage],
+      providers: [
+        { provide: Router, useValue: mockRouter },
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: ToastController, useValue: mockToastController },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MatchesPage);
+    component = fixture.componentInstance;
+  });
+
+  it('onSubmit() does NOT call submitPredictions when isLocked=true, even with a valid match and populated predictions', async () => {
+    // Arrange — locked state with an otherwise-submittable form:
+    // - One valid match with populated scores
+    // - currentGameweekId set (FK would be resolvable)
+    // - selectedPredictionCount=3 (quota met for a regular GW)
+    // - predictionsCompleted=false (hasn't already been submitted)
+    // If the guard at the top of onSubmit() ever regresses, this test will
+    // flip red because submitPredictions would be called.
+    component.isLocked = true;
+    component.currentGameweekId = 'gw-uuid-1';
+    component.selectedPredictionCount = 3;
+    component.predictionsCompleted = false;
+    component.matches = [
+      {
+        id: 'm-1',
+        homeTeam: 'Arsenal',
+        awayTeam: 'Chelsea',
+        kickoff: '2024-08-17T14:00:00Z',
+        status: 'scheduled',
+        homeScore: null,
+        awayScore: null,
+        gameweek: 7,
+        venue: '',
+        prediction: { homeScore: 2, awayScore: 1 },
+      } as any,
+    ];
+
+    // Act
+    await component.onSubmit();
+
+    // Assert — the guard must short-circuit before any network call
+    expect(mockSupabaseDataService.submitPredictions).not.toHaveBeenCalled();
   });
 });

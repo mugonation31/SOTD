@@ -1,5 +1,14 @@
 import { Injectable } from '@angular/core';
-import { SupabaseService, PredictionGroup, Match } from '../../services/supabase.service';
+import {
+  SupabaseService,
+  PredictionGroup,
+  Match,
+  Gameweek,
+  GroupMember,
+  GroupMemberWithProfile,
+  Prediction,
+  PredictionWithMatch,
+} from '../../services/supabase.service';
 import { SupabaseError } from '../errors/supabase-error';
 import { LoggerService } from './logger.service';
 
@@ -114,7 +123,7 @@ export class SupabaseDataService {
     return group;
   }
 
-  async joinGroup(code: string): Promise<any> {
+  async joinGroup(code: string): Promise<GroupMember> {
     const userId = await this.getCurrentUserId();
 
     // Find group by code
@@ -166,7 +175,7 @@ export class SupabaseDataService {
     if (!data || data.length === 0) throw new Error('You are not a member of this group');
   }
 
-  async getGroupMembers(groupId: string): Promise<any[]> {
+  async getGroupMembers(groupId: string): Promise<GroupMemberWithProfile[]> {
     const { data, error } = await this.client
       .from('group_members')
       .select('*, profiles(username, avatar_url)')
@@ -181,17 +190,17 @@ export class SupabaseDataService {
   // Gameweeks
   // -----------------------------------------------------------------------
 
-  async getGameweeks(): Promise<any[]> {
+  async getGameweeks(): Promise<Gameweek[]> {
     const { data, error } = await this.client
       .from('gameweeks')
       .select('*')
-      .order('number', { ascending: true });
+      .order('gameweek_number', { ascending: true });
 
     if (error) throw this.toSupabaseError('supabase.getGameweeks', 'Unable to load gameweeks', error);
     return data || [];
   }
 
-  async getActiveGameweek(): Promise<any> {
+  async getActiveGameweek(): Promise<Gameweek> {
     const { data, error } = await this.client
       .from('gameweeks')
       .select('*')
@@ -202,7 +211,7 @@ export class SupabaseDataService {
     return data;
   }
 
-  async getGameweek(gameweekId: string): Promise<any> {
+  async getGameweek(gameweekId: string): Promise<Gameweek> {
     const { data, error } = await this.client
       .from('gameweeks')
       .select('*')
@@ -229,7 +238,7 @@ export class SupabaseDataService {
     const { data, error } = await this.client
       .from('gameweeks')
       .select('deadline')
-      .eq('number', gameweekNumber)
+      .eq('gameweek_number', gameweekNumber)
       .single();
 
     if (error) throw this.toSupabaseError('supabase.getGameweekDeadline', 'Unable to load deadline', error);
@@ -276,7 +285,7 @@ export class SupabaseDataService {
   // Predictions
   // -----------------------------------------------------------------------
 
-  async getPredictions(gameweekNumber: number): Promise<any[]> {
+  async getPredictions(gameweekNumber: number): Promise<Prediction[]> {
     const userId = await this.getCurrentUserId();
 
     const { data, error } = await this.client
@@ -296,7 +305,7 @@ export class SupabaseDataService {
    * home_score, away_score, ...). Used by the predictions page to render
    * historical + current predictions without a second round-trip.
    */
-  async getPredictionsWithMatches(gameweekNumber: number): Promise<any[]> {
+  async getPredictionsWithMatches(gameweekNumber: number): Promise<PredictionWithMatch[]> {
     const userId = await this.getCurrentUserId();
 
     const { data, error } = await this.client
@@ -318,7 +327,7 @@ export class SupabaseDataService {
       gameweek_id: string;
       joker_used?: boolean;
     }>
-  ): Promise<any[]> {
+  ): Promise<Prediction[]> {
     const userId = await this.getCurrentUserId();
 
     const rows = predictions.map(p => ({
@@ -340,7 +349,7 @@ export class SupabaseDataService {
     return data || [];
   }
 
-  async getGroupPredictions(groupId: string, gameweekNumber: number): Promise<any[]> {
+  async getGroupPredictions(groupId: string, gameweekNumber: number): Promise<Prediction[]> {
     // Get group member user ids
     const { data: members, error: memberError } = await this.client
       .from('group_members')
@@ -351,12 +360,12 @@ export class SupabaseDataService {
     if (!members || members.length === 0) return [];
 
     // Client-side deadline check: UX convenience only. The real security
-    // boundary is the RLS policy on the predictions table (migration 006)
+    // boundary is the RLS policy on the predictions table (migration 005)
     // which enforces group membership and deadline constraints at the DB level.
     const { data: gameweek, error: gwError } = await this.client
       .from('gameweeks')
       .select('*')
-      .eq('number', gameweekNumber)
+      .eq('gameweek_number', gameweekNumber)
       .single();
 
     if (gwError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', gwError);
@@ -447,13 +456,13 @@ export class SupabaseDataService {
   }> {
     const { data, error } = await this.client
       .from('gameweeks')
-      .select('number, is_special, special_type')
-      .order('number', { ascending: true });
+      .select('gameweek_number, is_special, special_type')
+      .order('gameweek_number', { ascending: true });
 
     if (error) throw this.toSupabaseError('supabase.getLastRegularGameweekBeforeSpecial', 'Unable to load gameweeks', error);
 
     const rows = (data || []) as Array<{
-      number: number;
+      gameweek_number: number;
       is_special: boolean;
       special_type: string | null;
     }>;
@@ -463,8 +472,8 @@ export class SupabaseDataService {
       if (!special) return null;
       let last: number | null = null;
       for (const r of rows) {
-        if (!r.is_special && r.number < special.number) {
-          if (last === null || r.number > last) last = r.number;
+        if (!r.is_special && r.gameweek_number < special.gameweek_number) {
+          if (last === null || r.gameweek_number > last) last = r.gameweek_number;
         }
       }
       return last;
@@ -508,7 +517,7 @@ export class SupabaseDataService {
   // Leaderboard
   // -----------------------------------------------------------------------
 
-  async getLeaderboard(groupId: string): Promise<any[]> {
+  async getLeaderboard(groupId: string): Promise<GroupMemberWithProfile[]> {
     // Tiebreakers per plan 4.1.3: total_points DESC, then correct_scores DESC,
     // then correct_results DESC. Chained .order() calls serialize into a single
     // PostgREST ORDER BY clause.

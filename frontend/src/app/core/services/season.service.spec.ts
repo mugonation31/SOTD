@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { SeasonService } from './season.service';
 import { SupabaseDataService } from './supabase-data.service';
 import { LoggerService } from './logger.service';
@@ -26,8 +28,8 @@ describe('SeasonService', () => {
   });
 
   it('should be created', () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
-    mockSupabaseDataService.getGameweeks.mockResolvedValue([{ id: 'gw-1', number: 1 }]);
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', gameweek_number: 1 });
+    mockSupabaseDataService.getGameweeks.mockResolvedValue([{ id: 'gw-1', gameweek_number: 1 }]);
 
     service = TestBed.inject(SeasonService);
 
@@ -35,7 +37,7 @@ describe('SeasonService', () => {
   });
 
   it('should call SupabaseDataService.getActiveGameweek() on init()', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-5', number: 5 });
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-5', gameweek_number: 5 });
     mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
 
     service = TestBed.inject(SeasonService);
@@ -45,7 +47,7 @@ describe('SeasonService', () => {
   });
 
   it('should emit currentGameweek from the active gameweek number after init resolves', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-7', number: 7 });
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-7', gameweek_number: 7 });
     mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
 
     service = TestBed.inject(SeasonService);
@@ -57,8 +59,8 @@ describe('SeasonService', () => {
   });
 
   it('should set totalGameweeks from getGameweeks() length after init', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
-    const gameweeks = Array.from({ length: 38 }, (_, i) => ({ id: `gw-${i + 1}`, number: i + 1 }));
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', gameweek_number: 1 });
+    const gameweeks = Array.from({ length: 38 }, (_, i) => ({ id: `gw-${i + 1}`, gameweek_number: i + 1 }));
     mockSupabaseDataService.getGameweeks.mockResolvedValue(gameweeks);
 
     service = TestBed.inject(SeasonService);
@@ -82,7 +84,7 @@ describe('SeasonService', () => {
   });
 
   it('should mark season as started when an active gameweek exists', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-3', number: 3 });
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-3', gameweek_number: 3 });
     mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
 
     service = TestBed.inject(SeasonService);
@@ -94,8 +96,11 @@ describe('SeasonService', () => {
 
   it('should not reference hardcoded SEASON_START / SEASON_END dates', () => {
     // Behavioural guarantee: no date constants drive gameweek calc.
-    // Compile-time safety: the tests above pass without any time mocking.
-    const source = SeasonService.toString();
+    // Task 4.2.7: switched from the brittle `SeasonService.toString()` class
+    // body read (which only returns the constructor source) to a source-file
+    // regex — matches the pattern used at matches.page.spec.ts:157-162 and
+    // catches private method bodies too.
+    const source = readFileSync(join(__dirname, 'season.service.ts'), 'utf-8');
     expect(source).not.toMatch(/2024-08-10/);
     expect(source).not.toMatch(/2025-05-19/);
   });
@@ -115,7 +120,7 @@ describe('SeasonService', () => {
   });
 
   it('should call logger.warn with the gameweeks context and raw error when getGameweeks rejects', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', gameweek_number: 1 });
     const rawErr = new Error('table unreachable');
     mockSupabaseDataService.getGameweeks.mockRejectedValue(rawErr);
 
@@ -129,7 +134,7 @@ describe('SeasonService', () => {
   });
 
   it('should not call logger.warn when both calls succeed', async () => {
-    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', number: 1 });
+    mockSupabaseDataService.getActiveGameweek.mockResolvedValue({ id: 'gw-1', gameweek_number: 1 });
     mockSupabaseDataService.getGameweeks.mockResolvedValue([]);
 
     service = TestBed.inject(SeasonService);

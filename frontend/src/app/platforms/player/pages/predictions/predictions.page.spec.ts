@@ -48,6 +48,13 @@ describe('PredictionsPage (Task 3.2.4 — wire to Supabase)', () => {
 
     mockSupabaseDataService = {
       getPredictionsWithMatches: jest.fn().mockResolvedValue([]),
+      // Task 4.2.7: additive stub — after the `typeof getGroups === 'function'`
+      // guard was removed from predictions.page.ts, the page always calls
+      // getGroups first. A non-empty stub prevents the hasNoGroups
+      // short-circuit so existing assertions below remain valid.
+      getGroups: jest
+        .fn()
+        .mockResolvedValue([{ id: 'g-default', name: 'Default Group' }]),
     };
 
     mockLogger = { error: jest.fn(), warn: jest.fn() };
@@ -464,6 +471,12 @@ describe('PredictionsPage (Task 4.2.4.1 — null-score guard in toViewModel)', (
 
     mockSupabaseDataService = {
       getPredictionsWithMatches: jest.fn().mockResolvedValue([]),
+      // Task 4.2.7: additive stub — the typeof guard was removed so the
+      // page always calls getGroups first. Non-empty stub keeps the
+      // toViewModel assertion reachable.
+      getGroups: jest
+        .fn()
+        .mockResolvedValue([{ id: 'g-default', name: 'Default Group' }]),
     };
 
     mockLogger = { error: jest.fn(), warn: jest.fn() };

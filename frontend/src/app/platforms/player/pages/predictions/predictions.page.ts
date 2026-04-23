@@ -141,31 +141,28 @@ export class PredictionsPage {
       // (visibility of OTHER players' predictions). If the user has no
       // group, there is nothing meaningful to show so we short-circuit.
       //
-      // `getGroups` is guarded because legacy test doubles may only stub
-      // `getPredictionsWithMatches`; without the guard those suites would
-      // fail even though they predate Task 3.2.5. In production the method
-      // is always present on the real service.
-      if (typeof this.supabaseDataService.getGroups === 'function') {
-        let groups: Array<{ id: string; name: string }> = [];
-        try {
-          groups = (await this.supabaseDataService.getGroups()) ?? [];
-        } catch (err) {
-          this.logger.error('predictions.loadGroups', err);
-          groups = [];
-        }
-
-        if (groups.length === 0) {
-          this.availableGroups = [];
-          this.selectedGroupId = null;
-          this.hasNoGroups = true;
-          this.currentPredictions = [];
-          return;
-        }
-
-        this.availableGroups = groups;
-        this.selectedGroupId = groups[0].id;
-        this.hasNoGroups = false;
+      // Task 4.2.7: the previous `typeof getGroups === 'function'` guard has
+      // been removed — the method is always present on the real service
+      // and every test double now stubs it additively.
+      let groups: Array<{ id: string; name: string }> = [];
+      try {
+        groups = (await this.supabaseDataService.getGroups()) ?? [];
+      } catch (err) {
+        this.logger.error('predictions.loadGroups', err);
+        groups = [];
       }
+
+      if (groups.length === 0) {
+        this.availableGroups = [];
+        this.selectedGroupId = null;
+        this.hasNoGroups = true;
+        this.currentPredictions = [];
+        return;
+      }
+
+      this.availableGroups = groups;
+      this.selectedGroupId = groups[0].id;
+      this.hasNoGroups = false;
 
       const rows = await this.supabaseDataService.getPredictionsWithMatches(
         this.currentGameweek,

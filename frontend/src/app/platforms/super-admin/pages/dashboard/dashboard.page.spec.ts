@@ -22,7 +22,7 @@ describe('DashboardPage (Task 4.0.8 — real Supabase data + Sync)', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   const baseCounts = { userCount: 2, groupCount: 1 };
-  const baseGameweek = { id: 'gw1', number: 7, deadline: '2026-04-20T12:00:00Z', is_active: true };
+  const baseGameweek = { id: 'gw1', gameweek_number: 7, deadline: '2026-04-20T12:00:00Z', is_active: true };
   const baseSync = {
     lastSyncAt: '2026-04-17T10:00:00Z',
     lastSyncStatus: 'ok' as const,

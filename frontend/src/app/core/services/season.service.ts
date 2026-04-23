@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseDataService } from './supabase-data.service';
 import { LoggerService } from './logger.service';
+import { Gameweek } from '../../services/supabase.service';
 
 export interface SeasonInfo {
   currentGameweek: number;
@@ -44,7 +45,7 @@ export class SeasonService {
       this.safeGetGameweeks(),
     ]);
 
-    const currentGameweek = activeGameweek?.number ?? DEFAULT_GAMEWEEK;
+    const currentGameweek = activeGameweek?.gameweek_number ?? DEFAULT_GAMEWEEK;
     const totalGameweeks = allGameweeks.length || DEFAULT_TOTAL_GAMEWEEKS;
     const isSeasonStarted = !!activeGameweek;
     const isSeasonEnded = false;
@@ -77,7 +78,7 @@ export class SeasonService {
     return this.seasonInfo.value.isSeasonEnded;
   }
 
-  private async safeGetActiveGameweek(): Promise<{ number: number } | null> {
+  private async safeGetActiveGameweek(): Promise<Gameweek | null> {
     try {
       return await this.supabaseDataService.getActiveGameweek();
     } catch (err) {
@@ -89,7 +90,7 @@ export class SeasonService {
     }
   }
 
-  private async safeGetGameweeks(): Promise<Array<{ number: number }>> {
+  private async safeGetGameweeks(): Promise<Gameweek[]> {
     try {
       return await this.supabaseDataService.getGameweeks();
     } catch (err) {

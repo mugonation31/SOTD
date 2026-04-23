@@ -49,17 +49,60 @@ export interface Match {
   updated_at: string;
 }
 
+/**
+ * Matches the columns on the `gameweeks` table (migration 002). Used by
+ * `SupabaseDataService` return types and the season bootstrap flow.
+ *
+ * NOTE (Task 4.2.7): the DB column is `gameweek_number` (not `number`) and
+ * `season_year` (not `season_id`). Earlier interface drafts used the shorter
+ * aliases; several service-layer `.eq('number', …)` / `.order('number', …)`
+ * calls silently failed at runtime and consumers fell back to the `safeGet*`
+ * wrappers' empty defaults. Interface now matches the real column names so
+ * PostgREST queries succeed and consumer reads hit actual data.
+ */
+export interface Gameweek {
+  id: string;
+  gameweek_number: number;
+  season_year: string;
+  start_date: string;
+  end_date: string;
+  deadline: string;
+  is_special: boolean;
+  special_type: string | null;
+  is_active: boolean;
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Matches the columns on the `predictions` table (migration 005).
+ *
+ * NOTE (Task 4.2.7): this interface previously carried a `group_id` field
+ * which never existed on the DB table — predictions are per-player
+ * (UNIQUE(user_id, match_id)), not per-group. The field has been dropped
+ * so the interface matches the actual schema.
+ */
 export interface Prediction {
   id: string;
   user_id: string;
   match_id: string;
-  group_id: string;
+  gameweek_id: string;
+  gameweek_number: number;
   home_score: number;
   away_score: number;
   points_earned?: number;
+  joker_used?: boolean;
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * `Prediction` row joined with its parent `matches` row. Shape produced by
+ * PostgREST's `select('*, matches(*)')`. Used by
+ * `SupabaseDataService.getPredictionsWithMatches`.
+ */
+export type PredictionWithMatch = Prediction & { matches: Match };
 
 export interface GroupMember {
   id: string;
@@ -69,6 +112,15 @@ export interface GroupMember {
   total_points: number;
   position?: number;
 }
+
+/**
+ * `GroupMember` row joined with the member's `profiles` row (username +
+ * avatar_url). Shape produced by `select('*, profiles(username, avatar_url)')`
+ * used on leaderboard + members queries.
+ */
+export type GroupMemberWithProfile = GroupMember & {
+  profiles: Pick<Profile, 'username' | 'avatar_url'> | null;
+};
 
 @Injectable({
   providedIn: 'root'

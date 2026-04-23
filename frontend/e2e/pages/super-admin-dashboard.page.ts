@@ -45,6 +45,19 @@ export class SuperAdminDashboardPage extends BasePage {
   /** Loading spinner shown while `ionViewWillEnter` resolves stats. */
   readonly loadingSpinner: Locator;
 
+  /**
+   * Task 4.2.7 — the ".stat-value" div inside the "Active Gameweek" stat
+   * card. Template renders `{{ activeGameweekNumber ?? '—' }}`, so the
+   * observable values are either a digit string (real gameweek loaded) or
+   * the em-dash fallback (no active gameweek in DB, OR — before 4.2.7 —
+   * the schema bug where `.eq('number', ...)` silently matched nothing on
+   * a column that doesn't exist).
+   *
+   * The selector scopes the stat-value lookup to the card whose title is
+   * "Active Gameweek" so it survives re-ordering of the 4 stat cards.
+   */
+  readonly activeGameweekValue: Locator;
+
   constructor(page: Page) {
     super(page);
     this.statCards = page.locator('.stat-card');
@@ -54,6 +67,9 @@ export class SuperAdminDashboardPage extends BasePage {
     this.logoutButton = page.locator('ion-button.logout-button');
     this.tabButtons = page.locator('ion-tab-button');
     this.loadingSpinner = page.locator('.loading-state ion-spinner');
+    this.activeGameweekValue = page
+      .locator('.stat-card', { hasText: 'Active Gameweek' })
+      .locator('.stat-value');
   }
 
   async navigate(): Promise<void> {
