@@ -144,6 +144,14 @@ export class SupabaseService {
             detectSessionInUrl: true,
             flowType: 'pkce',
             storage: localStorage,
+            // Disable supabase-js's default cross-tab Navigator Lock
+            // coordination. Under multi-tab (especially incognito), the
+            // navigator.locks-based mutex can deadlock PostgREST requests
+            // (.from('profiles').select() etc.) — the fetch never even
+            // emits because the lock is never released. We don't rely on
+            // multi-tab session synchronization for any flow, so a no-op
+            // lock is safe and fully unblocks requests.
+            lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => await fn(),
           }
         }
       );
@@ -169,7 +177,7 @@ export class SupabaseService {
 
       // Load profile if user exists
       if (session?.user) {
-        await this.loadUserProfile(session.user.id, session.user);
+        await this.loadUserProfile(session.user.id);
       }
 
       // Listen for auth changes
@@ -178,7 +186,7 @@ export class SupabaseService {
         this.currentUser$.next(session?.user || null);
 
         if (session?.user) {
-          await this.loadUserProfile(session.user.id, session.user);
+          await this.loadUserProfile(session.user.id);
         } else {
           this.currentProfile$.next(null);
         }
@@ -188,7 +196,7 @@ export class SupabaseService {
     }
   }
 
-  private async loadUserProfile(userId: string, user?: User) {
+  private async loadUserProfile(userId: string) {
     if (!this.supabase) {
       console.error('❌ SupabaseService: Supabase client not initialized');
       return;
@@ -202,25 +210,9 @@ export class SupabaseService {
         .single();
 
       if (error) {
-        // If no profile found and we have a Google user, create one
-        if (user && user.app_metadata?.provider === 'google') {
-          const metadata = user.user_metadata || {};
-          const fullName = (metadata['full_name'] as string) || '';
-          const nameParts = fullName.split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-          const username = user.email ? user.email.split('@')[0] : '';
-
-          await this.createProfile(userId, {
-            email: user.email || '',
-            username,
-            first_name: firstName,
-            last_name: lastName,
-            role: 'player' as UserRole,
-            first_login: true,
-          } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>);
-          return;
-        }
+        // Profile is auto-created by the handle_new_user() trigger on
+        // auth.users (migration 014). If it's missing here, the row is
+        // genuinely absent — don't try to self-heal from the client.
         console.error('Error loading user profile:', error);
         return;
       }
@@ -285,15 +277,10 @@ export class SupabaseService {
         throw error;
       }
 
-      // Create profile after successful signup
-      if (data.user) {
-        await this.createProfile(data.user.id, {
-          email,
-          ...metadata,
-          first_login: true,
-        } as Omit<Profile, 'id' | 'created_at' | 'updated_at'>);
-      }
-
+      // Profile row is created server-side by the handle_new_user() trigger
+      // on auth.users (migration 014). Client no longer inserts it directly:
+      // with "Confirm email" ON there is no session at signUp time, so RLS
+      // (auth.uid() = id) would block a client-side INSERT.
       return data;
     } catch (error) {
       console.error('SignUp failed:', error);

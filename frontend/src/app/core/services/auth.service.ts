@@ -648,11 +648,26 @@ export class AuthService {
           // Fetch profile data directly from Supabase
           try {
             console.log('🔍 AuthService: Fetching profile from database...');
-            const profileResult = await this.supabaseService.client
+            // Defense-in-depth: if the PostgREST request hangs (e.g. on a
+            // lock, a network stall, or a misbehaving middleware), surface
+            // a clear error within 10s instead of leaving the user
+            // staring at a "Logging in..." spinner forever.
+            const PROFILE_FETCH_TIMEOUT_MS = 10000;
+            const profileFetchPromise = this.supabaseService.client
               .from('profiles')
               .select('*')
               .eq('id', result.user.id)
               .single();
+            const profileTimeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(
+                () => reject(new Error('Profile fetch timed out')),
+                PROFILE_FETCH_TIMEOUT_MS
+              );
+            });
+            const profileResult = await Promise.race([
+              profileFetchPromise,
+              profileTimeoutPromise,
+            ]) as any;
             console.log('🔍 AuthService: Profile fetch result:', profileResult);
 
             if (profileResult.error) {

@@ -14,6 +14,10 @@ export interface Standing {
   correctScores: number;
   correctResults: number;
   jokerUsed: number;
+  // True iff this user is the admin_id of the group whose leaderboard
+  // this Standing belongs to. UI surfaces (group standings, members
+  // list) render an "ADMIN" badge based on this flag.
+  isAdmin: boolean;
 }
 
 // Standardized group with standings interface
@@ -95,7 +99,7 @@ export class GroupService {
   private async buildGroupWithStandings(group: any): Promise<GroupWithStandings> {
     const currentUser = this.authService.getCurrentUser();
     const rawLeaderboard = await this.supabaseDataService.getLeaderboard(group.id);
-    const leaderboard = this.convertToStandings(rawLeaderboard);
+    const leaderboard = this.convertToStandings(rawLeaderboard, group.admin_id);
     const userPosition = currentUser
       ? leaderboard.findIndex(entry => entry.userId === currentUser.id) + 1
       : null;
@@ -112,7 +116,7 @@ export class GroupService {
     };
   }
 
-  private convertToStandings(rawLeaderboard: any[]): Standing[] {
+  private convertToStandings(rawLeaderboard: any[], adminId: string | undefined): Standing[] {
     return rawLeaderboard.map((entry: any, index: number) => ({
       position: index + 1,
       previousPosition: index + 1,
@@ -124,6 +128,7 @@ export class GroupService {
       correctScores: entry.correct_scores || 0,
       correctResults: entry.correct_results || 0,
       jokerUsed: entry.jokers_used || 0,
+      isAdmin: adminId !== undefined && entry.user_id === adminId,
     }));
   }
 }

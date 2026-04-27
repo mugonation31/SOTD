@@ -41,58 +41,35 @@ describe('SupabaseService', () => {
       (service as any).supabase = mockSupabaseClient;
     });
 
-    it('should await createProfile in signUp and throw if profile creation fails', async () => {
+    // Migration 014 moved profile creation to a handle_new_user() trigger on
+    // auth.users (SECURITY DEFINER, bypasses RLS). The client no longer
+    // calls createProfile after signUp — with "Confirm email" ON there is
+    // no session at signUp time, so a client-side INSERT would hit RLS.
+    it('should NOT call createProfile after signUp (trigger handles it)', async () => {
       const mockUser = { id: 'user-123' };
       mockSupabaseClient.auth.signUp.mockResolvedValue({
         data: { user: mockUser, session: null },
         error: null
       });
 
-      // Mock createProfile to reject
-      jest.spyOn(service, 'createProfile').mockRejectedValue(new Error('Profile creation failed'));
+      const createProfileSpy = jest.spyOn(service, 'createProfile');
 
-      await expect(
-        service.signUp('test@example.com', 'password123', {
-          username: 'testuser',
-          first_name: 'Test',
-          last_name: 'User',
-          role: 'player' as any
-        })
-      ).rejects.toThrow('Profile creation failed');
+      await service.signUp('test@example.com', 'password123', {
+        username: 'testuser',
+        first_name: 'Test',
+        last_name: 'User',
+        role: 'player' as any
+      });
 
-      expect(service.createProfile).toHaveBeenCalledWith(
-        'user-123',
-        expect.objectContaining({
-          email: 'test@example.com',
-          username: 'testuser',
-          first_name: 'Test',
-          last_name: 'User',
-          role: 'player',
-          first_login: true
-        })
-      );
+      expect(createProfileSpy).not.toHaveBeenCalled();
     });
 
-    it('should return profile data from signUp when profile creation succeeds', async () => {
+    it('should pass metadata on options.data for trigger to read', async () => {
       const mockUser = { id: 'user-456' };
-      const mockProfile = {
-        id: 'user-456',
-        email: 'success@example.com',
-        username: 'successuser',
-        first_name: 'Success',
-        last_name: 'User',
-        role: 'player',
-        first_login: true,
-        created_at: '2026-01-01',
-        updated_at: '2026-01-01'
-      };
-
       mockSupabaseClient.auth.signUp.mockResolvedValue({
         data: { user: mockUser, session: null },
         error: null
       });
-
-      jest.spyOn(service, 'createProfile').mockResolvedValue(mockProfile);
 
       const result = await service.signUp('success@example.com', 'password123', {
         username: 'successuser',
@@ -102,12 +79,18 @@ describe('SupabaseService', () => {
       });
 
       expect(result).toEqual({ user: mockUser, session: null });
-      expect(service.createProfile).toHaveBeenCalledWith(
-        'user-456',
+      expect(mockSupabaseClient.auth.signUp).toHaveBeenCalledWith(
         expect.objectContaining({
           email: 'success@example.com',
-          username: 'successuser',
-          first_login: true
+          password: 'password123',
+          options: expect.objectContaining({
+            data: expect.objectContaining({
+              username: 'successuser',
+              first_name: 'Success',
+              last_name: 'User',
+              role: 'player'
+            })
+          })
         })
       );
     });
@@ -161,18 +144,21 @@ describe('SupabaseService', () => {
     });
   });
 
-  describe('Google profile handling', () => {
+  // Migration 014: the handle_new_user() trigger on auth.users creates the
+  // profile row for BOTH email/password signups and OAuth (Google) signups.
+  // loadUserProfile on the client should simply read the existing row — it
+  // must NOT attempt a client-side INSERT fallback (that path used to race
+  // with the trigger and could hit RLS depending on the auth state).
+  describe('loadUserProfile (Google OAuth)', () => {
     let mockSupabaseClient: any;
     let selectMock: any;
     let eqMock: any;
     let singleMock: any;
-    let insertMock: any;
 
     beforeEach(() => {
       singleMock = jest.fn();
       eqMock = jest.fn().mockReturnValue({ single: singleMock });
       selectMock = jest.fn().mockReturnValue({ eq: eqMock });
-      insertMock = jest.fn().mockReturnValue({ select: jest.fn().mockReturnValue({ single: jest.fn().mockResolvedValue({ data: {}, error: null }) }) });
 
       mockSupabaseClient = {
         auth: {
@@ -180,109 +166,39 @@ describe('SupabaseService', () => {
           onAuthStateChange: jest.fn()
         },
         from: jest.fn().mockReturnValue({
-          select: selectMock,
-          insert: insertMock
+          select: selectMock
         })
       };
       (service as any).supabase = mockSupabaseClient;
     });
 
-    it('should create profile from Google metadata when loadUserProfile returns no profile', async () => {
-      // loadUserProfile returns no profile (error means no row found)
+    it('should NOT client-side create a profile when missing for a Google user (trigger owns creation)', async () => {
       singleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
 
-      const googleUser = {
-        id: 'google-user-123',
-        email: 'jane.doe@gmail.com',
-        app_metadata: { provider: 'google' },
-        user_metadata: { full_name: 'Jane Doe' }
-      };
+      const createProfileSpy = jest.spyOn(service, 'createProfile');
 
-      // Spy on createProfile
-      const createProfileSpy = jest.spyOn(service, 'createProfile').mockResolvedValue({} as any);
+      await (service as any).loadUserProfile('google-user-123');
 
-      // Call the private method via the auth state change handler
-      await (service as any).loadUserProfile(googleUser.id, googleUser);
-
-      expect(createProfileSpy).toHaveBeenCalledWith(
-        'google-user-123',
-        expect.objectContaining({
-          email: 'jane.doe@gmail.com',
-          username: 'jane.doe',
-          first_name: 'Jane',
-          last_name: 'Doe',
-          role: 'player',
-          first_login: true
-        })
-      );
+      expect(createProfileSpy).not.toHaveBeenCalled();
     });
 
-    it('should derive username from email prefix for Google users', async () => {
-      singleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
-
-      const googleUser = {
+    it('should publish the profile when the trigger-created row is present', async () => {
+      const triggerCreatedProfile = {
         id: 'google-user-456',
-        email: 'cool.player2025@gmail.com',
-        app_metadata: { provider: 'google' },
-        user_metadata: { full_name: 'Cool Player' }
+        email: 'jane.doe@gmail.com',
+        username: 'jane.doe',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        role: 'player',
+        first_login: true,
+        created_at: '2026-04-24',
+        updated_at: '2026-04-24'
       };
+      singleMock.mockResolvedValue({ data: triggerCreatedProfile, error: null });
 
-      const createProfileSpy = jest.spyOn(service, 'createProfile').mockResolvedValue({} as any);
+      await (service as any).loadUserProfile('google-user-456');
 
-      await (service as any).loadUserProfile(googleUser.id, googleUser);
-
-      expect(createProfileSpy).toHaveBeenCalledWith(
-        'google-user-456',
-        expect.objectContaining({
-          username: 'cool.player2025'
-        })
-      );
-    });
-
-    it('should derive first_name and last_name from Google full_name', async () => {
-      singleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
-
-      const googleUser = {
-        id: 'google-user-789',
-        email: 'mary.jane.watson@gmail.com',
-        app_metadata: { provider: 'google' },
-        user_metadata: { full_name: 'Mary Jane Watson' }
-      };
-
-      const createProfileSpy = jest.spyOn(service, 'createProfile').mockResolvedValue({} as any);
-
-      await (service as any).loadUserProfile(googleUser.id, googleUser);
-
-      expect(createProfileSpy).toHaveBeenCalledWith(
-        'google-user-789',
-        expect.objectContaining({
-          first_name: 'Mary',
-          last_name: 'Jane Watson'
-        })
-      );
-    });
-
-    it('should handle single-word full_name (no last name)', async () => {
-      singleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
-
-      const googleUser = {
-        id: 'google-user-solo',
-        email: 'madonna@gmail.com',
-        app_metadata: { provider: 'google' },
-        user_metadata: { full_name: 'Madonna' }
-      };
-
-      const createProfileSpy = jest.spyOn(service, 'createProfile').mockResolvedValue({} as any);
-
-      await (service as any).loadUserProfile(googleUser.id, googleUser);
-
-      expect(createProfileSpy).toHaveBeenCalledWith(
-        'google-user-solo',
-        expect.objectContaining({
-          first_name: 'Madonna',
-          last_name: ''
-        })
-      );
+      expect(service.currentProfile).toEqual(triggerCreatedProfile);
     });
   });
 });

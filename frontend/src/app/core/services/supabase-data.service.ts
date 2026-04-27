@@ -99,6 +99,10 @@ export class SupabaseDataService {
       ? `${currentYear}-${String(currentYear + 1).slice(2)}`
       : `${currentYear - 1}-${String(currentYear).slice(2)}`;
 
+    // current_members starts at 0 — the increment_member_count_on_join
+    // trigger will bump it to 1 when we insert the admin's group_members
+    // row below. Setting it to 1 here AND inserting the admin double-counts.
+    // (Migration 016 backfills any rows that drifted under the old code.)
     const { data: group, error: groupError } = await this.client
       .from('groups')
       .insert([{
@@ -106,14 +110,14 @@ export class SupabaseDataService {
         admin_id: userId,
         code: codeData,
         season_year: seasonYear,
-        current_members: 1,
+        current_members: 0,
       }])
       .select()
       .single();
 
     if (groupError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', groupError);
 
-    // Add creator as a member
+    // Add creator as a member — trigger will increment current_members to 1.
     const { error: memberError } = await this.client
       .from('group_members')
       .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]);
@@ -135,19 +139,62 @@ export class SupabaseDataService {
 
     if (findError) throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', findError);
 
-    // Add user as member
-    const { data: membership, error: joinError } = await this.client
+    // Idempotent: if the user already belongs to this group (e.g. they
+    // rejoined after a network blip, or an earlier INSERT succeeded but
+    // the response was lost), return the existing row instead of throwing
+    // the Postgres unique-violation (23505 → HTTP 409) that a second
+    // INSERT would produce.
+    const { data: existing } = await this.client
       .from('group_members')
-      .insert([{ group_id: group.id, user_id: userId, total_points: 0 }])
-      .select()
+      .select('*')
+      .eq('group_id', group.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      return existing as GroupMember;
+    }
+
+    // Add user as member.
+    //
+    // We deliberately do NOT chain .select() onto this insert. PostgREST
+    // turns `.select()` into INSERT ... RETURNING *, which forces RLS to
+    // re-evaluate the row against the SELECT policy (`is_group_member`).
+    // That predicate is STABLE and only sees rows visible at the
+    // statement's snapshot — i.e. NOT the just-inserted row — so the
+    // RETURNING phase rejects with 42501 even though the INSERT itself
+    // satisfies WITH CHECK. Mirrors the createGroup pattern (no .select)
+    // which has worked correctly all along.
+    const { error: joinError } = await this.client
+      .from('group_members')
+      .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]);
+
+    // Race case: another tab / double-fire inserted the row between our
+    // SELECT and INSERT. Treat as success — refetch below.
+    const isRaceConflict = joinError?.code === '23505';
+
+    if (joinError && !isRaceConflict) {
+      throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', joinError);
+    }
+
+    // Refetch the membership row in a separate request. Now that we ARE
+    // a member, the SELECT policy passes cleanly (is_group_member sees
+    // our row in this fresh statement's snapshot).
+    const { data: membership, error: refetchError } = await this.client
+      .from('group_members')
+      .select('*')
+      .eq('group_id', group.id)
+      .eq('user_id', userId)
       .single();
 
-    if (joinError) throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', joinError);
+    if (refetchError) {
+      throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', refetchError);
+    }
 
-    // Note: current_members is updated automatically by the
-    // increment_member_count_on_join DB trigger (see migration 005).
+    // Note: current_members on the parent groups row is incremented
+    // automatically by the increment_member_count_on_join trigger.
 
-    return membership;
+    return membership as GroupMember;
   }
 
   async leaveGroup(groupId: string): Promise<void> {
@@ -176,14 +223,9 @@ export class SupabaseDataService {
   }
 
   async getGroupMembers(groupId: string): Promise<GroupMemberWithProfile[]> {
-    const { data, error } = await this.client
-      .from('group_members')
-      .select('*, profiles(username, avatar_url)')
-      .eq('group_id', groupId)
-      .order('total_points', { ascending: false });
-
-    if (error) throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', error);
-    return data || [];
+    return this.fetchMembersWithProfiles(groupId, [
+      ['total_points', { ascending: false }],
+    ]);
   }
 
   // -----------------------------------------------------------------------
@@ -519,18 +561,65 @@ export class SupabaseDataService {
 
   async getLeaderboard(groupId: string): Promise<GroupMemberWithProfile[]> {
     // Tiebreakers per plan 4.1.3: total_points DESC, then correct_scores DESC,
-    // then correct_results DESC. Chained .order() calls serialize into a single
-    // PostgREST ORDER BY clause.
-    const { data, error } = await this.client
-      .from('group_members')
-      .select('*, profiles(username, avatar_url)')
-      .eq('group_id', groupId)
-      .order('total_points', { ascending: false })
-      .order('correct_scores', { ascending: false })
-      .order('correct_results', { ascending: false });
+    // then correct_results DESC.
+    return this.fetchMembersWithProfiles(groupId, [
+      ['total_points', { ascending: false }],
+      ['correct_scores', { ascending: false }],
+      ['correct_results', { ascending: false }],
+    ]);
+  }
 
-    if (error) throw this.toSupabaseError('supabase.getLeaderboard', 'Unable to load leaderboard', error);
-    return data || [];
+  /**
+   * Two-query merge for any caller that needs `group_members` rows joined
+   * with co-member display info (username + avatar).
+   *
+   * Why two queries instead of `.select('*, profiles(...)')`:
+   *   The `profiles` table is RLS-locked to the row's owner (and super-
+   *   admins). A PostgREST embed therefore returns NULL for every
+   *   co-member's profile, which is what made the leaderboard render
+   *   "Unknown" for everyone except the caller. The fix is migration
+   *   015's `member_profiles` view — a column-firewalled view exposing
+   *   ONLY id/username/avatar_url, with view-level access control. We
+   *   query it explicitly here and merge rather than rely on PostgREST
+   *   following a foreign key into a view (which it cannot do).
+   *
+   * Output shape matches the previous embed: each row is a GroupMember
+   * row with an extra `profiles` field of `{ username, avatar_url } | null`.
+   */
+  private async fetchMembersWithProfiles(
+    groupId: string,
+    orderBy: ReadonlyArray<[string, { ascending: boolean }]>,
+  ): Promise<GroupMemberWithProfile[]> {
+    let membersQuery = this.client
+      .from('group_members')
+      .select('*')
+      .eq('group_id', groupId);
+    for (const [column, opts] of orderBy) {
+      membersQuery = membersQuery.order(column, opts);
+    }
+    const { data: members, error: membersError } = await membersQuery;
+    if (membersError) {
+      throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', membersError);
+    }
+    if (!members || members.length === 0) return [];
+
+    const userIds = members.map(m => m.user_id);
+    const { data: profileRows, error: profilesError } = await this.client
+      .from('member_profiles')
+      .select('id, username, avatar_url')
+      .in('id', userIds);
+    if (profilesError) {
+      throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', profilesError);
+    }
+
+    const profileById = new Map<string, { username: string; avatar_url: string | undefined }>(
+      (profileRows ?? []).map(p => [p.id, { username: p.username, avatar_url: p.avatar_url }]),
+    );
+
+    return members.map(m => ({
+      ...m,
+      profiles: profileById.get(m.user_id) ?? null,
+    })) as GroupMemberWithProfile[];
   }
 
   // -----------------------------------------------------------------------

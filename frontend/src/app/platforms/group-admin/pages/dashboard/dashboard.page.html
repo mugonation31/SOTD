@@ -115,7 +115,10 @@
         <div class="performers-list">
           <div *ngFor="let player of topPerformers" class="performer-item">
             <div class="performer-info">
-              <span class="name">{{ player.name }}</span>
+              <span class="name">
+                {{ player.name }}
+                <ion-badge *ngIf="player.isAdmin" color="warning" class="admin-badge">ADMIN</ion-badge>
+              </span>
               <span class="points">+{{ player.weekPoints }} pts</span>
             </div>
             <div class="performance-details">
@@ -168,7 +171,10 @@
       <div class="insights-grid">
         <div *ngFor="let member of memberInsights.slice(0, 4)" class="insight-card">
           <div class="member-header">
-            <div class="member-name">{{ member.name }}</div>
+            <div class="member-name">
+              {{ member.name }}
+              <ion-badge *ngIf="member.isAdmin" color="warning" class="admin-badge">ADMIN</ion-badge>
+            </div>
             <ion-badge [color]="getRiskLevelColor(member.riskLevel)" size="small">
               {{ member.riskLevel | titlecase }} Risk
             </ion-badge>

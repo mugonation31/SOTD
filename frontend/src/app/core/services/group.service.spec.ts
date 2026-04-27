@@ -165,6 +165,13 @@ describe('GroupService', () => {
     });
     expect(result!.leaderboard).toHaveLength(2);
     expect(result!.userPosition).toBe(2);
+
+    // The Standing for the user matching group.admin_id is flagged isAdmin=true
+    // so the UI can render an "ADMIN" badge. All other rows are isAdmin=false.
+    const adminStanding = result!.leaderboard.find(s => s.userId === 'user-1');
+    const playerStanding = result!.leaderboard.find(s => s.userId === 'user-2');
+    expect(adminStanding!.isAdmin).toBe(true);
+    expect(playerStanding!.isAdmin).toBe(false);
   });
 
   it('should return empty array when getUserGroups() fails', async () => {

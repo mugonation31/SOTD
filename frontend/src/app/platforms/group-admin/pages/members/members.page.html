@@ -116,8 +116,15 @@
             </ion-avatar>
 
             <ion-label>
-              <h2>{{ member.name }}</h2>
-              <p>{{ member.email }}</p>
+              <h2>
+                {{ member.name }}
+                <ion-badge
+                  *ngIf="member.role === 'admin'"
+                  color="warning"
+                  class="role-badge"
+                >ADMIN</ion-badge>
+              </h2>
+              <p *ngIf="member.email">{{ member.email }}</p>
               <p class="member-meta">
                 <span class="join-date"
                   >Joined: {{ member.joinedAt | date : 'medium' }}</span

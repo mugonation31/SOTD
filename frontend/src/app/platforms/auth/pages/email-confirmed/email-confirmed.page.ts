@@ -52,29 +52,59 @@ export class EmailConfirmedPage implements OnInit {
   async handleEmailConfirmation() {
     try {
       console.log('📧 Handling email confirmation...');
-      
-      // Check if we have tokens in the URL fragment
+
       const url = new URL(window.location.href);
+      const queryParams = url.searchParams;
       const hashParams = new URLSearchParams(url.hash.slice(1));
+
+      // Case 1: Supabase redirected with an error (expired/invalid token,
+      // prefetched by email scanner, etc.). Keep the static success UI
+      // suppressed and surface the real reason.
+      const errorCode =
+        queryParams.get('error_code') || hashParams.get('error_code');
+      const errorDescription =
+        queryParams.get('error_description') || hashParams.get('error_description');
+      if (errorCode) {
+        console.error('❌ Email confirmation error:', errorCode, errorDescription);
+        return;
+      }
+
+      // Case 2: PKCE flow (current). Supabase returned ?code=... — exchange
+      // it for an access + refresh token pair, which also marks the email
+      // confirmed server-side and establishes the client session so the
+      // user doesn't have to log in a second time.
+      const code = queryParams.get('code');
+      if (code) {
+        console.log('🔗 Found PKCE code, exchanging for session...');
+        const { error } = await this.supabaseService.client.auth
+          .exchangeCodeForSession(code);
+        if (error) {
+          console.error('❌ PKCE exchange failed:', error);
+          return;
+        }
+        console.log('✅ Email confirmation successful — session established');
+        return;
+      }
+
+      // Case 3: Legacy implicit flow. Supabase returned tokens directly in
+      // the URL fragment. Preserved so older email templates / redirects
+      // that haven't been cut over still work.
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
-      
       if (accessToken && refreshToken) {
-        console.log('🔗 Found auth tokens in URL, processing session...');
-        
-        // Set the session using the tokens from the email confirmation
-        const success = await this.supabaseService.handleDeepLinkSession(window.location.href);
-        
+        console.log('🔗 Found implicit-flow tokens, setting session...');
+        const success = await this.supabaseService.handleDeepLinkSession(
+          window.location.href
+        );
         if (success) {
-          console.log('✅ Email confirmation successful, session established');
-          // The app will automatically navigate based on the user's role and first login status
-          // through the routing guards and session restoration flow
+          console.log('✅ Email confirmation successful — session established');
         } else {
-          console.error('❌ Failed to establish session from email confirmation');
+          console.error('❌ Failed to establish session from tokens');
         }
-      } else {
-        console.log('ℹ️ No auth tokens found in URL - user may need to login manually');
+        return;
       }
+
+      console.log('ℹ️ No auth material in URL — user must log in manually');
     } catch (error) {
       console.error('❌ Error handling email confirmation:', error);
     }

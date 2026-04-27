@@ -56,6 +56,7 @@ interface TopPerformer {
   weekPoints: number;
   correctPredictions: number;
   usedJoker: boolean;
+  isAdmin: boolean;
 }
 
 interface PendingMember {
@@ -104,6 +105,7 @@ interface MemberInsight {
   averageAccuracy: number;
   socialInteractions: number;
   recommendedAction?: string;
+  isAdmin: boolean;
 }
 
 interface CommunityAlert {
@@ -302,20 +304,27 @@ export class DashboardPage implements OnInit {
             weekPoints: entry.points || Math.floor(Math.random() * 20) + 10,
             correctPredictions: Math.floor(Math.random() * 3) + 1,
             usedJoker: Math.random() > 0.7,
+            // entry is a Standing — isAdmin already computed by GroupService.
+            // For raw leaderboards (no Standing wrapper) we fall back to user_id match.
+            isAdmin: entry.isAdmin === true || entry.user_id === group.admin_id,
           });
         });
       }
     });
 
-    // If no leaderboard data, create mock data from group members
+    // If no leaderboard data, create mock data from group members.
+    // GroupMember rows don't carry a `name` — pull username from the
+    // slim profile embed and derive admin status from group.admin_id.
     if (allPerformers.length === 0 && groups.length > 0) {
-      const allMembers = groups.flatMap(group => group.members);
-      allMembers.slice(0, 3).forEach((member: any) => {
-        allPerformers.push({
-          name: member.name,
-          weekPoints: Math.floor(Math.random() * 20) + 10,
-          correctPredictions: Math.floor(Math.random() * 3) + 1,
-          usedJoker: Math.random() > 0.7,
+      groups.forEach(group => {
+        (group.members || []).slice(0, 3).forEach((member: any) => {
+          allPerformers.push({
+            name: member.profiles?.username || member.name || 'Unknown',
+            weekPoints: Math.floor(Math.random() * 20) + 10,
+            correctPredictions: Math.floor(Math.random() * 3) + 1,
+            usedJoker: Math.random() > 0.7,
+            isAdmin: member.user_id === group.admin_id,
+          });
         });
       });
     }
@@ -401,10 +410,10 @@ export class DashboardPage implements OnInit {
       group.members.slice(0, 8).forEach((member: any, index: number) => {
         const engagementScore = Math.floor(Math.random() * 40) + 60;
         const riskLevel = engagementScore < 70 ? 'high' : engagementScore < 85 ? 'medium' : 'low';
-        
+
         insights.push({
           id: member.id || `member-${index}`,
-          name: member.name,
+          name: member.profiles?.username || member.name || 'Unknown',
           engagementScore,
           riskLevel,
           participationTrend: Math.random() > 0.7 ? 'improving' : Math.random() > 0.5 ? 'stable' : 'declining',
@@ -413,6 +422,7 @@ export class DashboardPage implements OnInit {
           averageAccuracy: Math.floor(Math.random() * 30) + 60,
           socialInteractions: Math.floor(Math.random() * 20) + 5,
           recommendedAction: riskLevel === 'high' ? 'Send engagement boost' : riskLevel === 'medium' ? 'Monitor closely' : undefined,
+          isAdmin: member.user_id === group.admin_id,
         });
       });
     });

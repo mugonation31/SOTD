@@ -62,6 +62,10 @@ interface Member {
   email: string;
   joinedAt: Date;
   groupName: string;
+  // 'admin' iff the user is the group's admin_id; 'player' otherwise.
+  // Derived from group.admin_id at load time, not from a profile field —
+  // the slim member_profiles view (migration 015) deliberately does NOT
+  // expose `role` to other group members.
   role: 'admin' | 'player';
   status: 'active' | 'inactive';
 }
@@ -147,16 +151,24 @@ export class MembersPage implements OnInit {
     try {
       const adminGroups = await this.groupService.getAdminGroups();
 
+      // Map raw group_members rows + slim profile (username, avatar) into
+      // the page's Member view-model. Email is intentionally NOT shown
+      // here — it's not in the slim member_profiles view (privacy
+      // boundary, migration 015). `role` is derived: anyone whose user_id
+      // matches the parent group's admin_id is the admin.
       this.members = adminGroups.flatMap((group: any) =>
-        (group.members || []).map((member: any) => ({
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          joinedAt: member.joinedAt,
-          groupName: group.name,
-          role: member.role,
-          status: member.status,
-        }))
+        (group.members || []).map((member: any) => {
+          const isAdmin = member.user_id === group.admin_id;
+          return {
+            id: member.id,
+            name: member.profiles?.username || 'Unknown',
+            email: '',
+            joinedAt: member.joined_at ? new Date(member.joined_at) : new Date(0),
+            groupName: group.name,
+            role: isAdmin ? ('admin' as const) : ('player' as const),
+            status: member.is_active === false ? ('inactive' as const) : ('active' as const),
+          };
+        })
       );
 
       this.applyFilters();

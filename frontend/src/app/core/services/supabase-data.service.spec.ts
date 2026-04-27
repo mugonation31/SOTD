@@ -157,7 +157,14 @@ describe('SupabaseDataService', () => {
       const result = await service.createGroup(input);
 
       expect(mockClient.from).toHaveBeenCalledWith('groups');
-      expect(groupBuilder.insert).toHaveBeenCalled();
+      // Migration 016: createGroup must insert with current_members: 0.
+      // The increment_member_count_on_join trigger lands the +1 when we
+      // insert the admin's group_members row in the same flow. If we
+      // pre-set current_members to 1 here the trigger pushes it to 2 and
+      // every group is born off-by-one.
+      expect(groupBuilder.insert).toHaveBeenCalledWith([
+        expect.objectContaining({ current_members: 0 }),
+      ]);
       expect(groupBuilder.select).toHaveBeenCalled();
       expect(groupBuilder.single).toHaveBeenCalled();
       expect(result).toEqual(created);
@@ -226,21 +233,64 @@ describe('SupabaseDataService', () => {
   });
 
   describe('getGroupMembers', () => {
-    it('should return group members ordered by total_points when getGroupMembers is called', async () => {
+    it('should query group_members and member_profiles separately and merge them when getGroupMembers is called', async () => {
+      // Migration 015 introduced the column-firewalled member_profiles view.
+      // The data service no longer embeds profiles via PostgREST — it does
+      // two queries (group_members, then member_profiles by user_ids) and
+      // merges in JS, so the leaderboard renders co-members' usernames
+      // without exposing email/role/etc.
       const members = [
         { id: 'gm1', user_id: 'u1', group_id: 'g1', total_points: 100 },
         { id: 'gm2', user_id: 'u2', group_id: 'g1', total_points: 80 },
       ];
-      const builder = createMockQueryBuilder({ data: members, error: null });
-      mockClient.from.mockReturnValueOnce(builder);
+      const slimProfiles = [
+        { id: 'u1', username: 'alice', avatar_url: null },
+        { id: 'u2', username: 'bob', avatar_url: null },
+      ];
+      const membersBuilder = createMockQueryBuilder({ data: members, error: null });
+      const profilesBuilder = createMockQueryBuilder({ data: slimProfiles, error: null });
+      mockClient.from
+        .mockReturnValueOnce(membersBuilder)
+        .mockReturnValueOnce(profilesBuilder);
 
       const result = await service.getGroupMembers('g1');
 
-      expect(mockClient.from).toHaveBeenCalledWith('group_members');
-      expect(builder.select).toHaveBeenCalledWith('*, profiles(username, avatar_url)');
-      expect(builder.eq).toHaveBeenCalledWith('group_id', 'g1');
-      expect(builder.order).toHaveBeenCalledWith('total_points', { ascending: false });
-      expect(result).toEqual(members);
+      expect(mockClient.from).toHaveBeenNthCalledWith(1, 'group_members');
+      expect(membersBuilder.select).toHaveBeenCalledWith('*');
+      expect(membersBuilder.eq).toHaveBeenCalledWith('group_id', 'g1');
+      expect(membersBuilder.order).toHaveBeenCalledWith('total_points', { ascending: false });
+
+      expect(mockClient.from).toHaveBeenNthCalledWith(2, 'member_profiles');
+      expect(profilesBuilder.select).toHaveBeenCalledWith('id, username, avatar_url');
+      expect(profilesBuilder.in).toHaveBeenCalledWith('id', ['u1', 'u2']);
+
+      expect(result).toEqual([
+        { ...members[0], profiles: { username: 'alice', avatar_url: null } },
+        { ...members[1], profiles: { username: 'bob', avatar_url: null } },
+      ]);
+    });
+
+    it('should skip the second query and return [] when the group has no members', async () => {
+      const membersBuilder = createMockQueryBuilder({ data: [], error: null });
+      mockClient.from.mockReturnValueOnce(membersBuilder);
+
+      const result = await service.getGroupMembers('empty-group');
+
+      expect(result).toEqual([]);
+      expect(mockClient.from).toHaveBeenCalledTimes(1);
+    });
+
+    it('should attach profiles: null when a member has no matching member_profiles row', async () => {
+      const members = [{ id: 'gm1', user_id: 'u1', group_id: 'g1', total_points: 50 }];
+      const membersBuilder = createMockQueryBuilder({ data: members, error: null });
+      const profilesBuilder = createMockQueryBuilder({ data: [], error: null });
+      mockClient.from
+        .mockReturnValueOnce(membersBuilder)
+        .mockReturnValueOnce(profilesBuilder);
+
+      const result = await service.getGroupMembers('g1');
+
+      expect(result).toEqual([{ ...members[0], profiles: null }]);
     });
   });
 
@@ -873,22 +923,44 @@ describe('SupabaseDataService', () => {
   // Leaderboard
   // -----------------------------------------------------------------------
   describe('getLeaderboard', () => {
-    it('should return group members sorted by total_points descending when getLeaderboard is called', async () => {
-      const leaderboard = [
-        { id: 'gm1', user_id: 'u1', group_id: 'g1', total_points: 120, profiles: { username: 'alice' } },
-        { id: 'gm2', user_id: 'u2', group_id: 'g1', total_points: 95, profiles: { username: 'bob' } },
-        { id: 'gm3', user_id: 'u3', group_id: 'g1', total_points: 80, profiles: { username: 'carol' } },
+    it('should query group_members + member_profiles separately and merge them with full tiebreaker ordering when getLeaderboard is called', async () => {
+      // Migration 015: the slim member_profiles view replaces the embedded
+      // profiles join. Tiebreakers per plan 4.1.3: total_points DESC,
+      // correct_scores DESC, correct_results DESC.
+      const members = [
+        { id: 'gm1', user_id: 'u1', group_id: 'g1', total_points: 120, correct_scores: 8, correct_results: 12 },
+        { id: 'gm2', user_id: 'u2', group_id: 'g1', total_points: 95,  correct_scores: 5, correct_results: 10 },
+        { id: 'gm3', user_id: 'u3', group_id: 'g1', total_points: 80,  correct_scores: 4, correct_results: 9 },
       ];
-      const builder = createMockQueryBuilder({ data: leaderboard, error: null });
-      mockClient.from.mockReturnValueOnce(builder);
+      const slimProfiles = [
+        { id: 'u1', username: 'alice', avatar_url: null },
+        { id: 'u2', username: 'bob', avatar_url: null },
+        { id: 'u3', username: 'carol', avatar_url: null },
+      ];
+      const membersBuilder = createMockQueryBuilder({ data: members, error: null });
+      const profilesBuilder = createMockQueryBuilder({ data: slimProfiles, error: null });
+      mockClient.from
+        .mockReturnValueOnce(membersBuilder)
+        .mockReturnValueOnce(profilesBuilder);
 
       const result = await service.getLeaderboard('g1');
 
-      expect(mockClient.from).toHaveBeenCalledWith('group_members');
-      expect(builder.select).toHaveBeenCalledWith('*, profiles(username, avatar_url)');
-      expect(builder.eq).toHaveBeenCalledWith('group_id', 'g1');
-      expect(builder.order).toHaveBeenCalledWith('total_points', { ascending: false });
-      expect(result).toEqual(leaderboard);
+      expect(mockClient.from).toHaveBeenNthCalledWith(1, 'group_members');
+      expect(membersBuilder.select).toHaveBeenCalledWith('*');
+      expect(membersBuilder.eq).toHaveBeenCalledWith('group_id', 'g1');
+      expect(membersBuilder.order).toHaveBeenNthCalledWith(1, 'total_points', { ascending: false });
+      expect(membersBuilder.order).toHaveBeenNthCalledWith(2, 'correct_scores', { ascending: false });
+      expect(membersBuilder.order).toHaveBeenNthCalledWith(3, 'correct_results', { ascending: false });
+
+      expect(mockClient.from).toHaveBeenNthCalledWith(2, 'member_profiles');
+      expect(profilesBuilder.select).toHaveBeenCalledWith('id, username, avatar_url');
+      expect(profilesBuilder.in).toHaveBeenCalledWith('id', ['u1', 'u2', 'u3']);
+
+      expect(result).toEqual([
+        { ...members[0], profiles: { username: 'alice', avatar_url: null } },
+        { ...members[1], profiles: { username: 'bob', avatar_url: null } },
+        { ...members[2], profiles: { username: 'carol', avatar_url: null } },
+      ]);
     });
   });
 

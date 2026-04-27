@@ -127,6 +127,7 @@ export class LeaderboardPage implements OnInit {
             correctScores: entry.correct_scores || 0,
             correctResults: entry.correct_results || 0,
             jokerUsed: entry.jokers_used || 0,
+            isAdmin: entry.user_id === group.admin_id,
           })),
           adminPosition: adminIndex >= 0 ? adminIndex + 1 : null,
         });

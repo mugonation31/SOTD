@@ -44,6 +44,7 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
         correctScores: 3,
         correctResults: 4,
         jokerUsed: 1,
+            isAdmin: false,
       },
       {
         position: 2,
@@ -55,6 +56,7 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
         correctScores: 1,
         correctResults: 3,
         jokerUsed: 0,
+            isAdmin: false,
       },
     ],
     userPosition: 2,
@@ -148,6 +150,7 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
             correctScores: 5,
             correctResults: 5,
             jokerUsed: 0,
+            isAdmin: false,
           },
           {
             position: 2,
@@ -159,6 +162,7 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
             correctScores: 3,
             correctResults: 4,
             jokerUsed: 0,
+            isAdmin: false,
           },
           {
             position: 3,
@@ -170,6 +174,7 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
             correctScores: 0,
             correctResults: 1,
             jokerUsed: 0,
+            isAdmin: false,
           },
         ],
       }),

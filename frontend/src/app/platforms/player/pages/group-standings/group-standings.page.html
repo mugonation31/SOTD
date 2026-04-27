@@ -91,6 +91,7 @@
           
           <div class="name-col">
             {{ player.name }}
+            <ion-badge *ngIf="player.isAdmin" color="warning" class="admin-badge">ADMIN</ion-badge>
             <ion-badge *ngIf="isCurrentUser(player.userId)" color="primary" class="you-badge">YOU</ion-badge>
           </div>
           
