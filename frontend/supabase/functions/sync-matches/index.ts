@@ -231,7 +231,11 @@ serve(async (req: Request) => {
     );
   }
 
-  // Authenticate: require a valid Supabase JWT or the service role key
+  // Authenticate: require a Bearer token. Gateway JWT verification is
+  // disabled in supabase/config.toml because the gateway rejects ES256
+  // (asymmetric) JWTs with UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM. We
+  // verify the JWT ourselves below via supabase.auth.getUser(), which
+  // supports ES256 because it round-trips to the auth server.
   const authHeader = req.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(
@@ -244,15 +248,51 @@ serve(async (req: Request) => {
     // Validate environment variables
     const apiKey = Deno.env.get('FOOTBALL_DATA_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!apiKey || !supabaseUrl || !supabaseServiceKey) {
+    if (!apiKey || !supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
       return new Response(
         JSON.stringify({
           success: false,
           error: 'Missing required environment variables',
         }),
         { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Caller verification — must be an active super-admin.
+    // -----------------------------------------------------------------------
+    // Two clients, mirroring the admin-signout pattern:
+    //   - supabaseUser: anon key + caller's JWT, used to resolve identity
+    //     and read the caller's profile under RLS.
+    //   - supabase: service role, used for the actual sync writes.
+    // Service-role key never leaves this function.
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: userResult, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !userResult?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const callerId = userResult.user.id;
+
+    const { data: profile, error: profileError } = await supabaseUser
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', callerId)
+      .maybeSingle();
+
+    if (profileError || !profile || profile.role !== 'super-admin' || profile.is_active === false) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden' }),
+        { status: 403, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -422,6 +462,46 @@ serve(async (req: Request) => {
       }
 
       totalGameweeksSynced++;
+    }
+
+    // -----------------------------------------------------------------------
+    // Mark exactly one gameweek as the "active" one.
+    // -----------------------------------------------------------------------
+    // football-data.org tells us which matchday is current via
+    // competition.currentSeason.currentMatchday. Without this step every
+    // gameweek lands with the column DEFAULT (false), so the frontend
+    // query `gameweeks?is_active=eq.true&.single()` returns 0 rows and
+    // 406s — which is what was happening before this patch.
+    //
+    // Two writes to keep "exactly one is_active" as a hard invariant:
+    //   1. Clear is_active on every other gameweek for this season.
+    //   2. Set is_active = true on the current matchday's row.
+    // Done in this order so we never momentarily have two actives.
+    const currentMatchday: number | undefined =
+      data.competition?.currentSeason?.currentMatchday;
+
+    if (typeof currentMatchday === 'number' && currentMatchday > 0) {
+      const { error: clearErr } = await supabase
+        .from('gameweeks')
+        .update({ is_active: false })
+        .eq('season_year', seasonYear)
+        .neq('gameweek_number', currentMatchday);
+      if (clearErr) {
+        errors.push(`Clear is_active: ${sanitizeError(clearErr.message)}`);
+      }
+
+      const { error: setErr } = await supabase
+        .from('gameweeks')
+        .update({ is_active: true })
+        .eq('season_year', seasonYear)
+        .eq('gameweek_number', currentMatchday);
+      if (setErr) {
+        errors.push(`Set is_active for GW${currentMatchday}: ${sanitizeError(setErr.message)}`);
+      }
+    } else {
+      console.warn(
+        'sync-matches: competition.currentSeason.currentMatchday missing — leaving is_active flags untouched'
+      );
     }
 
     const syncedAt = new Date().toISOString();

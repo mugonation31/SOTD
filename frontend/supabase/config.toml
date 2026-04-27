@@ -1,0 +1,16 @@
+# Supabase project config — applied at function deploy time.
+#
+# verify_jwt = false disables the Edge Function GATEWAY's JWT check on the
+# named function. We still verify the caller's identity inside the function
+# itself (via supabase.auth.getUser(jwt) and a role lookup), which is more
+# specific (super-admin only) and supports asymmetric ES256 JWTs that the
+# gateway currently rejects with UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM.
+#
+# Each function below MUST do its own auth check at the top of its handler.
+# Do NOT add a function here without one.
+
+[functions.sync-matches]
+verify_jwt = false
+
+[functions.admin-signout]
+verify_jwt = false

@@ -361,7 +361,7 @@ describe('SupabaseDataService', () => {
 
       expect(mockClient.from).toHaveBeenCalledWith('matches');
       expect(builder.select).toHaveBeenCalledWith('*');
-      expect(builder.eq).toHaveBeenCalledWith('gameweek', 1);
+      expect(builder.eq).toHaveBeenCalledWith('gameweek_number', 1);
       expect(builder.order).toHaveBeenCalledWith('kickoff_time', { ascending: true });
       expect(result).toEqual(matches);
     });

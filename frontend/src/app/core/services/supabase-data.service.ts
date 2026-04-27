@@ -302,10 +302,15 @@ export class SupabaseDataService {
   // -----------------------------------------------------------------------
 
   async getMatches(gameweek: number): Promise<Match[]> {
+    // Column is `gameweek_number` (migration 003), not `gameweek`. Querying
+    // `.eq('gameweek', ...)` returns 0 rows because the column doesn't
+    // exist by that name — and PostgREST silently coerces the unknown
+    // filter into `gameweek=eq.X` which matches no row. Same shape as the
+    // 4.2.7 alignment fix on the gameweeks table.
     const { data, error } = await this.client
       .from('matches')
       .select('*')
-      .eq('gameweek', gameweek)
+      .eq('gameweek_number', gameweek)
       .order('kickoff_time', { ascending: true });
 
     if (error) throw this.toSupabaseError('supabase.getMatches', 'Unable to load matches', error);
