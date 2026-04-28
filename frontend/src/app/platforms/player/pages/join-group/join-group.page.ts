@@ -252,15 +252,16 @@ export class JoinGroupPage implements OnInit {
         this.showGroupDetails = false;
         this.foundGroup = null;
         this.groupDetailsMessage = '';
-        
+
         // Show success message with enhanced feedback
         await this.toastService.showToast(
           `Successfully joined ${groupName}! Check "My Groups" below.`,
           'success'
         );
 
-        // Reload groups list
-        this.loadMyGroups();
+        // Task 9.1: route back to standings so the new group surfaces in
+        // the player's groups list (replaces the old in-page reload).
+        await this.router.navigate(['/player/standings']);
       } else {
 
         throw new Error('Failed to join group');

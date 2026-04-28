@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import { readFileSync } from 'fs';
@@ -275,5 +276,52 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
     const source = readFileSync(sourcePath, 'utf8');
     expect(source).not.toMatch(/MockDataService/);
     expect(source).not.toMatch(/mock-data\.service/);
+  });
+
+  describe('Task 9.1 — "Join another group" CTA', () => {
+    const findJoinAnotherButton = (): HTMLElement | null => {
+      const buttons = fixture.debugElement.queryAll(By.css('ion-button'));
+      const match = buttons.find((btn) =>
+        (btn.nativeElement.textContent || '')
+          .toLowerCase()
+          .includes('join another group')
+      );
+      return match ? (match.nativeElement as HTMLElement) : null;
+    };
+
+    it('should render a "Join another group" CTA when groupStandings has at least one group', async () => {
+      mockGroupService.getUserGroupsWithStandings.mockResolvedValue([
+        buildGroupWithStandings(),
+      ]);
+
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      expect(findJoinAnotherButton()).not.toBeNull();
+    });
+
+    it('should navigate to /player/join-group when the "Join another group" CTA is clicked', async () => {
+      mockGroupService.getUserGroupsWithStandings.mockResolvedValue([
+        buildGroupWithStandings(),
+      ]);
+
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const button = findJoinAnotherButton();
+      expect(button).not.toBeNull();
+      button!.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/player/join-group']);
+    });
+
+    it('should NOT render the "Join another group" CTA when groupStandings is empty', async () => {
+      mockGroupService.getUserGroupsWithStandings.mockResolvedValue([]);
+
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      expect(findJoinAnotherButton()).toBeNull();
+    });
   });
 });

@@ -41,11 +41,22 @@
     </ion-card-content>
   </ion-card>
 
+  <!-- Join Another Group CTA -->
+  <ion-button
+    *ngIf="!isLoading && groupStandings.length > 0"
+    expand="block"
+    fill="outline"
+    (click)="navigateTo('/player/join-group')"
+    class="join-another-cta">
+    <ion-icon name="person-add-outline" slot="start"></ion-icon>
+    Join another group
+  </ion-button>
+
   <!-- Groups List -->
   <ion-list *ngIf="!isLoading && groupStandings.length > 0">
-    <ion-item 
-      *ngFor="let groupStanding of groupStandings; trackBy: trackByGroupId" 
-      button 
+    <ion-item
+      *ngFor="let groupStanding of groupStandings; trackBy: trackByGroupId"
+      button
       (click)="viewGroupStandings(groupStanding.group.id)"
       class="group-item">
       

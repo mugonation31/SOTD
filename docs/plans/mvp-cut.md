@@ -254,6 +254,86 @@ remaining count decrements. The 3rd attempt is blocked client-side
 (belt) and server-side via the `mark_joker_used` RPC's existing
 guard (braces).
 
+### Phase 9 — Multi-group join CTA (S)
+
+**Title:** Surface a "Join another group" CTA so players already in one
+group can enter a second group code without leaving the app or being
+treated as new users.
+
+The current first-login flow routes 0-group players to
+`/player/join-group`, but once a player is in any group the join surface
+is unreachable from the player and group-admin shells. With promote/demote
+and history landing this cycle, the same human can legitimately belong to
+multiple groups (e.g. a friends group plus a work group), so the join page
+needs to be a steady-state action — not just an onboarding gate.
+
+**Size:** S
+
+**Files:**
+- `frontend/src/app/platforms/player/pages/home/home.page.html`
+  (add CTA in admin-adjacent / footer slot)
+- `frontend/src/app/platforms/player/pages/home/home.page.ts`
+  (handler that routes to `/player/join-group`)
+- `frontend/src/app/platforms/group-admin/pages/group/group.page.html`
+  (add "Join another group" secondary action below the member list)
+- `frontend/src/app/platforms/group-admin/pages/group/group.page.ts`
+  (handler)
+- `frontend/src/app/platforms/player/pages/join-group/join-group.page.ts`
+  (loosen the "redirect away if already in a group" guard so the page
+  is reachable as an explicit action; keep the auto-redirect only for
+  the first-login deep path)
+- `frontend/src/app/platforms/player/player.routes.ts` /
+  `frontend/src/app/platforms/group-admin/group-admin.routes.ts`
+  (confirm `/join-group` route is reachable from both shells; reuse
+  the existing player route from group-admin via shared link if simpler)
+- `frontend/src/app/core/services/group.service.ts`
+  (verify `joinGroup(code)` already appends to `group_members` rather
+  than replacing — no change expected, but covered by tests)
+
+**TDD scenarios:**
+1. Player already in 1 group taps "Join another group" CTA on
+   `/player` → router navigates to `/player/join-group` (no
+   auto-redirect back to home).
+2. Player submits a valid 6-char code on the join page while already
+   in a group → `group_members` row inserted for the new group, toast
+   confirms, routed to `/player`. Existing membership is untouched.
+3. Player submits a code for a group they're already a member of →
+   inline error "You're already in this group" surfaces; no duplicate
+   `group_members` row created. (Relies on the unique
+   `(group_id, user_id)` constraint already in place.)
+4. Group admin on `/group-admin/group` taps "Join another group" →
+   navigates to the join surface; a successful join does not affect
+   their admin status in the original group.
+5. Settings/home empty-state path (player in 0 groups) still
+   auto-routes to `/player/join-group` on first load — regression
+   guard for the existing onboarding flow.
+
+**Implementation outline:**
+- Add a small `<ion-button fill="outline">Join another group</ion-button>`
+  to the player home (under the leaderboard preview card or in a
+  fourth utility card) and to the group-admin group page (under the
+  member list, paired with the existing copy-code button).
+- Update `join-group.page.ts` so the "already in a group, redirect
+  home" branch only fires when the page is hit via the post-signup
+  deep link (e.g. query param `?onboarding=1`), not on direct
+  navigation. Default behaviour: render the form regardless of
+  current membership count.
+- Confirm `GroupService.joinGroup` is idempotent on the unique
+  constraint and surfaces a friendly error.
+- No schema changes — the `group_members` table already supports
+  multiple rows per `user_id`.
+
+**Acceptance:**
+- Player in AdminTestGroup can tap "Join another group" from
+  `/player`, enter a second valid code, and end up with two rows in
+  `group_members` for their `auth.uid()`.
+- Their `/player/standings` and `/player/history` continue to scope
+  to whichever group is "active" (out of scope for this phase: a
+  group switcher; defer until 2+ groups exist for any real user).
+- The first-login onboarding redirect for 0-group players still
+  works.
+- All existing tests stay green; new specs cover the 5 TDD scenarios.
+
 ---
 
 ## Sequencing notes
@@ -272,7 +352,6 @@ guard (braces).
 
 ## Out of scope (defer post-launch)
 
-- Multi-group-per-player support (assumed 1 group per player for MVP).
 - Email notifications when GW deadline approaches.
 - Push notifications.
 - Avatars / profile photos beyond default Ionicons.
