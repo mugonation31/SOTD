@@ -220,15 +220,114 @@ describe('SupabaseDataService', () => {
     it('should remove the user from a group when leaveGroup is called', async () => {
       // First call: admin check (select from groups)
       const adminCheckBuilder = createMockQueryBuilder({ data: { admin_id: 'other-user' }, error: null });
-      // Second call: delete from group_members (returns deleted rows)
+      // Second call: membership admin check (select is_admin from group_members)
+      const membershipCheckBuilder = createMockQueryBuilder({ data: { is_admin: false }, error: null });
+      // Third call: delete from group_members (returns deleted rows)
       const deleteBuilder = createMockQueryBuilder({ data: [{ id: 'row1' }], error: null });
-      mockClient.from.mockReturnValueOnce(adminCheckBuilder).mockReturnValueOnce(deleteBuilder);
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder)
+        .mockReturnValueOnce(membershipCheckBuilder)
+        .mockReturnValueOnce(deleteBuilder);
 
       await service.leaveGroup('g1');
 
       expect(mockClient.from).toHaveBeenCalledWith('groups');
       expect(mockClient.from).toHaveBeenCalledWith('group_members');
       expect(deleteBuilder.delete).toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Phase 12.3 (H5): leaveGroup admin guard mirrors RLS (migration 017)
+  // -----------------------------------------------------------------------
+  // The "Users can leave groups" RLS policy from migration 017 blocks DELETE
+  // when the caller is ANY current admin — creator (groups.admin_id) OR a
+  // promoted co-admin (group_members.is_admin = true). The client-side
+  // guard previously only checked groups.admin_id, so a promoted co-admin
+  // would silently fall through to the DELETE, get an empty result back
+  // (RLS quietly filtered the row out), and then receive the misleading
+  // "You are not a member of this group" error. This block locks down the
+  // client guard so it mirrors the RLS predicate and emits a single,
+  // friendly, consistent message in both admin paths.
+  describe('Phase 12.3 (H5): leaveGroup admin guard mirrors RLS', () => {
+    const ADMIN_CANNOT_LEAVE_MESSAGE =
+      'You are an admin of this group. Demote yourself or have another admin do so before leaving.';
+
+    it('should throw the friendly admin-cannot-leave error when caller is the original creator (admin_id match)', async () => {
+      // groups.admin_id === 'user-1' (the caller), is_admin doesn't matter
+      // (RLS would reject anyway). Should never reach the DELETE.
+      const adminCheckBuilder = createMockQueryBuilder({ data: { admin_id: 'user-1' }, error: null });
+      const membershipCheckBuilder = createMockQueryBuilder({ data: { is_admin: true }, error: null });
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder)
+        .mockReturnValueOnce(membershipCheckBuilder);
+
+      await expect(service.leaveGroup('g1')).rejects.toThrow(ADMIN_CANNOT_LEAVE_MESSAGE);
+    });
+
+    it('should throw the SAME friendly admin-cannot-leave error when caller is a promoted co-admin (is_admin=true, NOT admin_id)', async () => {
+      // groups.admin_id is someone else ('creator-user'), but the caller's
+      // group_members.is_admin is TRUE — promoted co-admin per migration 017.
+      // Without the new guard the code would proceed to DELETE, hit RLS,
+      // get an empty result, and throw "You are not a member of this group".
+      const adminCheckBuilder = createMockQueryBuilder({ data: { admin_id: 'creator-user' }, error: null });
+      const membershipCheckBuilder = createMockQueryBuilder({ data: { is_admin: true }, error: null });
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder)
+        .mockReturnValueOnce(membershipCheckBuilder);
+
+      await expect(service.leaveGroup('g1')).rejects.toThrow(ADMIN_CANNOT_LEAVE_MESSAGE);
+    });
+
+    it('should successfully delete the membership row when caller is a regular member (admin_id mismatch AND is_admin=false)', async () => {
+      const adminCheckBuilder = createMockQueryBuilder({ data: { admin_id: 'creator-user' }, error: null });
+      const membershipCheckBuilder = createMockQueryBuilder({ data: { is_admin: false }, error: null });
+      const deleteBuilder = createMockQueryBuilder({ data: [{ id: 'gm-row-1' }], error: null });
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder)
+        .mockReturnValueOnce(membershipCheckBuilder)
+        .mockReturnValueOnce(deleteBuilder);
+
+      await service.leaveGroup('g1');
+
+      expect(deleteBuilder.delete).toHaveBeenCalled();
+      expect(deleteBuilder.eq).toHaveBeenCalledWith('group_id', 'g1');
+      expect(deleteBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    });
+
+    it('should use a consistent user-facing error message across creator and co-admin paths (no UX drift)', async () => {
+      // Creator path
+      const adminCheckBuilder1 = createMockQueryBuilder({ data: { admin_id: 'user-1' }, error: null });
+      const membershipCheckBuilder1 = createMockQueryBuilder({ data: { is_admin: true }, error: null });
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder1)
+        .mockReturnValueOnce(membershipCheckBuilder1);
+
+      let creatorError: Error | null = null;
+      try {
+        await service.leaveGroup('g1');
+      } catch (err) {
+        creatorError = err as Error;
+      }
+
+      // Co-admin path
+      const adminCheckBuilder2 = createMockQueryBuilder({ data: { admin_id: 'creator-user' }, error: null });
+      const membershipCheckBuilder2 = createMockQueryBuilder({ data: { is_admin: true }, error: null });
+      mockClient.from
+        .mockReturnValueOnce(adminCheckBuilder2)
+        .mockReturnValueOnce(membershipCheckBuilder2);
+
+      let coAdminError: Error | null = null;
+      try {
+        await service.leaveGroup('g1');
+      } catch (err) {
+        coAdminError = err as Error;
+      }
+
+      expect(creatorError).not.toBeNull();
+      expect(coAdminError).not.toBeNull();
+      expect(creatorError!.message).toBe(coAdminError!.message);
+      expect(creatorError!.message).toBe(ADMIN_CANNOT_LEAVE_MESSAGE);
     });
   });
 

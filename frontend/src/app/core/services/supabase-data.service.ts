@@ -200,15 +200,37 @@ export class SupabaseDataService {
   async leaveGroup(groupId: string): Promise<void> {
     const userId = await this.getCurrentUserId();
 
-    // Prevent admin from leaving their own group
+    // Phase 12.3 (H5): the client-side admin guard must mirror migration 017's
+    // "Users can leave groups" RLS predicate, which blocks DELETE for ANY
+    // current admin — the original creator (groups.admin_id) AND any
+    // promoted co-admin (group_members.is_admin = true). Checking only
+    // admin_id (the pre-017 behaviour) let promoted co-admins fall through
+    // to the DELETE, where RLS quietly filtered out their row and the
+    // empty-data branch surfaced a misleading "You are not a member" error.
+    //
+    // Two explicit queries (Option B) instead of a PostgREST embed: the
+    // member_profiles bug (migration 015) showed embedded selects against
+    // RLS-locked tables silently NULL out unrelated rows. Two narrow reads
+    // are simpler to reason about and match the rest of this service.
     const { data: group } = await this.client
       .from('groups')
       .select('admin_id')
       .eq('id', groupId)
       .single();
 
-    if (group && group.admin_id === userId) {
-      throw new Error('Group admins cannot leave their own group');
+    const { data: membership } = await this.client
+      .from('group_members')
+      .select('is_admin')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const isCreator = !!group && group.admin_id === userId;
+    const isPromotedAdmin = !!membership && membership.is_admin === true;
+    if (isCreator || isPromotedAdmin) {
+      throw new Error(
+        'You are an admin of this group. Demote yourself or have another admin do so before leaving.'
+      );
     }
 
     const { data, error } = await this.client
