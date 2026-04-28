@@ -478,6 +478,59 @@ modify passing assertions. Setter pattern keeps the public API stable.
 - CSP header for XSS defense-in-depth (separate MEDIUM finding).
 - Stripping the URL fragment after capture (bigger refactor).
 
+#### 11.3 — Same-class residuals on adjacent surfaces (S)
+
+**Size:** S — surfaced by post-11.2 security re-scan; same threat
+class as B1 + B2 hiding on parallel code paths.
+
+**Files:**
+- `frontend/src/app/platforms/auth/pages/reset-password/reset-password.page.ts`
+  (RESID-1: `setTestToken()` public method writes recovery token to
+  `localStorage` under `test_reset_token` — same B2 vulnerability,
+  different key. Comment says "Remove in production." Delete the method,
+  the matching spec block, and the `removeItem('test_reset_token')` line
+  in `ngOnInit`.)
+- `frontend/src/app/core/services/auth.service.ts`
+  (RESID-2: `console.log('Supabase signIn completed:', result)` around
+  L641 dumps the full session including `access_token` + `refresh_token`
+  — same B1 leak class on the AuthService path. Replace with a marker
+  log carrying only `{ hasUser, hasSession }`.)
+- `frontend/src/app/platforms/auth/pages/reset-password/reset-password.page.spec.ts`
+  (delete the spec block exercising `setTestToken`; new spec confirming
+  `setTestToken` no longer exists or no longer writes to localStorage.)
+- `frontend/src/app/core/services/auth.service.spec.ts`
+  (new spec spying on `console.log` during signIn → assert no log
+  argument contains `access_token`/`refresh_token`/JWT shape; reuses the
+  Phase 11.1 `concatLoggedStrings` regression-guard pattern.)
+
+**TDD scenarios:**
+1. `setTestToken` is no longer present on the component (or, if kept as
+   a test-only no-op, calling it does NOT call `localStorage.setItem`
+   with key `test_reset_token`).
+2. AuthService `signIn` (or the wrapping method that emits the L641 log)
+   produces no console output containing `access_token`, `refresh_token`,
+   or JWT-shaped substrings — pattern parity with `supabase.service.spec.ts`.
+
+**Implementation outline:**
+- Delete `setTestToken()` method body and its spec describe block.
+  Keep `removeItem('test_reset_token')` cleanup on init only if grep
+  finds any remaining writers; otherwise delete it too.
+- Replace L641 `console.log('Supabase signIn completed:', result)` with
+  `console.log('Supabase signIn completed', { hasUser: !!result?.data?.user, hasSession: !!result?.data?.session })`.
+- Audit the immediately surrounding lines (L676, L1047, L1050 noted as
+  PII leaks — MEDIUM/LOW from re-scan) and decide per case. Stick to
+  the HIGH-class fixes for this phase; PII follow-up out of scope.
+
+**Acceptance:**
+- `grep -rn "test_reset_token" frontend/src/ | grep -v "\.spec\.ts"` → zero hits
+- `grep -rn "console.log.*result" frontend/src/app/core/services/auth.service.ts | grep -v "hasSession"` → no matches that would re-leak a session
+- New specs green; existing 16 pre-existing failures unchanged
+- `npm test` clean; full E2E smoke clean
+
+**Non-goals:**
+- PII-class log dumps (MEDIUM/LOW residuals — separate cleanup ticket)
+- Other ~140 console.log sites bundled in production output (LOW)
+
 ---
 
 ## Sequencing notes

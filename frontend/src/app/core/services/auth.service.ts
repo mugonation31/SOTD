@@ -638,7 +638,13 @@ export class AuthService {
       let result;
       try {
         result = await Promise.race([signInPromise, timeoutPromise]) as any;
-        console.log('✅ AuthService: Supabase signIn completed:', result);
+        // Phase 11.3 (RESID-2): never log the full Supabase signIn payload
+        // — `result.session.access_token` and `result.session.refresh_token`
+        // are bearer credentials. Marker-only diagnostic.
+        console.log('✅ AuthService: Supabase signIn completed', {
+          hasUser: !!result?.user,
+          hasSession: !!result?.session,
+        });
         console.log('🔍 AuthService: About to fetch profile for user:', result.user?.id);
       } catch (signInError) {
         console.error('❌ AuthService: SignIn failed or timed out:', signInError);

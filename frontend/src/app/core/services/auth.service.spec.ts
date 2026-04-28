@@ -667,4 +667,114 @@ describe('AuthService', () => {
       getItemSpy.mockRestore();
     });
   });
+
+  describe('Phase 11.3 (RESID-2): signIn must not log session payload', () => {
+    let consoleLogSpy: jest.SpyInstance;
+    let consoleErrorSpy: jest.SpyInstance;
+
+    const concatLoggedStrings = (): string => {
+      const allCalls = [
+        ...consoleLogSpy.mock.calls,
+        ...consoleErrorSpy.mock.calls,
+      ];
+      return allCalls
+        .map((args: any[]) =>
+          args
+            .map((a: any) => {
+              try {
+                return JSON.stringify(a);
+              } catch {
+                return String(a);
+              }
+            })
+            .join(' ')
+        )
+        .join('\n');
+    };
+
+    beforeEach(() => {
+      // Force the Supabase code path so login() routes through performSupabaseLogin
+      service['useSupabase'] = true;
+      service['currentUserSubject'].next(null);
+
+      // Stub the Supabase client so the post-signIn profile fetch resolves
+      // cleanly. The test only cares about what `console.log` sees during
+      // the signIn step itself.
+      mockSupabaseService.signIn = jest.fn().mockResolvedValue({
+        user: { id: 'u1', email: 'leak-test@example.com' },
+        session: {
+          access_token: 'AT_FAKE_RESID2',
+          refresh_token: 'RT_FAKE_RESID2',
+        },
+      });
+      mockSupabaseService.currentUser = null;
+      mockSupabaseService.client = {
+        from: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: {
+                  id: 'u1',
+                  email: 'leak-test@example.com',
+                  role: 'player',
+                  username: 'leaker',
+                  first_name: 'Leak',
+                  last_name: 'Test',
+                },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+
+      consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    const runSignIn = (): Promise<void> =>
+      new Promise<void>((resolve) => {
+        service
+          .login({
+            email: 'leak-test@example.com',
+            password: 'pw123',
+            securityQuestion: '',
+            securityAnswer: '',
+          })
+          .subscribe({
+            next: () => resolve(),
+            error: () => resolve(),
+            complete: () => resolve(),
+          });
+      });
+
+    it('should not log session tokens or refresh_token when signIn completes', async () => {
+      await runSignIn();
+
+      const logged = concatLoggedStrings();
+
+      expect(logged).not.toContain('AT_FAKE_RESID2');
+      expect(logged).not.toContain('RT_FAKE_RESID2');
+      expect(logged).not.toContain('refresh_token');
+      // JWT shape: header.payload.signature in base64url
+      expect(logged).not.toMatch(
+        /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/
+      );
+    });
+
+    it("should still log a 'signIn completed' marker (debug signal preserved)", async () => {
+      await runSignIn();
+
+      const sawMarker = consoleLogSpy.mock.calls.some((args: any[]) =>
+        args.some((a: any) => typeof a === 'string' && a.includes('signIn completed'))
+      );
+
+      expect(sawMarker).toBe(true);
+    });
+  });
 });

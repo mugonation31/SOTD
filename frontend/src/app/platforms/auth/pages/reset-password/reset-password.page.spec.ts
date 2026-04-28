@@ -71,11 +71,6 @@ describe('ResetPasswordPage', () => {
       expect(component.refreshToken).toBe('');
     });
 
-    it('should clear test tokens on initialization', () => {
-      localStorage.setItem('test_reset_token', 'test-token');
-      component.ngOnInit();
-      expect(localStorage.getItem('test_reset_token')).toBeNull();
-    });
   });
 
   describe('Token Extraction', () => {
@@ -303,17 +298,6 @@ describe('ResetPasswordPage', () => {
     });
   });
 
-  describe('Test Token Method', () => {
-    it('should set test token for development', () => {
-      const testToken = 'test-token-123';
-      component.setTestToken(testToken);
-      
-      expect(component.accessToken).toBe(testToken);
-      expect(localStorage.getItem('test_reset_token')).toBe(testToken);
-      expect(component.validationErrors.password).toBe('');
-    });
-  });
-
   describe('URL Token Extraction', () => {
     it('should extract token from URL path segments', () => {
       const longToken = 'a'.repeat(51);
@@ -527,6 +511,16 @@ describe('ResetPasswordPage', () => {
       component.ngOnDestroy();
 
       expect(mockAuthService.clearResetAccessToken).toHaveBeenCalled();
+    });
+  });
+
+  describe('Phase 11.3 (RESID-1): setTestToken must not exist', () => {
+    it('should not expose setTestToken (recovery token must never touch localStorage)', () => {
+      // Phase 11.3 (RESID-1): the legacy `setTestToken` debug method
+      // wrote the recovery bearer to localStorage, where any XSS could
+      // exfiltrate it and where it survived tab close. Same threat
+      // class as B2 — the method is removed entirely.
+      expect((component as any).setTestToken).toBeUndefined();
     });
   });
 });

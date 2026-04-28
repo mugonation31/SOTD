@@ -93,10 +93,7 @@ export class ResetPasswordPage implements OnInit, OnDestroy {
 
   ngOnInit() {
 
-    
-    // Clear any old test tokens
-    localStorage.removeItem('test_reset_token');
-    
+
     // Log the full URL for debugging
 
 
@@ -203,14 +200,10 @@ export class ResetPasswordPage implements OnInit, OnDestroy {
     }
   }
 
-  // TEMPORARY: For testing purposes
-  // Remove this method in production
-  setTestToken(token: string) {
-    localStorage.setItem('test_reset_token', token);
-    this.accessToken = token;
-    this.validationErrors.password = '';
-
-  }
+  // Phase 11.3 (RESID-1): the legacy setTestToken debug helper was
+  // removed because it persisted the recovery bearer to localStorage
+  // (same threat class as B2). The recovery token must only ever live
+  // in-memory inside AuthService.
 
   private checkHashFragment() {
     // Check if there's a hash fragment with the access token
