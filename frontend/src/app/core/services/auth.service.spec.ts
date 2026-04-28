@@ -596,4 +596,75 @@ describe('AuthService', () => {
       await expect(service.markFirstLoginComplete()).resolves.not.toThrow();
     });
   });
-}); 
+
+  describe('Phase 11.2 (B2): in-memory recovery access token', () => {
+    let mockFetch: jest.Mock;
+    let originalFetch: typeof global.fetch;
+
+    beforeEach(() => {
+      originalFetch = global.fetch;
+      mockFetch = jest.fn();
+      global.fetch = mockFetch;
+
+      // Empty URL so URL fragment doesn't pre-populate the token
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'http://localhost:8100/auth/reset-password',
+          hash: ''
+        },
+        writable: true
+      });
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should use the in-memory token set via setResetAccessToken in the Bearer header', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({ user: { id: '123' } })
+      });
+
+      service.setResetAccessToken('AT_MEMORY');
+      const result = await service.updatePasswordWithTokens('newpw');
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/v1/user'),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer AT_MEMORY'
+          })
+        })
+      );
+    });
+
+    it('should return false after clearResetAccessToken clears the in-memory token', async () => {
+      service.setResetAccessToken('AT_MEMORY');
+      service.clearResetAccessToken();
+
+      const result = await service.updatePasswordWithTokens('newpw');
+
+      expect(result).toBe(false);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should NOT read current_reset_token from localStorage during updatePasswordWithTokens', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({ user: { id: '123' } })
+      });
+
+      const getItemSpy = jest.spyOn(Storage.prototype, 'getItem');
+
+      service.setResetAccessToken('AT_MEMORY');
+      await service.updatePasswordWithTokens('newpw');
+
+      expect(getItemSpy).not.toHaveBeenCalledWith('current_reset_token');
+      getItemSpy.mockRestore();
+    });
+  });
+});

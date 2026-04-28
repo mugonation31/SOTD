@@ -35,7 +35,10 @@ describe('ResetPasswordPage Integration Tests', () => {
     mockAuthService = {
       enableSupabaseAuth: jest.fn(),
       updatePasswordWithTokens: jest.fn(),
-      setSessionFromFragment: jest.fn()
+      setSessionFromFragment: jest.fn(),
+      // Phase 11.2 (B2): in-memory recovery token API
+      setResetAccessToken: jest.fn(),
+      clearResetAccessToken: jest.fn()
     };
     mockToastService = createMockToastService();
 

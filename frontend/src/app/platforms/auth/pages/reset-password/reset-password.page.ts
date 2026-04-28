@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -55,7 +55,7 @@ interface ValidationErrors {
     NgIf,
   ],
 })
-export class ResetPasswordPage implements OnInit {
+export class ResetPasswordPage implements OnInit, OnDestroy {
   resetData = {
     password: '',
     confirmPassword: '',
@@ -114,8 +114,9 @@ export class ResetPasswordPage implements OnInit {
 
         if (this.accessToken) {
 
-          // Store token in localStorage for service access
-          localStorage.setItem('current_reset_token', this.accessToken);
+          // Phase 11.2 (B2): hand the recovery token to AuthService in-memory
+          // only. Never persist it to localStorage / sessionStorage.
+          this.authService.setResetAccessToken(this.accessToken);
           this.validationErrors.password = '';
         } else {
           console.error('❌ ResetPasswordPage: No access token found in query params');
@@ -166,8 +167,8 @@ export class ResetPasswordPage implements OnInit {
       if (segment.length > 50 && !this.accessToken) {
 
         this.accessToken = segment;
-        // Store token in localStorage for service access
-        localStorage.setItem('current_reset_token', segment);
+        // Phase 11.2 (B2): in-memory only.
+        this.authService.setResetAccessToken(segment);
         this.validationErrors.password = ''; // Clear any previous error
         break;
       }
@@ -194,8 +195,8 @@ export class ResetPasswordPage implements OnInit {
       if (match && match[1] && !this.accessToken) {
 
         this.accessToken = decodeURIComponent(match[1]);
-        // Store token in localStorage for service access
-        localStorage.setItem('current_reset_token', decodeURIComponent(match[1]));
+        // Phase 11.2 (B2): in-memory only.
+        this.authService.setResetAccessToken(this.accessToken);
         this.validationErrors.password = '';
         break;
       }
@@ -224,10 +225,10 @@ export class ResetPasswordPage implements OnInit {
       if (hashToken) {
 
         this.accessToken = hashToken;
-        
-        // Store token in localStorage for service access
-        localStorage.setItem('current_reset_token', hashToken);
-        
+
+        // Phase 11.2 (B2): in-memory only.
+        this.authService.setResetAccessToken(hashToken);
+
         // Also extract refresh token if present
         const refreshToken = hashParams.get('refresh_token');
         if (refreshToken) {
@@ -246,8 +247,8 @@ export class ResetPasswordPage implements OnInit {
         if (token) {
 
         this.accessToken = token;
-        // Store token in localStorage for service access
-        localStorage.setItem('current_reset_token', token);
+        // Phase 11.2 (B2): in-memory only.
+        this.authService.setResetAccessToken(token);
         this.validationErrors.password = ''; // Clear any previous error
         return;
         }
@@ -307,9 +308,9 @@ export class ResetPasswordPage implements OnInit {
       const success = await this.authService.updatePasswordWithTokens(this.resetData.password);
       
       if (success) {
-        // Clean up stored token
-        localStorage.removeItem('current_reset_token');
-        
+        // Phase 11.2 (B2): clear in-memory recovery token on success.
+        this.authService.clearResetAccessToken();
+
         // Show success message
         await this.toastService.showToast('Password reset successful! You can now log in with your new password.', 'success');
         
@@ -321,9 +322,9 @@ export class ResetPasswordPage implements OnInit {
     } catch (error) {
       console.error('Password reset error:', error);
       
-      // Clean up stored token on error
-      localStorage.removeItem('current_reset_token');
-      
+      // Phase 11.2 (B2): clear in-memory recovery token on error.
+      this.authService.clearResetAccessToken();
+
       // Show error message
       const errorMessage = (error as any)?.message || 'Failed to reset password. Please try again.';
       await this.toastService.showToast(errorMessage, 'error');
@@ -339,5 +340,13 @@ export class ResetPasswordPage implements OnInit {
 
   navigateToWelcome() {
     this.router.navigate(['/welcome']);
+  }
+
+  /**
+   * Phase 11.2 (B2): always clear the in-memory recovery token when the
+   * reset-password page is destroyed (navigation away, tab close, etc.).
+   */
+  ngOnDestroy(): void {
+    this.authService.clearResetAccessToken();
   }
 }

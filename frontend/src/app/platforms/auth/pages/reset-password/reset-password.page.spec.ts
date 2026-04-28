@@ -30,7 +30,9 @@ describe('ResetPasswordPage', () => {
     mockAuthService = {
       enableSupabaseAuth: jest.fn(),
       updatePasswordWithTokens: jest.fn(),
-      setSessionFromFragment: jest.fn()
+      setSessionFromFragment: jest.fn(),
+      setResetAccessToken: jest.fn(),
+      clearResetAccessToken: jest.fn()
     };
     mockToastService = createMockToastService();
 
@@ -393,15 +395,138 @@ describe('ResetPasswordPage', () => {
 
     it('should handle empty tokens', () => {
       Object.defineProperty(window, 'location', {
-        value: { 
-          href: 'http://localhost:8100/auth/reset-password#access_token=&refresh_token=', 
-          hash: '#access_token=&refresh_token=' 
+        value: {
+          href: 'http://localhost:8100/auth/reset-password#access_token=&refresh_token=',
+          hash: '#access_token=&refresh_token='
         },
         writable: true
       });
-      
+
       (component as any).checkHashFragment();
       expect(component.accessToken).toBe('');
     });
   });
-}); 
+
+  describe('Phase 11.2 (B2): recovery token must not be persisted to localStorage', () => {
+    let setItemSpy: jest.SpyInstance;
+    const HASH_TOKEN = 'AT_FAKE_HASH';
+    const PKCE_CODE = 'PKCE_CODE_FAKE';
+    const RAW_TOKEN = 'AT_FAKE_RAW';
+    const PATH_TOKEN = 'a'.repeat(51);
+
+    beforeEach(() => {
+      setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    });
+
+    afterEach(() => {
+      setItemSpy.mockRestore();
+    });
+
+    it('should NOT write current_reset_token to localStorage when token captured via hash fragment', () => {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: `http://localhost:8100/auth/reset-password#access_token=${HASH_TOKEN}&refresh_token=RT_FAKE&type=recovery`,
+          hash: `#access_token=${HASH_TOKEN}&refresh_token=RT_FAKE&type=recovery`
+        },
+        writable: true
+      });
+
+      (component as any).checkHashFragment();
+
+      expect(component.accessToken).toBe(HASH_TOKEN);
+      expect(setItemSpy).not.toHaveBeenCalledWith('current_reset_token', expect.anything());
+    });
+
+    it('should NOT write current_reset_token to localStorage when token captured via PKCE query param', () => {
+      // Recreate route with code param
+      mockActivatedRoute.queryParams = of({ code: PKCE_CODE });
+
+      // Build a fresh component using TestBed override
+      TestBed.resetTestingModule();
+      return TestBed.configureTestingModule({
+        imports: [IonicModule.forRoot(), FormsModule, ResetPasswordPage],
+        providers: [
+          { provide: Router, useValue: mockRouter },
+          { provide: ActivatedRoute, useValue: { queryParams: of({ code: PKCE_CODE }), params: of({}) } },
+          { provide: AuthService, useValue: mockAuthService },
+          { provide: ToastService, useValue: mockToastService }
+        ]
+      }).compileComponents().then(() => {
+        // Empty location so the other capture methods don't pollute
+        Object.defineProperty(window, 'location', {
+          value: { href: 'http://localhost:8100/auth/reset-password', hash: '' },
+          writable: true
+        });
+        const f = TestBed.createComponent(ResetPasswordPage);
+        const c = f.componentInstance;
+        c.ngOnInit();
+        expect(c.accessToken).toBe(PKCE_CODE);
+        expect(setItemSpy).not.toHaveBeenCalledWith('current_reset_token', expect.anything());
+      });
+    });
+
+    it('should NOT write current_reset_token to localStorage when token captured via raw URL pattern', () => {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: `http://localhost:8100/auth/reset-password?token=${RAW_TOKEN}`
+        },
+        writable: true
+      });
+
+      (component as any).checkRawUrlForToken();
+
+      expect(component.accessToken).toBe(RAW_TOKEN);
+      expect(setItemSpy).not.toHaveBeenCalledWith('current_reset_token', expect.anything());
+    });
+
+    it('should NOT write current_reset_token to localStorage when token captured via URL path segment', () => {
+      mockRouter.url = `/auth/reset-password/${PATH_TOKEN}`;
+
+      (component as any).checkUrlPathForToken();
+
+      expect(component.accessToken).toBe(PATH_TOKEN);
+      expect(setItemSpy).not.toHaveBeenCalledWith('current_reset_token', expect.anything());
+    });
+
+    it('should call authService.setResetAccessToken with the captured token (hash flow)', () => {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: `http://localhost:8100/auth/reset-password#access_token=${HASH_TOKEN}&refresh_token=RT_FAKE&type=recovery`,
+          hash: `#access_token=${HASH_TOKEN}&refresh_token=RT_FAKE&type=recovery`
+        },
+        writable: true
+      });
+
+      (component as any).checkHashFragment();
+
+      expect(mockAuthService.setResetAccessToken).toHaveBeenCalledWith(HASH_TOKEN);
+    });
+
+    it('should call authService.setResetAccessToken with the captured token (raw URL flow)', () => {
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: `http://localhost:8100/auth/reset-password?token=${RAW_TOKEN}`
+        },
+        writable: true
+      });
+
+      (component as any).checkRawUrlForToken();
+
+      expect(mockAuthService.setResetAccessToken).toHaveBeenCalledWith(RAW_TOKEN);
+    });
+
+    it('should call authService.setResetAccessToken with the captured token (path segment flow)', () => {
+      mockRouter.url = `/auth/reset-password/${PATH_TOKEN}`;
+
+      (component as any).checkUrlPathForToken();
+
+      expect(mockAuthService.setResetAccessToken).toHaveBeenCalledWith(PATH_TOKEN);
+    });
+
+    it('should call authService.clearResetAccessToken on ngOnDestroy', () => {
+      component.ngOnDestroy();
+
+      expect(mockAuthService.clearResetAccessToken).toHaveBeenCalled();
+    });
+  });
+});

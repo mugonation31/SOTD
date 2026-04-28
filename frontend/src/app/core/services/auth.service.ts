@@ -78,6 +78,11 @@ export class AuthService {
   private lastBroadcastTime = 0; // Throttle broadcasts
   private readonly BROADCAST_THROTTLE_MS = 1000; // Minimum 1 second between broadcasts
 
+  // Phase 11.2 (B2): recovery access token kept in service-private memory only.
+  // Never persisted to localStorage / sessionStorage so it cannot survive tab
+  // close, cross-tab read, or XSS-driven storage scrape.
+  private resetAccessToken: string | null = null;
+
   constructor(
     private http: HttpClient,
     private supabaseService: SupabaseService
@@ -1438,30 +1443,43 @@ export class AuthService {
   }
 
   /**
+   * Phase 11.2 (B2): store the recovery access token captured by the
+   * reset-password page in service-private memory. Never persisted.
+   */
+  setResetAccessToken(token: string): void {
+    this.resetAccessToken = token;
+  }
+
+  /**
+   * Phase 11.2 (B2): clear the in-memory recovery access token.
+   * Called from reset-password page ngOnDestroy and on success/failure.
+   */
+  clearResetAccessToken(): void {
+    this.resetAccessToken = null;
+  }
+
+  /**
    * Update password using Supabase reset token
    */
   async updatePasswordWithTokens(newPassword: string): Promise<boolean> {
     try {
-      // Try multiple sources for the access token
+      // Try multiple sources for the access token (in priority order):
+      // 1. URL fragment (Supabase-default behaviour)
+      // 2. Service-private in-memory cell populated by setResetAccessToken
+      // The legacy localStorage / sessionStorage fallback was removed in
+      // Phase 11.2 (B2) — recovery tokens must NEVER be persisted.
       let accessToken = '';
-      
-      // First, try to get from URL fragment
+
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.slice(1));
       accessToken = hashParams.get('access_token') || '';
-      
-      // If not found in URL, try to get from localStorage (component might have stored it)
+
       if (!accessToken) {
-        accessToken = localStorage.getItem('current_reset_token') || '';
+        accessToken = this.resetAccessToken || '';
       }
-      
-      // If still not found, try to get from session storage
+
       if (!accessToken) {
-        accessToken = sessionStorage.getItem('current_reset_token') || '';
-      }
-      
-      if (!accessToken) {
-        console.error('No access token found in URL fragment, localStorage, or sessionStorage');
+        console.error('No access token found in URL fragment or in-memory recovery cell');
         return false;
       }
 
