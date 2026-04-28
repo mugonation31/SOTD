@@ -55,6 +55,16 @@ interface ValidationErrors {
   ],
 })
 export class LoginPage implements OnInit {
+  // Phase 12.2 (H4): only allow returnUrls that point at an in-app
+  // platform root. Anything else (absolute URLs, protocol-relative,
+  // javascript:, path traversal, recovery-token fragments, etc.) is
+  // silently dropped and the role-based default is used instead.
+  // Whitelisted prefixes match every post-login destination today —
+  // /player/*, /group-admin/*, /super-admin/*, /welcome/*. Auth/onboarding
+  // are intentionally excluded so a captured /auth/reset-password URL can't
+  // be replayed via ?returnUrl=.
+  private static readonly RETURN_URL_ALLOWLIST = /^\/(player|group-admin|super-admin|welcome)\//;
+
   loginData = {
     email: '',
     password: '',
@@ -185,15 +195,29 @@ export class LoginPage implements OnInit {
   private handleSuccessfulLogin() {
     this.isLoading = false;
     const userRole = this.authService.getUserRole();
-    
-    // Handle specific return URL from external navigation (e.g., guard redirects)
-    if (this.returnUrl && this.returnUrl.trim() !== '') {
-      this.router.navigate([this.returnUrl], { replaceUrl: true });
+
+    // Handle specific return URL from external navigation (e.g., guard redirects).
+    // sanitiseReturnUrl() returns null for anything that isn't a known in-app
+    // path so we don't honor http://evil.com, javascript:, or recovery-token
+    // fragment URLs fed via ?returnUrl=.
+    const safeReturnUrl = this.sanitiseReturnUrl(this.returnUrl);
+    if (safeReturnUrl) {
+      this.router.navigate([safeReturnUrl], { replaceUrl: true });
       return;
     }
 
     // Simple role-based redirection to dashboards
     this.redirectBasedOnRole(userRole);
+  }
+
+  private sanitiseReturnUrl(returnUrl: string | null | undefined): string | null {
+    if (!returnUrl || typeof returnUrl !== 'string') return null;
+    // Reject any URL carrying a fragment — recovery-token URLs of the form
+    // /auth/reset-password#access_token=… are dangerous even though the path
+    // segment is in-app, because the fragment travels with the navigation.
+    if (returnUrl.includes('#')) return null;
+    if (!LoginPage.RETURN_URL_ALLOWLIST.test(returnUrl)) return null;
+    return returnUrl;
   }
 
   private redirectBasedOnRole(role: string | null) {
