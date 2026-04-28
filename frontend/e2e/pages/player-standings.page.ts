@@ -33,6 +33,15 @@ export class PlayerStandingsPage extends BasePage {
   /** Page heading ("My Groups") — always rendered when the page mounts. */
   readonly pageHeading: Locator;
 
+  /**
+   * Task 9.1 — "Join another group" CTA rendered above the groups list.
+   * Only present when `!isLoading && groupStandings.length > 0`. Selector
+   * targets the dedicated `.join-another-cta` class on the `ion-button` so
+   * it can't collide with the empty-state CTA (which lives inside
+   * `ion-card.empty-state`).
+   */
+  readonly joinAnotherGroupButton: Locator;
+
   constructor(page: Page) {
     super(page);
     this.loadingSpinner = page.locator('.loading-state ion-spinner');
@@ -42,6 +51,7 @@ export class PlayerStandingsPage extends BasePage {
     this.emptyStateHeading = page.locator('ion-card.empty-state h3');
     this.groupItems = page.locator('ion-item.group-item');
     this.pageHeading = page.locator('.page-header h1');
+    this.joinAnotherGroupButton = page.locator('ion-button.join-another-cta');
   }
 
   async navigate(): Promise<void> {
@@ -93,5 +103,24 @@ export class PlayerStandingsPage extends BasePage {
 
     // Populated path — verify at least one group row rendered.
     await expect(this.groupItems.first()).toBeVisible();
+  }
+
+  /**
+   * Task 9.1 — click the "Join another group" CTA. Caller is responsible
+   * for asserting the resulting navigation (`/player/join-group`).
+   */
+  async clickJoinAnotherGroup(): Promise<void> {
+    await this.joinAnotherGroupButton.click();
+  }
+
+  /**
+   * Returns true when the standings page is in the populated state — i.e.
+   * the loading spinner has cleared and at least one `.group-item` row is
+   * rendered. Used by Task 9.1 smokes to branch between "CTA must render"
+   * and "CTA must NOT render" assertions without seeding DB state.
+   */
+  async hasGroups(): Promise<boolean> {
+    await expect(this.loadingSpinner).toHaveCount(0, { timeout: 10_000 });
+    return (await this.groupItems.count()) > 0;
   }
 }
