@@ -14,7 +14,6 @@ import {
   footballOutline,
   analyticsOutline,
   trophyOutline,
-  settingsOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -39,7 +38,6 @@ export class PlayerLayoutPage {
       footballOutline,
       analyticsOutline,
       trophyOutline,
-      settingsOutline,
     });
   }
 }

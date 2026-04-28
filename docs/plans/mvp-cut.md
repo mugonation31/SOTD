@@ -334,6 +334,53 @@ needs to be a steady-state action — not just an onboarding gate.
   works.
 - All existing tests stay green; new specs cover the 5 TDD scenarios.
 
+### Phase 10 — Drop redundant Settings bottom-nav tab (XS)
+
+**Title:** Remove the Settings tab from the player and group-admin
+bottom-nav bars. The per-page header already has a profile icon
+(top-right `person-outline`) that routes to `/<platform>/settings`,
+so the bottom-nav entry is duplicate UX.
+
+**Files:**
+- `frontend/src/app/platforms/player/layout/player-layout.page.html`
+  — delete the `<ion-tab-button tab="settings">` block (lines 18-21).
+- `frontend/src/app/platforms/group-admin/layout/group-admin-layout.page.html`
+  — delete the `<ion-tab-button tab="settings">` block (lines 35-38).
+- `frontend/src/app/platforms/player/layout/player-layout.page.ts`
+  — drop the now-unused `settingsOutline` import + `addIcons` entry.
+- `frontend/src/app/platforms/group-admin/layout/group-admin-layout.page.ts`
+  — drop the now-unused `settingsOutline` import + `addIcons` entry.
+
+**TDD scenarios:**
+1. `/player/home`: bottom-nav renders exactly 3 tabs (Home, My Picks,
+   Standings) — no Settings tab.
+2. `/group-admin/home`: bottom-nav renders exactly 3 tabs (Home,
+   Predictions, Group) — no Settings tab.
+3. Top-right profile icon on any player page still routes to
+   `/player/settings` and the page loads.
+4. Top-right profile icon on any group-admin page still routes to
+   `/group-admin/settings` and the page loads.
+5. Direct navigation to `/player/settings` and `/group-admin/settings`
+   continues to work (route definitions untouched).
+
+**Implementation outline:**
+- Delete the 4-line tab-button block from each layout HTML.
+- In each layout TS, remove `settingsOutline` from the `ionicons/icons`
+  import list and from the `addIcons({...})` call. Leave all other
+  icons alone — header + remaining tabs still reference them.
+- No route, guard, or service changes. Settings page stays as-is.
+
+**Acceptance:**
+- `npm test` clean (no new failures vs baseline).
+- `e2e/specs/smoke/navigation.spec.ts` still passes (no Settings-tab
+  reference in current spec).
+- `player-join-another-group.spec.ts` E2E still passes.
+- Visual: 3 tabs at bottom on both shells; profile icon top-right
+  still navigates to settings on every page.
+
+**Non-goals:** Not removing the settings page. Not changing settings
+content. Not adding a new profile icon. Not touching super-admin.
+
 ---
 
 ## Sequencing notes
