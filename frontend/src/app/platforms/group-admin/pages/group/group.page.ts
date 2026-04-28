@@ -30,7 +30,7 @@ import {
   shieldOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { GroupService } from '@core/services/group.service';
+import { GroupService, Standing } from '@core/services/group.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { AuthService } from '@core/services/auth.service';
 import { LoggerService } from '@core/services/logger.service';
@@ -81,6 +81,12 @@ export class GroupAdminGroupPage implements OnInit {
   groupCode = '';
   creatorUserId = '';
   members: ViewMember[] = [];
+
+  // Full leaderboard for the group, used by the leaderboard card
+  // rendered above the members list. Same shape as the player
+  // group-standings page; admin home's "View full leaderboard" button
+  // routes here now.
+  leaderboard: Standing[] = [];
 
   // Empty-state form fields.
   newGroupName = '';
@@ -158,6 +164,18 @@ export class GroupAdminGroupPage implements OnInit {
           if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
           return a.username.localeCompare(b.username);
         });
+
+      // Pull the full Standing[] for the leaderboard card. Reuses the
+      // same group.service.getUserGroupsWithStandings pipeline as the
+      // player home so badges (ADMIN, YOU) are computed identically.
+      try {
+        const standings = await this.groupService.getUserGroupsWithStandings();
+        const matched = standings.find((s) => s.group.id === this.groupId);
+        this.leaderboard = matched ? matched.leaderboard : [];
+      } catch (lbErr) {
+        this.logger.warn('group-admin-group.loadLeaderboard', lbErr);
+        this.leaderboard = [];
+      }
     } catch (error) {
       this.logger.error('group-admin-group.load', error);
       await this.errorToast('Failed to load group');
@@ -168,6 +186,16 @@ export class GroupAdminGroupPage implements OnInit {
 
   get adminCount(): number {
     return this.members.filter((m) => m.isAdmin).length;
+  }
+
+  positionSuffix(position: number): string {
+    if (position > 3 && position < 21) return 'th';
+    switch (position % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
   }
 
   get atAdminCap(): boolean {

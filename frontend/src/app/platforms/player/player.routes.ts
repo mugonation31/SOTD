@@ -30,9 +30,14 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
       {
+        // Per-group leaderboard. Restored after Phase 1 cleanup — turns
+        // out the standings list page links to it for "click a group to
+        // see its full leaderboard," which we'd silently broken.
         path: 'group-standings/:groupId',
-        redirectTo: 'standings',
-        pathMatch: 'full',
+        loadComponent: () =>
+          import('./pages/group-standings/group-standings.page').then(
+            (m) => m.GroupStandingsPage,
+          ),
       },
       {
         path: 'groups',

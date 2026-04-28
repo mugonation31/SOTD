@@ -15,6 +15,7 @@ import {
 import { RouterModule, Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
+  homeOutline,
   gridOutline,
   peopleOutline,
   footballOutline,
@@ -51,6 +52,7 @@ import {
 export class GroupAdminLayoutPage {
   constructor(private router: Router) {
     addIcons({
+      homeOutline,
       gridOutline,
       peopleOutline,
       footballOutline,
