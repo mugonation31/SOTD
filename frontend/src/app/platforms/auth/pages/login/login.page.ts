@@ -208,9 +208,13 @@ export class LoginPage implements OnInit {
       console.log('🆕 Login: First-time user - redirecting to onboarding flow');
       switch (role) {
         case 'group-admin':
-          targetRoute = '/group-admin/groups';
+          // /group-admin/group has the "Create your group" empty-state
+          // form inline. Was /group-admin/groups before Phase 1 cleanup.
+          targetRoute = '/group-admin/group';
           break;
         case 'player':
+          // Players land on the join-group form; the first-login flow
+          // exists precisely so new players know to enter a code.
           targetRoute = '/player/join-group';
           break;
         case 'super-admin':
@@ -221,13 +225,15 @@ export class LoginPage implements OnInit {
       }
     } else {
       console.log('🔄 Login: Returning user - redirecting to dashboard');
-      // Returning user - redirect to dashboard
+      // Returning user — direct to the new home routes, not the legacy
+      // /dashboard ones (which only resolve via redirectTo today and may
+      // be removed entirely later).
       switch (role) {
         case 'group-admin':
-          targetRoute = '/group-admin/dashboard';
+          targetRoute = '/group-admin/home';
           break;
         case 'player':
-          targetRoute = '/player/dashboard';
+          targetRoute = '/player/home';
           break;
         case 'super-admin':
           targetRoute = '/super-admin/dashboard';

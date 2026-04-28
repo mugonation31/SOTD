@@ -180,6 +180,20 @@ export class GroupAdminGroupPage implements OnInit {
     this.isCreating = true;
     try {
       await this.groupService.createGroup({ name });
+      // First-time admin onboarding: flip profiles.first_login = false so
+      // subsequent logins route to /group-admin/home (not the create-group
+      // empty-state). Same call the player join-group page makes when a
+      // new player joins their first group.
+      try {
+        await this.authService.markFirstLoginComplete();
+      } catch (firstLoginErr) {
+        // Non-fatal — group is already created. Just log; the user can
+        // still proceed and we'll re-attempt the flag flip next login.
+        this.logger.warn(
+          'group-admin-group.createGroup.markFirstLoginComplete',
+          firstLoginErr,
+        );
+      }
       await this.successToast(`Created "${name}"`);
       await this.load();
     } catch (error) {
