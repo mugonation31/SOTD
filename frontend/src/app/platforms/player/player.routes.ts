@@ -8,7 +8,7 @@ export const routes: Routes = [
     children: [
       {
         // /player/home is the merged landing — leaderboard preview at top,
-        // then the prediction surface (matches list with score inputs and
+        // then the prediction surface (matches list with score inputs +
         // submit) inline below. Loads matches.page because the merged
         // content lives there now.
         path: 'home',
@@ -16,59 +16,57 @@ export const routes: Routes = [
           import('./pages/matches/matches.page').then((m) => m.MatchesPage),
       },
       {
-        // Legacy — kept until Phase 1 (delete dead pages). Default
-        // redirect now points at /home; this route stays only so any
-        // bookmarked /player/dashboard URLs still resolve.
-        path: 'dashboard',
-        loadComponent: () =>
-          import('./pages/dashboard/dashboard.page').then(
-            (m) => m.DashboardPage
-          ),
-      },
-      {
-        // Legacy URL — same content as /home now lives there. Redirect
-        // so any bookmarked /matches URL still resolves.
+        // Legacy URLs — redirected to /home so any bookmarked links still
+        // resolve. The corresponding page directories are deleted in
+        // Phase 1 of mvp-cut. Removing these redirects too would 404
+        // anyone with a stale link, so they stay.
         path: 'matches',
         redirectTo: 'home',
+        pathMatch: 'full',
+      },
+      {
+        path: 'dashboard',
+        redirectTo: 'home',
+        pathMatch: 'full',
+      },
+      {
+        path: 'group-standings/:groupId',
+        redirectTo: 'standings',
+        pathMatch: 'full',
+      },
+      {
+        path: 'groups',
+        redirectTo: 'standings',
         pathMatch: 'full',
       },
       {
         path: 'predictions',
         loadComponent: () =>
           import('./pages/predictions/predictions.page').then(
-            (m) => m.PredictionsPage
+            (m) => m.PredictionsPage,
           ),
       },
       {
         path: 'standings',
         loadComponent: () =>
           import('./pages/standings/standings.page').then(
-            (m) => m.StandingsPage
+            (m) => m.StandingsPage,
           ),
       },
       {
-        path: 'group-standings/:groupId',
-        loadComponent: () =>
-          import('./pages/group-standings/group-standings.page').then(
-            (m) => m.GroupStandingsPage
-          ),
-      },
-      {
+        // First-login flow routes new players here. Kept intentionally —
+        // see mvp-cut.md notes on why we don't collapse it into an
+        // empty-state on /home.
         path: 'join-group',
         loadComponent: () =>
           import('./pages/join-group/join-group.page').then(
-            (m) => m.JoinGroupPage
+            (m) => m.JoinGroupPage,
           ),
       },
       {
         path: 'settings',
         loadComponent: () =>
           import('./pages/settings/settings.page').then((m) => m.SettingsPage),
-      },
-      {
-        path: 'groups',
-        loadComponent: () =>
-          import('./pages/groups/groups.page').then((m) => m.GroupsPage),
       },
       {
         path: '',

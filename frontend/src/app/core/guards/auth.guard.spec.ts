@@ -60,7 +60,17 @@ describe('AuthGuard (Task 4.0.2 — Supabase profile role source)', () => {
       profile$: profileSubject.asObservable(),
       get currentProfile() {
         return profileSubject.value;
-      }
+      },
+      // Hard-refresh recovery (auth.guard canActivate): the guard now
+      // asks supabase-js directly whether a session sits in localStorage
+      // when the BehaviorSubject is still null. Mock returns "no
+      // session" by default; specs that exercise the recovery path can
+      // override via mockResolvedValueOnce.
+      client: {
+        auth: {
+          getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
+        },
+      },
     };
 
     TestBed.configureTestingModule({
@@ -309,7 +319,14 @@ describe('AuthGuard cold-start race (Task 4.2.6)', () => {
       profile$: profileSubject.asObservable(),
       get currentProfile() {
         return profileSubject.value;
-      }
+      },
+      // See parent describe — same mock for the hard-refresh recovery
+      // path the guard exercises when the BehaviorSubject is null.
+      client: {
+        auth: {
+          getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
+        },
+      },
     };
 
     toastPresentSpy = jest.fn().mockResolvedValue(undefined);

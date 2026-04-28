@@ -1370,33 +1370,68 @@ export class AuthService {
     }
 
     try {
-      const user = this.supabaseService.currentUser;
-      const profile = this.supabaseService.currentProfile;
-      
-      if (user && profile) {
-        console.log('🔄 AuthService: Handling session restoration navigation', {
-          userId: user.id,
-          role: profile.role,
-          firstLogin: profile.first_login
-        });
-        
-        // The navigation will be handled by the guards and routing system
-        // We just need to ensure the AuthService state is properly set
-        const authResponse: AuthResponse = {
-          token: 'supabase-session-token',
-          user: {
-            id: profile.id,
-            email: profile.email,
-            role: profile.role,
-            username: profile.username,
-            firstName: profile.first_name,
-            lastName: profile.last_name,
-          }
-        };
-        
-        this.setAuthenticatedUser(authResponse);
-        console.log('✅ AuthService: Session restoration complete');
+      // Hard-refresh fix: don't read BehaviorSubject getters — they're
+      // populated async by the supabase-js onAuthStateChange listener,
+      // which races with this code on cold start. Query auth + profile
+      // directly so we always see the freshly-restored session.
+      const { data: sessionData } =
+        await this.supabaseService.client.auth.getSession();
+      const supabaseUser = sessionData?.session?.user;
+
+      if (!supabaseUser) {
+        console.log('ℹ️ AuthService: No active session to restore');
+        return;
       }
+
+      // Fetch the profile row directly. The profile RLS owner-policy
+      // permits this for the authed caller. 8s timeout matches the
+      // login-path profile fetch (auth.service.ts performSupabaseLogin).
+      const PROFILE_FETCH_TIMEOUT_MS = 8000;
+      const profileFetchPromise = this.supabaseService.client
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+      const profileTimeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('Profile fetch timed out (session restore)')),
+          PROFILE_FETCH_TIMEOUT_MS,
+        );
+      });
+      const profileResult = (await Promise.race([
+        profileFetchPromise,
+        profileTimeoutPromise,
+      ])) as { data: any; error: any };
+
+      if (profileResult.error || !profileResult.data) {
+        console.error(
+          '❌ AuthService: Profile fetch on session restore failed',
+          profileResult.error,
+        );
+        return;
+      }
+
+      const profile = profileResult.data;
+      console.log('🔄 AuthService: Handling session restoration', {
+        userId: supabaseUser.id,
+        role: profile.role,
+        firstLogin: profile.first_login,
+      });
+
+      const authResponse: AuthResponse = {
+        token: sessionData?.session?.access_token ?? 'supabase-session-token',
+        user: {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          username: profile.username,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+        },
+      };
+
+      this.setAuthenticatedUser(authResponse);
+      console.log('✅ AuthService: Session restoration complete');
     } catch (error) {
       console.error('❌ AuthService: Error during session restoration:', error);
     }

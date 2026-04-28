@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router, ActivatedRouteSnapshot } from '@angular/router';
-import { Observable, of } from 'rxjs';
+import { from, Observable, of } from 'rxjs';
 import { catchError, filter, map, switchMap, take, timeout } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular/standalone';
 import { User } from '../interfaces/user.interface';
@@ -41,13 +41,60 @@ export class AuthGuard {
     return this.authService.currentUser.pipe(
       take(1),
       switchMap(authResponse => {
+        // Hard-refresh fix: AuthService.currentUser is fed by an
+        // RxJS BehaviorSubject that starts as `null`. On a cold-start
+        // hard refresh, this guard fires BEFORE app.component's
+        // handleSessionRestoration has populated the subject — so a
+        // logged-in user with a valid session in localStorage gets a
+        // false-negative and bounces to /auth/login.
+        //
+        // When the BehaviorSubject's first emission is falsy, do a
+        // side-channel check: ask supabase-js directly whether a
+        // session exists in localStorage. If yes, kick off restoration
+        // and re-evaluate. If no, fall through to the original
+        // redirect path.
+        if (!authResponse || !authResponse.user) {
+          return from(this.supabaseService.client.auth.getSession()).pipe(
+            switchMap(({ data }) => {
+              if (!data?.session?.user) {
+                this.redirectToLogin(route);
+                return of(false);
+              }
+              // Session exists in localStorage but the AuthService
+              // BehaviorSubject hadn't been told yet. Restore now,
+              // then re-run the guard against the freshly populated
+              // BehaviorSubject.
+              return from(this.authService.handleSessionRestoration()).pipe(
+                switchMap(() => this.authService.currentUser.pipe(take(1))),
+                switchMap(restored => this.evaluateAccess(route, restored)),
+              );
+            }),
+            catchError(err => {
+              console.error('AuthGuard: session restore check failed', err);
+              this.redirectToLogin(route);
+              return of(false);
+            }),
+          );
+        }
+        return this.evaluateAccess(route, authResponse);
+      }),
+    );
+  }
+
+  /**
+   * Original guard logic, extracted so the hard-refresh recovery path
+   * above can call back into it after restoring the session.
+   */
+  private evaluateAccess(
+    route: ActivatedRouteSnapshot,
+    authResponse: any,
+  ): Observable<boolean> {
+    return of(authResponse).pipe(
+      switchMap(() => {
         try {
           const expectedRole = route.data?.['expectedRole'];
 
-          // Unauthenticated → immediate redirect, no profile-wait, no toast.
-          // MUST precede the super-admin branch: otherwise an unauthenticated
-          // deep-link to /super-admin/** would hang 5s on profile$ and fire a
-          // misleading "Session taking too long" toast (there's no session).
+          // Unauthenticated even after the recovery attempt → redirect.
           if (!authResponse || !authResponse.user) {
             this.redirectToLogin(route);
             return of(false);

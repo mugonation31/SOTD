@@ -76,3 +76,5 @@ Thumbs.db
 
 # direnv env files — NEVER commit (contain secrets like SUPABASE_ACCESS_TOKEN)
 .envrc
+supabase/
+LinkedIn-post.md

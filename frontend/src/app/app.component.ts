@@ -53,10 +53,21 @@ export class AppComponent implements OnInit {
         }
       }
       
-      // Check if we have an existing session
-      const session = this.supabaseService.currentSession;
-      const user = this.supabaseService.currentUser;
-      
+      // Hard-refresh fix: read the session DIRECTLY from supabase-js's
+      // auth client rather than from our BehaviorSubject getters.
+      // Supabase restores the session from localStorage asynchronously
+      // during client init — `currentSession` / `currentUser` getters are
+      // null until that finishes. On hard refresh we hit this code BEFORE
+      // restoration completes, conclude "no session," and redirect the
+      // user to /auth/login even though they have a valid session sitting
+      // in localStorage. Awaiting auth.getSession() here forces us to
+      // wait for the restore round-trip; the BehaviorSubjects fill in
+      // shortly after via the existing onAuthStateChange listener.
+      const { data: sessionData } =
+        await this.supabaseService.client.auth.getSession();
+      const session = sessionData?.session ?? null;
+      const user = session?.user ?? null;
+
       if (session && user) {
         console.log('✅ Existing session found, user is authenticated');
         // Handle session restoration in AuthService
