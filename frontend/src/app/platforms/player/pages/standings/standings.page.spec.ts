@@ -323,5 +323,13 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
 
       expect(findJoinAnotherButton()).toBeNull();
     });
+
+    it('should NOT render the "Join another group" CTA while isLoading is true', () => {
+      component.isLoading = true;
+      component.groupStandings = [buildGroupWithStandings()];
+      fixture.detectChanges();
+
+      expect(findJoinAnotherButton()).toBeNull();
+    });
   });
 });

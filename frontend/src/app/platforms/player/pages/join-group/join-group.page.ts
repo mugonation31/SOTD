@@ -253,9 +253,8 @@ export class JoinGroupPage implements OnInit {
         this.foundGroup = null;
         this.groupDetailsMessage = '';
 
-        // Show success message with enhanced feedback
         await this.toastService.showToast(
-          `Successfully joined ${groupName}! Check "My Groups" below.`,
+          `Successfully joined ${groupName}.`,
           'success'
         );
 
