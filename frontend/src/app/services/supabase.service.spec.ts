@@ -144,6 +144,148 @@ describe('SupabaseService', () => {
     });
   });
 
+  // Phase 11.1 — Token-leak redaction in console.log sites (B1 + H2).
+  //
+  // These specs lock in that the two specific token-leak sites in
+  // signIn() and handleDeepLinkSession() never write
+  // access_token / refresh_token / JWT-shaped strings to console.
+  //
+  // The redaction is in the LOG only — actual auth behaviour
+  // (signInWithPassword call, setSession call) must be preserved.
+  describe('token-leak redaction (Phase 11.1)', () => {
+    const JWT_SHAPE = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/;
+
+    /**
+     * Walk all calls captured by a console spy, JSON.stringify each,
+     * and return the concatenated string for substring/regex assertions.
+     */
+    const concatLoggedStrings = (spy: jest.SpyInstance): string => {
+      return spy.mock.calls
+        .map(args => {
+          try {
+            return JSON.stringify(args);
+          } catch {
+            // fall back to String() for circular refs etc.
+            return args.map((a: any) => String(a)).join(' ');
+          }
+        })
+        .join('\n');
+    };
+
+    let logSpy: jest.SpyInstance;
+    let errorSpy: jest.SpyInstance;
+    let mockSupabaseClient: any;
+
+    beforeEach(() => {
+      logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      mockSupabaseClient = {
+        auth: {
+          signInWithPassword: jest.fn(),
+          setSession: jest.fn()
+        }
+      };
+      (service as any).supabase = mockSupabaseClient;
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    describe('B1 — signIn must not log session tokens', () => {
+      it('should not log access_token, refresh_token, or JWT-shape strings on successful signIn', async () => {
+        const fixture = {
+          data: {
+            user: { id: 'u1' },
+            session: {
+              access_token: 'eyJfake.AT_FAKE.sig',
+              refresh_token: 'RT_FAKE'
+            }
+          },
+          error: null
+        };
+        mockSupabaseClient.auth.signInWithPassword.mockResolvedValue(fixture);
+
+        await service.signIn('e@x', 'pw');
+
+        const logged = concatLoggedStrings(logSpy) + '\n' + concatLoggedStrings(errorSpy);
+
+        expect(logged).not.toContain('AT_FAKE');
+        expect(logged).not.toContain('RT_FAKE');
+        expect(logged).not.toContain('refresh_token');
+        expect(logged).not.toContain('access_token');
+        expect(logged).not.toMatch(JWT_SHAPE);
+      });
+
+      it('should not log session payload when signIn fails', async () => {
+        mockSupabaseClient.auth.signInWithPassword.mockResolvedValue({
+          data: null,
+          error: { message: 'bad creds' }
+        });
+
+        await expect(service.signIn('e@x', 'pw')).rejects.toBeDefined();
+
+        const logged = concatLoggedStrings(logSpy) + '\n' + concatLoggedStrings(errorSpy);
+
+        expect(logged).not.toContain('access_token');
+        expect(logged).not.toContain('refresh_token');
+        expect(logged).not.toMatch(JWT_SHAPE);
+      });
+    });
+
+    describe('H2 — handleDeepLinkSession must not log the URL fragment', () => {
+      const DEEP_LINK_URL =
+        'https://app.example/auth/callback#access_token=AT_FAKE&refresh_token=RT_FAKE&type=recovery';
+
+      it('should not log access_token, refresh_token, or JWT-shape values from the URL', async () => {
+        mockSupabaseClient.auth.setSession.mockResolvedValue({
+          data: { session: { access_token: 'AT_FAKE', refresh_token: 'RT_FAKE' } },
+          error: null
+        });
+
+        await service.handleDeepLinkSession(DEEP_LINK_URL);
+
+        const logged = concatLoggedStrings(logSpy) + '\n' + concatLoggedStrings(errorSpy);
+
+        expect(logged).not.toContain('AT_FAKE');
+        expect(logged).not.toContain('RT_FAKE');
+        expect(logged).not.toContain('access_token=');
+        expect(logged).not.toMatch(JWT_SHAPE);
+      });
+
+      it('should still emit a useful diagnostic log (origin/pathname + type)', async () => {
+        mockSupabaseClient.auth.setSession.mockResolvedValue({
+          data: { session: { access_token: 'AT_FAKE', refresh_token: 'RT_FAKE' } },
+          error: null
+        });
+
+        await service.handleDeepLinkSession(DEEP_LINK_URL);
+
+        const logged = concatLoggedStrings(logSpy);
+
+        expect(logged).toContain('app.example');
+        expect(logged).toContain('recovery');
+      });
+
+      it('should still call auth.setSession with the parsed access_token and refresh_token (behaviour preserved)', async () => {
+        mockSupabaseClient.auth.setSession.mockResolvedValue({
+          data: { session: { access_token: 'AT_FAKE', refresh_token: 'RT_FAKE' } },
+          error: null
+        });
+
+        const result = await service.handleDeepLinkSession(DEEP_LINK_URL);
+
+        expect(result).toBe(true);
+        expect(mockSupabaseClient.auth.setSession).toHaveBeenCalledWith({
+          access_token: 'AT_FAKE',
+          refresh_token: 'RT_FAKE'
+        });
+      });
+    });
+  });
+
   // Migration 014: the handle_new_user() trigger on auth.users creates the
   // profile row for BOTH email/password signups and OAuth (Google) signups.
   // loadUserProfile on the client should simply read the existing row — it

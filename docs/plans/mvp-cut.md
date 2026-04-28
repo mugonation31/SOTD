@@ -381,6 +381,103 @@ so the bottom-nav entry is duplicate UX.
 **Non-goals:** Not removing the settings page. Not changing settings
 content. Not adding a new profile icon. Not touching super-admin.
 
+### Phase 11 — Token-leak cleanup (S, split into 11.1 + 11.2)
+
+**Title:** Stop leaking Supabase session tokens through `console.log` and
+`localStorage`. Three findings from the launch-readiness review (B1, H2, B2)
+each expose access/refresh tokens to anyone with devtools, browser
+extensions, or screenshare access. Pre-launch must-fix.
+
+#### 11.1 — Redact session and recovery-URL logs in supabase.service (S)
+
+**Size:** S — 2 call sites, ~24 line diff
+
+**Files:**
+- `frontend/src/app/services/supabase.service.ts` (B1: signIn logs around
+  L373-383; H2: handleDeepLinkSession log around L693)
+- `frontend/src/app/services/supabase.service.spec.ts` (new specs only)
+
+**TDD scenarios:**
+1. B1 — successful signIn does not log refresh_token (spy on console,
+   walk all calls, assert no `'AT_FAKE'`/`'RT_FAKE'`/`'refresh_token'`).
+2. B1 — failed signIn does not log session payload.
+3. H2 — handleDeepLinkSession does not log fragment substrings.
+4. H2 — diagnostic log keeps origin/pathname + `type` (debug signal preserved).
+5. H2 — `auth.setSession` still receives unredacted tokens (behaviour preserved).
+
+**Implementation outline:**
+- Delete `console.log('Data:', data)` and `console.log('Error:', error)`
+  in signIn; the success-marker log keeps its prefix without the payload.
+- Hoist URL parsing + `type` extraction above the deep-link log; emit
+  `${urlObj.origin}${urlObj.pathname} (type=${type})` instead of `url`.
+- No helper, no lint rule — inline redaction for two sites.
+
+**Acceptance:**
+- 5 new specs green; existing supabase.service.spec.ts unchanged.
+- `npm test` clean (16 pre-existing auth/signup failures unchanged).
+- Manual: sign in with devtools open, search console for `eyJ` — zero hits.
+
+#### 11.2 — Hold reset-password token in memory, drop localStorage (S)
+
+**Size:** S — adds setter on AuthService, deletes 5 localStorage writes
+
+**Files:**
+- `frontend/src/app/platforms/auth/pages/reset-password/reset-password.page.ts`
+  (5 `localStorage.setItem('current_reset_token', …)` writes around
+  L118/170/198/229/250 + 2 `removeItem` calls)
+- `frontend/src/app/core/services/auth.service.ts`
+  (`updatePasswordWithTokens` localStorage/sessionStorage reads around
+  L1455-1460; add `setResetAccessToken` / `clearResetAccessToken`)
+- `frontend/src/app/platforms/auth/pages/reset-password/reset-password.page.spec.ts`
+  (new specs only — must NOT modify existing 42 passing assertions)
+
+**TDD scenarios (all new — append, do not edit existing):**
+1. `checkHashFragment` populates `accessToken` field WITHOUT calling
+   `localStorage.setItem('current_reset_token', …)`.
+2. PKCE query-param flow (`?code=…`) — same assertion.
+3. `checkRawUrlForToken` — same assertion.
+4. `checkUrlPathForToken` — same assertion.
+5. Component calls `authService.setResetAccessToken('AT')` after capture.
+6. `ngOnDestroy` calls `authService.clearResetAccessToken()` for cleanup.
+
+**Implementation outline (Option B — preserves existing API signature):**
+- Add private `resetAccessToken: string | null = null` to AuthService
+  with `setResetAccessToken(t)` / `clearResetAccessToken()` accessors.
+- In `updatePasswordWithTokens`, replace `localStorage.getItem(...)` and
+  `sessionStorage.getItem(...)` fallbacks with `this.resetAccessToken`.
+  Self-clear after success or failure.
+- In reset-password page, replace each `localStorage.setItem(...)` with
+  `this.authService.setResetAccessToken(token)`. Delete `removeItem` calls.
+- Add `OnDestroy` lifecycle calling `clearResetAccessToken()`.
+
+**Why Option B (memory cell on service, not new arg to existing method):**
+The existing spec at L230 asserts
+`updatePasswordWithTokens.toHaveBeenCalledWith('NewPassword123!')` —
+adding a 2nd arg would break it. Per CLAUDE.md project rule we never
+modify passing assertions. Setter pattern keeps the public API stable.
+
+**Acceptance:**
+- 6 new specs green; all 42 existing reset-password specs unchanged.
+- Codebase grep for `'current_reset_token'` returns zero hits.
+- `npm test` clean. `npm run build:prod` succeeds.
+- Manual: reset password via real email link with devtools open,
+  Application > Local Storage shows no `current_reset_token` key.
+
+**Risks:**
+- The L230 spec is the trip wire — verified before implementation that
+  Option B keeps it green. If any other existing assertion depends on
+  localStorage state, stop and re-plan rather than edit the spec.
+- In-memory token only survives until tab close — acceptable, that's the
+  point. Worst case: user closes tab mid-form → must restart from email
+  link. Better than persistent localStorage.
+
+**Non-goals (deferred from this phase):**
+- Lint rule against future `console.log(token)` patterns (was originally
+  scoped here, descoped — single-purpose phase). Add as separate task if
+  desired post-launch.
+- CSP header for XSS defense-in-depth (separate MEDIUM finding).
+- Stripping the URL fragment after capture (bigger refactor).
+
 ---
 
 ## Sequencing notes

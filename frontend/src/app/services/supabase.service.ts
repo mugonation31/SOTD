@@ -370,16 +370,19 @@ export class SupabaseService {
           password
         });
 
+        // NOTE (Phase 11.1): the signInWithPassword response carries
+        // session.access_token + session.refresh_token. Logging `data`
+        // (or even `error` verbatim, which can echo session info on some
+        // edge cases) leaks tokens into devtools / log aggregators. Keep
+        // the diagnostic markers but never print the payload.
         console.log('🔍 SupabaseService: SignIn response received');
-        console.log('🔍 SupabaseService: Data:', data);
-        console.log('🔍 SupabaseService: Error:', error);
 
         if (error) {
-          console.error('❌ SupabaseService: SignIn error:', error);
+          console.error('❌ SupabaseService: SignIn error:', error.message ?? 'unknown error');
           throw error;
         }
 
-        console.log('✅ SupabaseService: SignIn successful:', data);
+        console.log('✅ SupabaseService: SignIn successful');
         return data;
 
       } catch (attemptError) {
@@ -692,14 +695,21 @@ export class SupabaseService {
    */
   async handleDeepLinkSession(url: string): Promise<boolean> {
     try {
-      console.log('🔗 Handling deep link session:', url);
-      
-      // Parse the URL to extract tokens
+      // NOTE (Phase 11.1): the raw `url` carries `#access_token=…&refresh_token=…`
+      // for password-recovery / email-confirm deep links. Logging it dumps tokens
+      // into devtools and any log aggregator. Parse first, then log only the
+      // redacted shape (origin + pathname + flow type) — never the fragment.
       const urlObj = new URL(url);
       const hashParams = new URLSearchParams(urlObj.hash.slice(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       const type = hashParams.get('type');
+
+      console.log(
+        '🔗 Handling deep link session:',
+        `${urlObj.origin}${urlObj.pathname}`,
+        `type=${type ?? 'unknown'}`
+      );
       
       if (!accessToken || !refreshToken) {
         console.error('❌ Missing tokens in deep link');
