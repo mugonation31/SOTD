@@ -120,21 +120,10 @@ export class JoinGroupPage implements OnInit {
   ngOnInit() {
     this.loadMyGroups();
 
-    // Check if this is a first-time player and mark first login complete
-    this.handleFirstTimeUser();
-  }
-
-  private async handleFirstTimeUser() {
-    // Check if this is a first-time user
-    if (this.authService.isFirstTimeUser()) {
-      console.log('🆕 JoinGroupPage: First-time player detected - marking login as complete');
-      try {
-        await this.authService.markFirstLoginComplete();
-        console.log('✅ JoinGroupPage: First login marked complete for player');
-      } catch (error) {
-        console.error('❌ JoinGroupPage: Error marking first login complete:', error);
-      }
-    }
+    // Phase 12.1 (H3): the first-login flag must NOT flip just because this
+    // page rendered — that would strand a first-time user who bounces before
+    // joining. The flip now happens inside confirmJoinGroup() after a real
+    // successful join (mirrors the group-admin createGroup flow).
   }
 
   navigateTo(path: string) {
@@ -257,6 +246,21 @@ export class JoinGroupPage implements OnInit {
           `Successfully joined ${groupName}.`,
           'success'
         );
+
+        // Phase 12.1 (H3): flip the first-login flag ONLY after a real join
+        // succeeds. Mirrors group-admin/pages/group/group.page.ts:215 — same
+        // try/catch since the join itself already succeeded and the flag
+        // flip is non-fatal (we'll re-attempt next login if it fails).
+        if (this.authService.isFirstTimeUser()) {
+          try {
+            await this.authService.markFirstLoginComplete();
+          } catch (firstLoginErr) {
+            console.warn(
+              'join-group.confirmJoinGroup.markFirstLoginComplete',
+              firstLoginErr
+            );
+          }
+        }
 
         // Task 9.1: route back to standings so the new group surfaces in
         // the player's groups list (replaces the old in-page reload).

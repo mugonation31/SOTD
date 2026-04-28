@@ -531,6 +531,118 @@ class as B1 + B2 hiding on parallel code paths.
 - PII-class log dumps (MEDIUM/LOW residuals — separate cleanup ticket)
 - Other ~140 console.log sites bundled in production output (LOW)
 
+### Phase 12 — Remaining HIGH cluster from launch-readiness review (S+S+S)
+
+**Title:** Fix the three HIGH-severity issues from today's full-app
+review that are clear-cut code changes (B3 deferred — needs manual
+verification first). All three are launch-blockers for the 5-user
+cohort but each is ~10-15 min of work.
+
+#### 12.1 — Move `markFirstLoginComplete` to post-join branch (H3, S)
+
+**Files:**
+- `frontend/src/app/platforms/player/pages/join-group/join-group.page.ts`
+  (currently `handleFirstTimeUser` runs in `ngOnInit` — flips the flag
+  on page load regardless of whether the user actually joins. If they
+  bounce, next login routes them to `/player/home` with no group →
+  broken UX.)
+- `frontend/src/app/platforms/player/pages/join-group/join-group.page.spec.ts`
+
+**TDD scenarios:**
+1. `ngOnInit` does NOT call `markFirstLoginComplete` for first-time users
+   any more (regression of the previous behaviour we're moving away from).
+2. `confirmJoinGroup` success path calls `markFirstLoginComplete` exactly
+   once when `isFirstTimeUser()` returns true.
+3. `confirmJoinGroup` success path does NOT call `markFirstLoginComplete`
+   when `isFirstTimeUser()` returns false (returning users joining
+   additional groups).
+4. `confirmJoinGroup` failure path does NOT call `markFirstLoginComplete`
+   (only flip the flag on actual successful join).
+
+**Implementation outline:**
+- Remove the `handleFirstTimeUser` call from `ngOnInit` (or trim it to
+  data-prep only — read the function first to see if it does more).
+- In `confirmJoinGroup` success branch, after the toast and before
+  navigation, call `if (this.authService.isFirstTimeUser()) { await this.authService.markFirstLoginComplete(); }`.
+- Mirror what `group-admin/pages/group/group.page.ts:216` already does
+  on the create-group path — use that as the reference pattern.
+
+**Acceptance:**
+- 4 specs green; existing join-group specs unchanged.
+- Manual: fresh signup → land on /player/join-group → close tab without
+  joining → log back in → still routes to /player/join-group (not /home).
+
+#### 12.2 — `returnUrl` open-redirect allowlist on login (H4, S)
+
+**Files:**
+- `frontend/src/app/platforms/auth/pages/login/login.page.ts`
+  (lines ~100, ~191 — `returnUrl` from query param fed directly into
+  `router.navigate([returnUrl])`. Crafted `/auth/reset-password#access_token=…`
+  returnUrl could phish a reset flow.)
+- `frontend/src/app/platforms/auth/pages/login/login.page.spec.ts`
+
+**TDD scenarios:**
+1. Valid in-app `returnUrl` (`/player/home`, `/group-admin/group`,
+   `/super-admin/dashboard`) → router.navigate called with it.
+2. Invalid external/malformed `returnUrl` (`http://evil.com`,
+   `//evil.com/path`, `/auth/reset-password#access_token=AT_FAKE`,
+   `javascript:alert(1)`) → router.navigate falls back to default
+   destination (`/player/home` or whatever the existing default is —
+   read the file first).
+3. Empty/missing `returnUrl` → falls back to default (regression guard).
+
+**Implementation outline:**
+- Add `private readonly RETURN_URL_ALLOWLIST = /^\/(player|group-admin|super-admin|welcome)\//`
+  (or refine pattern by reading the actual route tree).
+- Wrap `returnUrl` use in a sanitiser:
+  `const safeReturnUrl = this.RETURN_URL_ALLOWLIST.test(returnUrl) ? returnUrl : DEFAULT_RETURN_URL;`
+- Apply at both call sites (~L100, ~L191).
+- Don't break the legitimate post-login redirect for any role.
+
+**Acceptance:**
+- 3+ specs green; existing login specs unchanged.
+- Manual: visit `/auth/login?returnUrl=http://evil.com` → log in → land
+  on default (not evil.com).
+
+#### 12.3 — `leaveGroup` admin guard mirrors RLS predicate (H5, S)
+
+**Files:**
+- `frontend/src/app/core/services/supabase-data.service.ts`
+  (lines ~200-223 — `leaveGroup` checks `group.admin_id === userId`
+  but RLS now also blocks any `is_admin = TRUE` member from leaving
+  per migration 017. Promoted co-admins clicking "leave" hit a
+  confusing "You are not a member" error from the empty data array.)
+- `frontend/src/app/core/services/supabase-data.service.spec.ts`
+
+**TDD scenarios:**
+1. Creator (admin_id match) gets the existing "demote first" error.
+2. Promoted co-admin (is_admin=true but NOT admin_id) ALSO gets the
+   "demote first" error (this is the bug being fixed).
+3. Regular member (is_admin=false, not creator) successfully leaves.
+
+**Implementation outline:**
+- Read the membership row first (already happens? verify) to get
+  `is_admin`.
+- Replace `if (group.admin_id === userId) throw …` with
+  `if (group.admin_id === userId || membership.is_admin) throw …`
+- Keep the user-facing message neutral — "You are an admin of this
+  group. Demote yourself or have another admin do so before leaving."
+
+**Acceptance:**
+- 3 specs green; existing leaveGroup specs unchanged.
+- Manual: promote a member to admin, click leave → see clear error;
+  demote → click leave → succeeds.
+
+**Sequencing:** 12.1 → 12.2 → 12.3 (in any order, all independent).
+Single Plan→TDD→Review→Security→E2E cycle for the cluster.
+
+**Out of scope (from launch-readiness review, deferred):**
+- B3 (`getGroupByCode` RLS) — needs manual verification first; might
+  not be a real bug since friends-and-family testing has had successful
+  joins. Verify with a fresh non-member account before fixing.
+- All MEDIUM-severity items (search_path pinning, CSP, predictions
+  fail-open, dead createGroup, PII profile dumps).
+
 ---
 
 ## Sequencing notes
