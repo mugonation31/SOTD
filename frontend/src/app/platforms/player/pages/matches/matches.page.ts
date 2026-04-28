@@ -47,6 +47,8 @@ import { LoggerService } from '@core/services/logger.service';
 import { SupabaseError } from '@core/errors/supabase-error';
 import { Match as SupabaseMatch } from '../../../../services/supabase.service';
 import { CountdownTimerComponent } from '../../../../shared/components/countdown-timer/countdown-timer.component';
+import { GroupService, Standing } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
 
 /**
  * View model for a single match row in this page's template.
@@ -111,7 +113,73 @@ interface GameWeek {
       <ion-grid>
         <ion-row class="ion-justify-content-center">
           <ion-col size="12" size-md="10" size-lg="8">
-            <!-- Gameweek Navigation -->
+            <!-- Leaderboard preview (home-card) — surfaces the standing
+                 at the top of the predict surface so /matches doubles as
+                 the player landing page. Hidden until the home-card load
+                 resolves. -->
+            <ion-card *ngIf="leaderboardPreview.length > 0" class="home-leaderboard-card">
+              <ion-card-header>
+                <ion-card-title>
+                  {{ groupName }} leaderboard
+                </ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div *ngFor="let player of leaderboardPreview" class="leaderboard-row">
+                  <span class="position">{{ player.position }}{{ positionSuffix(player.position) }}</span>
+                  <span class="name">
+                    {{ player.name }}
+                    <ion-badge *ngIf="player.isAdmin" color="warning" class="admin-badge">ADMIN</ion-badge>
+                  </span>
+                  <span class="points">{{ player.points }}</span>
+                </div>
+                <div *ngIf="callerStanding" class="leaderboard-row caller-row">
+                  <span class="position">{{ callerStanding.position }}{{ positionSuffix(callerStanding.position) }}</span>
+                  <span class="name">
+                    {{ callerStanding.name }}
+                    <ion-badge color="primary" class="you-badge">YOU</ion-badge>
+                  </span>
+                  <span class="points">{{ callerStanding.points }}</span>
+                </div>
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  (click)="goToFullLeaderboard()"
+                  class="view-full-link"
+                >
+                  View full leaderboard
+                </ion-button>
+              </ion-card-content>
+            </ion-card>
+
+            <!-- Clean countdown tile (replaces busy gameweek-navigation +
+                 "Game Week N" h2 from when this was a standalone /matches
+                 page). -->
+            <ion-card class="next-gw-tile">
+              <ion-card-header>
+                <ion-card-title>
+                  <ion-icon name="time-outline" color="primary"></ion-icon>
+                  Gameweek {{ currentGameweek.number }}
+                </ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="countdown-line">
+                  <app-countdown-timer
+                    [deadline]="currentGameweek.deadline"
+                    (deadlinePassed)="onDeadlinePassed()"
+                  ></app-countdown-timer>
+                </div>
+                <p class="status-line" *ngIf="!isLocked">
+                  Make any 3 predictions before the deadline.
+                </p>
+                <p class="status-line locked" *ngIf="isLocked">
+                  Predictions are locked for this gameweek.
+                </p>
+              </ion-card-content>
+            </ion-card>
+
+            <!-- Gameweek Navigation — between the countdown tile and the
+                 prediction surface. Lets the player flip through past
+                 gameweeks (results) and adjacent ones. -->
             <div class="gameweek-navigation">
               <ion-button
                 fill="clear"
@@ -126,16 +194,16 @@ interface GameWeek {
               </ion-button>
 
               <div class="gameweek-title">
-                <h2>Game Week {{ currentGameweek.number }}</h2>
+                <!-- Gameweek number + Predict3 badge — slim version,
+                     since the .next-gw-tile above already shows the full
+                     "Gameweek N" header. -->
+                <span class="gw-label">GW {{ currentGameweek.number }}</span>
                 <ion-icon
                   *ngIf="isLocked"
                   name="lock-closed-outline"
                   class="lock-icon"
                   aria-label="Predictions locked"
                 ></ion-icon>
-                <ion-badge color="primary" class="prediction-badge"
-                  >Predict3</ion-badge
-                >
               </div>
 
               <ion-button
@@ -151,26 +219,16 @@ interface GameWeek {
               </ion-button>
             </div>
 
-            <!-- Deadline Info Card -->
+            <!-- Deadline Info Card — keep visible because the joker
+                 section and reset-all button live inside it. The redundant
+                 "Deadline:" line + "Make any 3 predictions" hint are
+                 hidden via the .deadline-section-trimmed class so the new
+                 .next-gw-tile above is the sole source of those strings. -->
             <ion-card class="deadline-card">
               <ion-card-content>
-                <div class="deadline-info">
-                  <div class="deadline-section">
-                    <p class="deadline">
-                      <ion-icon name="time-outline"></ion-icon>
-                      Deadline:
-                      {{
-                        currentGameweek.deadline | date : 'MMM d, yyyy, h:mm a'
-                      }}
-                    </p>
-                    <app-countdown-timer
-                      [deadline]="currentGameweek.deadline"
-                      (deadlinePassed)="onDeadlinePassed()"
-                    ></app-countdown-timer>
-                    <p class="selection-info">
-                      Make any 3 predictions for this game week
-                    </p>
-                  </div>
+                <!-- Deadline + countdown text moved to the .next-gw-tile
+                     above; only the RESET ALL button remains here. -->
+                <div class="deadline-info reset-only">
                   <ion-button
                     *ngIf="!isLocked"
                     fill="clear"
@@ -414,9 +472,15 @@ interface GameWeek {
 
       .gameweek-title {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         gap: 8px;
+
+        .gw-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--ion-color-medium);
+        }
 
         h2 {
           margin: 0;
@@ -439,6 +503,120 @@ interface GameWeek {
         box-shadow: none;
         border: 1px solid var(--ion-color-light-shade);
         background: var(--card-background);
+      }
+
+      .deadline-info.reset-only {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+      }
+
+      // New clean countdown tile — matches the original /home aesthetic.
+      // Sits between the leaderboard preview and the matches list.
+      .next-gw-tile {
+        margin-bottom: var(--page-margin);
+        border-radius: var(--card-border-radius);
+        border: 1px solid var(--ion-color-light-shade);
+
+        ion-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+
+          ion-icon {
+            font-size: 1.2rem;
+          }
+        }
+
+        .countdown-line {
+          display: flex;
+          justify-content: center;
+          margin: 4px 0 8px;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+
+        .status-line {
+          text-align: center;
+          margin: 0;
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+
+          &.locked {
+            color: var(--ion-color-danger);
+            font-weight: 500;
+          }
+        }
+      }
+
+      // Home-card leaderboard, rendered above the deadline card so
+      // /matches doubles as the player home.
+      .home-leaderboard-card {
+        margin-bottom: var(--page-margin);
+        border-radius: var(--card-border-radius);
+        border: 1px solid var(--ion-color-light-shade);
+
+        ion-card-title {
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        .leaderboard-row {
+          display: grid;
+          grid-template-columns: 56px 1fr auto;
+          gap: 8px;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid var(--ion-color-light-shade, #e6e9ee);
+
+          &:last-of-type {
+            border-bottom: none;
+          }
+
+          &.caller-row {
+            background: linear-gradient(
+              90deg,
+              rgba(var(--ion-color-primary-rgb), 0.08),
+              transparent
+            );
+            border-left: 3px solid var(--ion-color-primary);
+            padding-left: 6px;
+          }
+
+          .position {
+            font-weight: 700;
+            color: var(--ion-color-medium);
+          }
+
+          .name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+          }
+
+          .points {
+            font-weight: 700;
+            color: var(--ion-color-primary);
+            min-width: 40px;
+            text-align: right;
+          }
+
+          .admin-badge,
+          .you-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+          }
+        }
+
+        .view-full-link {
+          --color: var(--ion-color-primary);
+          text-transform: none;
+          font-size: 0.85rem;
+          margin: 4px 0 -8px -12px;
+        }
       }
 
       .deadline-info {
@@ -886,6 +1064,14 @@ export class MatchesPage implements OnInit {
     is_special: boolean;
   }> | null = null;
 
+  // Home-card state (added on top of the matches surface so /matches
+  // doubles as the player's landing page — no extra navigation between
+  // "see leaderboard" and "predict").
+  leaderboardPreview: Standing[] = [];
+  callerStanding: Standing | null = null;
+  groupName = '';
+  groupId: string | null = null;
+
   constructor(
     private router: Router,
     private seasonService: SeasonService,
@@ -893,6 +1079,8 @@ export class MatchesPage implements OnInit {
     private toastController: ToastController,
     private alertController: AlertController,
     private logger: LoggerService,
+    private groupService: GroupService,
+    private authService: AuthService,
   ) {
     addIcons({
       timeOutline,
@@ -925,8 +1113,61 @@ export class MatchesPage implements OnInit {
     await this.applyGameweekMeta(gameweekNumber);
 
     await this.loadMatchesForGameweek(gameweekNumber);
+
+    // Home-cards: pull leaderboard preview + caller standing so /matches
+    // can double as the home surface. Best-effort — failure here doesn't
+    // block the prediction UI from rendering.
+    void this.loadHomeCards();
     // Hydration intentionally lives in `ionViewWillEnter` (Task 4.2.4.1) so
     // cached component re-entries also re-hydrate. See that method below.
+  }
+
+  /**
+   * Fetch leaderboard preview + caller's row for the home cards rendered
+   * at the top of the matches page. Mirrors the load shape from the
+   * (now-deprecated) /player/home page so the same UX lands here.
+   */
+  private async loadHomeCards(): Promise<void> {
+    try {
+      const callerId = this.authService.getCurrentUser()?.id;
+      if (!callerId) return;
+      const groupsWithStandings =
+        await this.groupService.getUserGroupsWithStandings();
+      const primary = groupsWithStandings[0];
+      if (!primary) return;
+      this.groupId = primary.group.id;
+      this.groupName = primary.group.name;
+      const leaderboard = primary.leaderboard;
+      const top = leaderboard.slice(0, 3);
+      const caller = leaderboard.find((s) => s.userId === callerId) ?? null;
+      this.leaderboardPreview = top;
+      this.callerStanding =
+        caller && !top.some((t) => t.userId === callerId) ? caller : null;
+    } catch (error) {
+      this.logger.warn('matches.loadHomeCards', error);
+    }
+  }
+
+  positionSuffix(position: number): string {
+    if (position > 3 && position < 21) return 'th';
+    switch (position % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
+
+  goToFullLeaderboard(): void {
+    if (this.groupId) {
+      this.router.navigate(['/player/standings'], {
+        queryParams: { groupId: this.groupId },
+      });
+    }
   }
 
   /**

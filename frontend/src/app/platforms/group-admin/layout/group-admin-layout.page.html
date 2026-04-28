@@ -1,6 +1,6 @@
 <ion-header>
   <ion-toolbar>
-    <div class="logo-container" (click)="navigateTo('/group-admin/dashboard')">
+    <div class="logo-container" (click)="navigateTo('/group-admin/home')">
       <ion-icon name="football-outline" class="football-icon"></ion-icon>
       <div class="logo-text">
         <span class="logo-predict3">Predict3</span>
@@ -17,14 +17,9 @@
 
 <ion-tabs>
   <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="dashboard" href="/group-admin/dashboard">
-      <ion-icon name="grid-outline"></ion-icon>
-      <ion-label>Dashboard</ion-label>
-    </ion-tab-button>
-
-    <ion-tab-button tab="members" href="/group-admin/members">
-      <ion-icon name="people-outline"></ion-icon>
-      <ion-label>Members</ion-label>
+    <ion-tab-button tab="home" href="/group-admin/home">
+      <ion-icon name="home-outline"></ion-icon>
+      <ion-label>Home</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="predictions" href="/group-admin/predictions">
@@ -32,14 +27,14 @@
       <ion-label>Predictions</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="live" href="/group-admin/live">
-      <ion-icon name="eye-outline"></ion-icon>
-      <ion-label>Live</ion-label>
+    <ion-tab-button tab="group" href="/group-admin/group">
+      <ion-icon name="people-outline"></ion-icon>
+      <ion-label>Group</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="groups" href="/group-admin/groups">
-      <ion-icon name="people-circle-outline"></ion-icon>
-      <ion-label>Groups</ion-label>
+    <ion-tab-button tab="settings" href="/group-admin/settings">
+      <ion-icon name="settings-outline"></ion-icon>
+      <ion-label>Settings</ion-label>
     </ion-tab-button>
   </ion-tab-bar>
 </ion-tabs>

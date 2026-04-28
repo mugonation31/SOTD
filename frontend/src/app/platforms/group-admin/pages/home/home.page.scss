@@ -1,0 +1,248 @@
+.home-content {
+  --background: var(--ion-color-light, #f5f7fa);
+}
+
+ion-card {
+  margin: 12px 0;
+  border-radius: 14px;
+}
+
+ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+
+  ion-icon {
+    font-size: 1.2rem;
+  }
+}
+
+.loading-state {
+  margin-top: 40px;
+}
+
+// Admin block
+.admin-block {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--ion-color-primary-rgb), 0.06),
+    rgba(var(--ion-color-warning-rgb), 0.04)
+  );
+  border-left: 4px solid var(--ion-color-warning);
+
+  .admin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .admin-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .group-name {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .member-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ion-color-medium);
+    font-size: 0.85rem;
+  }
+
+  .manage-btn {
+    --border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ion-color-light-shade, #e6e9ee);
+  }
+
+  .code-label {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .code-value {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--ion-color-primary);
+    flex: 1;
+  }
+
+  .copy-btn {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    margin: 0;
+  }
+}
+
+// Last-week recap
+.recap-card {
+  .recap-row {
+    display: flex;
+    justify-content: space-around;
+    margin: 8px 0 12px;
+  }
+
+  .recap-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--ion-color-primary);
+    }
+
+    .label {
+      font-size: 0.75rem;
+      color: var(--ion-color-medium);
+      margin-top: 2px;
+    }
+  }
+
+  .perfect-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+
+    ion-icon {
+      font-size: 0.8rem;
+    }
+  }
+
+  .view-history-link {
+    --color: var(--ion-color-primary);
+    text-transform: none;
+    font-size: 0.85rem;
+    margin-left: -12px;
+  }
+}
+
+// Leaderboard preview
+.leaderboard-card {
+  .leaderboard-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ion-color-light-shade, #e6e9ee);
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+
+    &.caller-row {
+      background: linear-gradient(
+        90deg,
+        rgba(var(--ion-color-primary-rgb), 0.08),
+        transparent
+      );
+      border-left: 3px solid var(--ion-color-primary);
+      padding-left: 6px;
+      margin-top: 4px;
+    }
+
+    .position {
+      font-weight: 700;
+      color: var(--ion-color-medium);
+    }
+
+    .name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .points {
+      font-weight: 700;
+      color: var(--ion-color-primary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .admin-badge,
+    .you-badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+    }
+  }
+
+  .view-full-link {
+    --color: var(--ion-color-primary);
+    text-transform: none;
+    font-size: 0.85rem;
+    margin: 8px 0 -8px -12px;
+  }
+}
+
+// Next gameweek
+.next-gw-card {
+  .countdown-line {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .status-line {
+    text-align: center;
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+
+    &.locked {
+      color: var(--ion-color-success);
+      font-weight: 500;
+    }
+  }
+
+  .predict-cta {
+    margin-top: 8px;
+  }
+}
+
+.no-gw-card {
+  margin-top: 20px;
+
+  ion-icon {
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    margin: 4px 0;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+}

@@ -7,6 +7,18 @@ export const routes: Routes = [
       import('./layout/player-layout.page').then((m) => m.PlayerLayoutPage),
     children: [
       {
+        // /player/home is the merged landing — leaderboard preview at top,
+        // then the prediction surface (matches list with score inputs and
+        // submit) inline below. Loads matches.page because the merged
+        // content lives there now.
+        path: 'home',
+        loadComponent: () =>
+          import('./pages/matches/matches.page').then((m) => m.MatchesPage),
+      },
+      {
+        // Legacy — kept until Phase 1 (delete dead pages). Default
+        // redirect now points at /home; this route stays only so any
+        // bookmarked /player/dashboard URLs still resolve.
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/dashboard/dashboard.page').then(
@@ -14,9 +26,11 @@ export const routes: Routes = [
           ),
       },
       {
+        // Legacy URL — same content as /home now lives there. Redirect
+        // so any bookmarked /matches URL still resolves.
         path: 'matches',
-        loadComponent: () =>
-          import('./pages/matches/matches.page').then((m) => m.MatchesPage),
+        redirectTo: 'home',
+        pathMatch: 'full',
       },
       {
         path: 'predictions',
@@ -58,7 +72,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'home',
         pathMatch: 'full',
       },
     ],

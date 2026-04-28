@@ -1,0 +1,131 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Group</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding group-content">
+  <div *ngIf="isLoading" class="loading-state ion-text-center ion-padding">
+    <ion-spinner name="dots"></ion-spinner>
+    <p>Loading…</p>
+  </div>
+
+  <!-- Empty state: no group yet, show inline create form -->
+  <ion-card *ngIf="!isLoading && !hasGroup" class="empty-card">
+    <ion-card-header>
+      <ion-card-title>Create your group</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="empty-copy">
+        Pick a name and we'll generate a 6-character code your friends can use to join.
+      </p>
+      <ion-item lines="full" class="name-input">
+        <ion-label position="stacked">Group name</ion-label>
+        <ion-input
+          [(ngModel)]="newGroupName"
+          placeholder="e.g. Sunday League"
+          maxlength="60"
+          (keyup.enter)="createGroup()"
+        ></ion-input>
+      </ion-item>
+      <ion-button
+        expand="block"
+        (click)="createGroup()"
+        [disabled]="!newGroupName.trim() || isCreating"
+        class="create-cta"
+      >
+        {{ isCreating ? 'Creating...' : 'Create group' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Populated state: group + members -->
+  <ng-container *ngIf="!isLoading && hasGroup">
+    <ion-card class="meta-card">
+      <ion-card-content>
+        <h2 class="group-name">{{ groupName }}</h2>
+        <div class="code-row">
+          <div class="code-label">Group code</div>
+          <div class="code-value">{{ groupCode }}</div>
+          <ion-button
+            fill="clear"
+            size="small"
+            (click)="copyGroupCode()"
+            aria-label="Copy group code"
+            class="copy-btn"
+          >
+            <ion-icon name="copy-outline"></ion-icon>
+          </ion-button>
+        </div>
+        <p class="member-count">
+          <ion-icon name="people-outline" color="medium"></ion-icon>
+          {{ members.length }} {{ members.length === 1 ? 'member' : 'members' }}
+          ·
+          {{ adminCount }}/{{ MAX_ADMINS }} admins
+        </p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="members-card">
+      <ion-card-header>
+        <ion-card-title>Members</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div *ngFor="let m of members" class="member-row">
+          <div class="member-info">
+            <div class="member-name">
+              {{ m.username }}
+              <ion-badge
+                *ngIf="m.isAdmin"
+                color="warning"
+                class="role-badge"
+              >ADMIN</ion-badge>
+              <ion-badge
+                *ngIf="m.isCreator"
+                color="medium"
+                class="creator-badge"
+                title="Group creator"
+              >CREATOR</ion-badge>
+              <ion-badge
+                *ngIf="m.isCaller"
+                color="primary"
+                class="you-badge"
+              >YOU</ion-badge>
+            </div>
+            <div class="joined-at">
+              Joined {{ m.joinedAt | date: 'mediumDate' }}
+            </div>
+          </div>
+
+          <div class="member-actions">
+            <!-- Promote: shown for non-admins. Disabled when at cap. -->
+            <ion-button
+              *ngIf="!m.isAdmin"
+              size="small"
+              fill="outline"
+              [disabled]="atAdminCap"
+              (click)="promote(m)"
+              [title]="atAdminCap ? 'Group already has the max of 3 admins' : 'Promote to admin'"
+            >
+              <ion-icon name="shield-outline" slot="start"></ion-icon>
+              Promote
+            </ion-button>
+
+            <!-- Demote: shown for admins who aren't the creator. -->
+            <ion-button
+              *ngIf="m.isAdmin && !m.isCreator"
+              size="small"
+              fill="outline"
+              color="medium"
+              (click)="demote(m)"
+              title="Demote to player"
+            >
+              <ion-icon name="arrow-down-outline" slot="start"></ion-icon>
+              Demote
+            </ion-button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </ng-container>
+</ion-content>

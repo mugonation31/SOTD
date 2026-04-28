@@ -10,11 +10,11 @@ import {
 import { RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
-  gridOutline,
+  homeOutline,
   footballOutline,
   analyticsOutline,
   trophyOutline,
-  peopleCircleOutline,
+  settingsOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -35,11 +35,11 @@ import {
 export class PlayerLayoutPage {
   constructor() {
     addIcons({
-      gridOutline,
+      homeOutline,
       footballOutline,
       analyticsOutline,
       trophyOutline,
-      peopleCircleOutline,
+      settingsOutline,
     });
   }
 }

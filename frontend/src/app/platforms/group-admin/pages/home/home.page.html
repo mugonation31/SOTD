@@ -1,0 +1,178 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Home</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding home-content">
+  <div *ngIf="isLoading" class="loading-state ion-text-center ion-padding">
+    <ion-spinner name="dots"></ion-spinner>
+    <p>Loading…</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading">
+    <!-- Admin block: group code + members + manage CTA -->
+    <ion-card *ngIf="groupId" class="admin-block">
+      <ion-card-content>
+        <div class="admin-row">
+          <div class="admin-meta">
+            <h2 class="group-name">{{ groupName }}</h2>
+            <div class="member-count">
+              <ion-icon name="people-outline" color="medium"></ion-icon>
+              <span>{{ memberCount }} {{ memberCount === 1 ? 'member' : 'members' }}</span>
+            </div>
+          </div>
+          <ion-button
+            fill="outline"
+            size="small"
+            (click)="goToGroupManagement()"
+            class="manage-btn"
+          >
+            <ion-icon name="settings-outline" slot="start"></ion-icon>
+            Manage
+          </ion-button>
+        </div>
+
+        <div class="code-row">
+          <div class="code-label">Group code</div>
+          <div class="code-value">{{ groupCode }}</div>
+          <ion-button
+            fill="clear"
+            size="small"
+            (click)="copyGroupCode()"
+            class="copy-btn"
+            aria-label="Copy group code"
+          >
+            <ion-icon name="copy-outline"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Card 1: Last week recap (hidden if no completed prior GW) -->
+    <ion-card *ngIf="lastWeek" class="recap-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="ribbon-outline" color="primary"></ion-icon>
+          Last week
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="recap-row">
+          <div class="recap-stat">
+            <span class="value">{{ lastWeek.pointsEarned }}</span>
+            <span class="label">points (GW{{ lastWeek.gameweekNumber }})</span>
+          </div>
+          <div class="recap-stat">
+            <span class="value">{{ lastWeek.predictionCount }}/3</span>
+            <span class="label">predictions</span>
+          </div>
+        </div>
+        <ion-badge
+          *ngIf="lastWeek.perfectRound"
+          color="warning"
+          class="perfect-badge"
+        >
+          <ion-icon name="flame-outline"></ion-icon>
+          PERFECT ROUND
+        </ion-badge>
+        <ion-button
+          fill="clear"
+          size="small"
+          (click)="goToHistory()"
+          class="view-history-link"
+        >
+          View full history
+          <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Card 2: Leaderboard preview -->
+    <ion-card class="leaderboard-card" *ngIf="leaderboardPreview.length > 0">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="trophy-outline" color="primary"></ion-icon>
+          Leaderboard
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div *ngFor="let player of leaderboardPreview" class="leaderboard-row">
+          <span class="position">{{ player.position }}{{ positionSuffix(player.position) }}</span>
+          <span class="name">
+            {{ player.name }}
+            <ion-badge
+              *ngIf="player.isAdmin"
+              color="warning"
+              class="admin-badge"
+            >ADMIN</ion-badge>
+          </span>
+          <span class="points">{{ player.points }}</span>
+        </div>
+
+        <div *ngIf="callerStanding" class="leaderboard-row caller-row">
+          <span class="position">{{ callerStanding.position }}{{ positionSuffix(callerStanding.position) }}</span>
+          <span class="name">
+            {{ callerStanding.name }}
+            <ion-badge color="primary" class="you-badge">YOU</ion-badge>
+          </span>
+          <span class="points">{{ callerStanding.points }}</span>
+        </div>
+
+        <ion-button
+          fill="clear"
+          size="small"
+          (click)="goToFullLeaderboard()"
+          class="view-full-link"
+        >
+          View full leaderboard
+          <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Card 3: Next gameweek countdown + CTA -->
+    <ion-card *ngIf="nextGameweek" class="next-gw-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="time-outline" color="primary"></ion-icon>
+          Next: Gameweek {{ nextGameweek.gameweekNumber }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="countdown-line">
+          <app-countdown-timer
+            [deadline]="nextGameweek.deadline"
+          ></app-countdown-timer>
+        </div>
+
+        <p
+          *ngIf="nextGameweek.alreadyPredicted"
+          class="status-line locked"
+        >
+          ✓ Predictions in. You can still change them before the deadline.
+        </p>
+        <p *ngIf="!nextGameweek.alreadyPredicted" class="status-line">
+          Make any 3 predictions before the deadline.
+        </p>
+
+        <ion-button
+          expand="block"
+          (click)="goToPredictions()"
+          class="predict-cta"
+        >
+          {{ nextGameweek.alreadyPredicted ? 'Review predictions' : 'Make predictions' }}
+          <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card *ngIf="!nextGameweek" class="no-gw-card">
+      <ion-card-content class="ion-text-center">
+        <ion-icon name="time-outline" size="large" color="medium"></ion-icon>
+        <h3>No active gameweek</h3>
+        <p>The next round of fixtures hasn't been published yet.</p>
+      </ion-card-content>
+    </ion-card>
+  </ng-container>
+</ion-content>

@@ -228,6 +228,53 @@ export class SupabaseDataService {
     ]);
   }
 
+  /**
+   * Promote an existing group member to admin. Requires the caller to
+   * already be an admin of the same group (RLS gates the UPDATE via the
+   * "Group admins can update members" policy from migration 017). The DB
+   * trigger `enforce_max_admins_per_group` rejects the UPDATE with
+   * Postgres error code P0001 if the group already has 3 admins.
+   */
+  async promoteMemberToAdmin(memberRowId: string): Promise<void> {
+    const { error } = await this.client
+      .from('group_members')
+      .update({ is_admin: true })
+      .eq('id', memberRowId);
+    if (error) {
+      // Surface the cap violation as a user-friendly error; everything
+      // else gets the generic sanitized message.
+      const isCapViolation =
+        error.code === 'P0001' && /maximum of 3 admins/i.test(error.message);
+      throw this.toSupabaseError(
+        'supabase.promoteMemberToAdmin',
+        isCapViolation
+          ? 'This group already has the maximum of 3 admins'
+          : 'Unable to promote member',
+        error,
+      );
+    }
+  }
+
+  /**
+   * Demote an admin member back to player. The application layer is
+   * responsible for refusing to demote the group's creator
+   * (`groups.admin_id`) — RLS doesn't enforce that because we want to
+   * preserve the option of a future "transfer ownership" flow.
+   */
+  async demoteAdminToMember(memberRowId: string): Promise<void> {
+    const { error } = await this.client
+      .from('group_members')
+      .update({ is_admin: false })
+      .eq('id', memberRowId);
+    if (error) {
+      throw this.toSupabaseError(
+        'supabase.demoteAdminToMember',
+        'Unable to demote admin',
+        error,
+      );
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Gameweeks
   // -----------------------------------------------------------------------

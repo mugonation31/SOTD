@@ -58,10 +58,10 @@ happened last week / what's next" home.
 ### Player
 
 - `frontend/src/app/platforms/player/pages/dashboard/` — replaced by new home
-- `frontend/src/app/platforms/player/pages/matches/` — duplicates predictions
+- ~~`frontend/src/app/platforms/player/pages/matches/`~~ **KEEP** — this is where players actually MAKE predictions (score inputs, joker toggle, submit). `predictions.page` is the read-only "my picks" view. Two-page split is intentional. Nav now reads "Predict" / "My Picks" to make the distinction obvious.
 - `frontend/src/app/platforms/player/pages/groups/` — collapsed into standings/home
 - `frontend/src/app/platforms/player/pages/group-standings/` — merged into `/player/standings`
-- `frontend/src/app/platforms/player/pages/join-group/` — becomes empty-state of `/player/standings` (or modal triggered from home)
+- ~~`frontend/src/app/platforms/player/pages/join-group/`~~ **KEEP** — first-login flow already sends new players here; that onboarding is intentional and works. Don't collapse it into the home empty-state.
 
 ### Group admin
 
@@ -203,6 +203,37 @@ Demote → badge disappears. Promote button greys out when 3
 admins exist. Creator's row never shows demote button. Test the
 RLS path: promoted admin can edit member status, demoted admin
 cannot.
+
+### Phase 8 — Settings/Profile real-data wiring (S)
+
+Both `/player/settings` and `/group-admin/settings` currently render
+hardcoded fixture data: "John Player", "john.player@example.com",
+"+44 7123 456789", role "Player", joined "2024-01-01". Real users see
+this on first login and immediately notice it's not them.
+
+Tasks:
+- Replace the hardcoded constants with reads from `profiles` (email,
+  first_name, last_name, role, created_at, avatar_url) keyed on
+  `auth.uid()`.
+- "Update Profile" button writes back via the existing RLS-permitted
+  update path — owner can edit their own row, except the `role`
+  column (covered by migration 001's WITH CHECK clause).
+- "Phone" field: not in the current `profiles` schema. Either:
+  a) Hide the field for MVP (recommended — nobody uses it yet), or
+  b) Add `phone TEXT` to profiles in a new migration and surface it.
+  Going with (a) for now.
+- "Joined Date" should bind to `profiles.created_at` formatted as
+  `mediumDate`.
+- "Change Password" already uses Supabase Auth — verify it still
+  works under the ES256 / sb_publishable_ keys; current spec passes
+  but the prod path hasn't been smoke-tested since the auth refactor.
+- Apply identical treatment to the group-admin settings page (which
+  is the same component or near-identical).
+
+Acceptance: Logged in as player1, settings shows
+"Player One / player1@predict3.co.uk / Player / Apr 24 2026". Edit
+first name → save → reload → persists. Email is read-only (Supabase
+auth manages it). Role is read-only.
 
 ### Phase 7 — Joker UX polish (S, conditional)
 

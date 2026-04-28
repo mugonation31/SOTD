@@ -7,6 +7,14 @@ export const routes: Routes = [
     component: GroupAdminLayoutPage,
     children: [
       {
+        path: 'home',
+        loadComponent: () =>
+          import('./pages/home/home.page').then((m) => m.GroupAdminHomePage),
+      },
+      {
+        // Legacy — kept until Phase 1 cleanup. Default redirect now lands
+        // on /home; this route stays only so any bookmarked URLs still
+        // resolve to something rather than 404.
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/dashboard/dashboard.page').then(
@@ -14,6 +22,15 @@ export const routes: Routes = [
           ),
       },
       {
+        // New unified group-management page from Phase 6 (mvp-cut plan).
+        // Combines members + promote/demote + group code + create-group
+        // empty-state into a single route.
+        path: 'group',
+        loadComponent: () =>
+          import('./pages/group/group.page').then((m) => m.GroupAdminGroupPage),
+      },
+      {
+        // Legacy — kept until Phase 1 cleanup.
         path: 'members',
         loadComponent: () =>
           import('./pages/members/members.page').then((m) => m.MembersPage),
@@ -59,7 +76,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'home',
         pathMatch: 'full',
       },
     ],

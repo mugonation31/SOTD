@@ -7,7 +7,19 @@ import { MatchesPage } from './matches.page';
 import { SeasonService } from '@core/services/season.service';
 import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { LoggerService } from '@core/services/logger.service';
+import { GroupService } from '@core/services/group.service';
+import { AuthService } from '@core/services/auth.service';
 import { createMockRouter } from '../../../../../testing/test-utils';
+
+// Stubs for the home-card pipeline injected into MatchesPage. Both
+// services are best-effort (matches.page.loadHomeCards swallows errors)
+// so the simplest shape that satisfies DI is fine.
+const buildGroupServiceStub = () => ({
+  getUserGroupsWithStandings: jest.fn().mockResolvedValue([]),
+});
+const buildAuthServiceStub = () => ({
+  getCurrentUser: jest.fn().mockReturnValue(null),
+});
 
 describe('MatchesPage (Task 2.2.2 — fetch matches for current gameweek)', () => {
   let component: MatchesPage;
@@ -55,6 +67,8 @@ describe('MatchesPage (Task 2.2.2 — fetch matches for current gameweek)', () =
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -225,6 +239,8 @@ describe('MatchesPage (Task 2.2.3 — gameweek prev/next navigation fetches from
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -405,6 +421,8 @@ describe('MatchesPage (Task 2.2.4 — match status display)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -566,6 +584,8 @@ describe('MatchesPage (Task 2.2.5 — error handling + empty state)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: LoggerService, useValue: mockLogger },
       ],
@@ -801,6 +821,8 @@ describe('MatchesPage (Task 3.1.2 — gameweek deadline wiring)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -946,6 +968,8 @@ describe('MatchesPage (Task 3.1.3 — lock-state logic)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -1185,6 +1209,8 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
       ],
     }).compileComponents();
 
@@ -1203,7 +1229,11 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
     jest.useRealTimers();
   });
 
-  it('renders <app-countdown-timer> inside the deadline card', async () => {
+  it('renders <app-countdown-timer> inside the next-gw tile', async () => {
+    // The countdown moved out of the legacy .deadline-card into the
+    // .next-gw-tile when the matches page was repurposed as the player
+    // home (see mvp-cut Phase 2). The deadline card now only carries the
+    // joker section + reset button.
     mockSupabaseDataService.getGameweeks.mockResolvedValue([
       buildGameweekRow({ gameweek_number: 7, deadline: '2024-08-17T11:00:00Z' }),
     ]);
@@ -1212,9 +1242,9 @@ describe('MatchesPage (Task 3.1.4 — locked-state UI)', () => {
     fixture.detectChanges();
 
     const compiled: HTMLElement = fixture.nativeElement;
-    const card = compiled.querySelector('ion-card.deadline-card');
-    expect(card).not.toBeNull();
-    expect(card!.querySelector('app-countdown-timer')).not.toBeNull();
+    const tile = compiled.querySelector('ion-card.next-gw-tile');
+    expect(tile).not.toBeNull();
+    expect(tile!.querySelector('app-countdown-timer')).not.toBeNull();
   });
 
   it('binds the countdown timer [deadline] to currentGameweek.deadline', async () => {
@@ -1420,6 +1450,8 @@ describe('MatchesPage (Task 3.2.1 — submit to Supabase)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: LoggerService, useValue: mockLogger },
       ],
@@ -1717,6 +1749,8 @@ describe('MatchesPage (Task 3.2.2 — pre-fill saved predictions)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: LoggerService, useValue: mockLogger },
       ],
@@ -2034,6 +2068,8 @@ describe('MatchesPage (Task 3.2.3 — regular vs special gating)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
       ],
     }).compileComponents();
@@ -2230,6 +2266,8 @@ describe('MatchesPage (Task 3.4.2 — joker page state)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
       ],
     }).compileComponents();
@@ -2548,6 +2586,8 @@ describe('MatchesPage (Task 3.4.3 — joker template UI)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
       ],
     }).compileComponents();
@@ -2871,6 +2911,8 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: AlertController, useValue: mockAlertController },
         { provide: LoggerService, useValue: mockLogger },
@@ -2975,6 +3017,8 @@ describe('MatchesPage (Task 3.4.4 — joker submit flow)', () => {
           { provide: Router, useValue: mockRouter },
           { provide: SeasonService, useValue: mockSeasonService },
           { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
           { provide: ToastController, useValue: mockToastController },
           { provide: AlertController, useValue: mockAlertController },
         ],
@@ -3169,6 +3213,8 @@ describe('MatchesPage (Task 4.2.4.1 — hydrate lifecycle + empty-venue + null-s
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: LoggerService, useValue: mockLogger },
       ],
@@ -3342,6 +3388,8 @@ describe('MatchesPage (Task 4.2.7 — isLocked short-circuit regression)', () =>
         { provide: Router, useValue: mockRouter },
         { provide: SeasonService, useValue: mockSeasonService },
         { provide: SupabaseDataService, useValue: mockSupabaseDataService },
+        { provide: GroupService, useValue: buildGroupServiceStub() },
+        { provide: AuthService, useValue: buildAuthServiceStub() },
         { provide: ToastController, useValue: mockToastController },
         { provide: LoggerService, useValue: mockLogger },
       ],

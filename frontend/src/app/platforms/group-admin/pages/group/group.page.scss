@@ -1,0 +1,132 @@
+.group-content {
+  --background: var(--ion-color-light, #f5f7fa);
+}
+
+ion-card {
+  margin: 12px 0;
+  border-radius: 14px;
+}
+
+.loading-state {
+  margin-top: 40px;
+}
+
+// Empty state (create group)
+.empty-card {
+  .empty-copy {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+    margin: 0 0 12px;
+  }
+
+  .name-input {
+    --background: transparent;
+    margin-bottom: 16px;
+  }
+
+  .create-cta {
+    margin-top: 4px;
+  }
+}
+
+// Group meta
+.meta-card {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--ion-color-primary-rgb), 0.06),
+    rgba(var(--ion-color-warning-rgb), 0.04)
+  );
+  border-left: 4px solid var(--ion-color-warning);
+
+  .group-name {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-top: 1px solid var(--ion-color-light-shade, #e6e9ee);
+    border-bottom: 1px solid var(--ion-color-light-shade, #e6e9ee);
+  }
+
+  .code-label {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .code-value {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--ion-color-primary);
+    flex: 1;
+  }
+
+  .copy-btn {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    margin: 0;
+  }
+
+  .member-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 0;
+    color: var(--ion-color-medium);
+    font-size: 0.85rem;
+  }
+}
+
+// Members list
+.members-card {
+  .member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--ion-color-light-shade, #e6e9ee);
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  .member-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .member-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-weight: 500;
+  }
+
+  .joined-at {
+    font-size: 0.75rem;
+    color: var(--ion-color-medium);
+    margin-top: 2px;
+  }
+
+  .role-badge,
+  .creator-badge,
+  .you-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .member-actions {
+    flex-shrink: 0;
+  }
+}
