@@ -55,72 +55,71 @@
         <ion-icon name="time-outline"></ion-icon>
         <span>Deadline: {{ currentGameWeek.deadline | date:'MMM d, yyyy, h:mm a' }}</span>
       </div>
-      <ion-button fill="clear" size="small" (click)="resetPredictions()">
-        <ion-icon name="refresh-outline" slot="start"></ion-icon>
-        RESET ALL
-      </ion-button>
     </div>
 
-    <div class="selection-info-text">
-      Make any 3 predictions for this game week
-    </div>
-
-    <!-- Joker indicator -->
-    <div class="joker-indicator" *ngIf="!predictionsLocked">
-      <ion-icon name="star-outline"></ion-icon>
-      <span>{{ jokersRemaining }}/2 jokers remaining</span>
-    </div>
-
-    <!-- Joker toggle -->
-    <div class="joker-toggle-row" *ngIf="canUseJoker()">
-      <ion-label>Play Joker this gameweek</ion-label>
-      <ion-toggle [(ngModel)]="jokerUsedThisGameweek"></ion-toggle>
-    </div>
+    <!-- Joker + reset card -->
+    <ion-card class="deadline-card">
+      <ion-card-content>
+        <div class="deadline-info reset-only">
+          <ion-button fill="clear" class="reset-button" (click)="resetPredictions()">
+            <ion-icon name="refresh-outline" slot="start"></ion-icon>
+            RESET ALL
+          </ion-button>
+        </div>
+        <div class="joker-section">
+          <div class="joker-indicator" *ngIf="!predictionsLocked">
+            <ion-icon name="star-outline" color="warning"></ion-icon>
+            <span>{{ jokersRemaining }}/2 jokers remaining</span>
+          </div>
+          <div class="joker-toggle-row" *ngIf="canUseJoker()">
+            <ion-label>Play Joker this gameweek</ion-label>
+            <ion-toggle [(ngModel)]="jokerUsedThisGameweek" color="warning"></ion-toggle>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
 
     <!-- Match Cards -->
     <div class="match-cards">
       <div class="match-card" *ngFor="let match of currentGameWeek.matches">
         <div class="match-header">
-          <div class="venue">
-            <ion-icon name="footballOutline"></ion-icon>
-            {{ match.venue }}
-          </div>
           <div class="kickoff">
             <ion-icon name="time-outline"></ion-icon>
             {{ match.kickoff | date:'EEEE d MMM HH:mm' }}
           </div>
         </div>
-        
-        <div class="match-prediction">
-          <div class="team-name">{{ getShortTeamName(match.homeTeam) }}</div>
-          
+        <div class="match-content">
+          <div class="team home">{{ match.homeTeam }}</div>
           <div class="score-inputs">
-            <input 
-              type="tel" 
-              maxlength="2" 
+            <input
+              type="number"
+              min="0"
+              max="99"
               [(ngModel)]="match.homeScore"
-              (input)="onScoreChange(match)"
+              (ngModelChange)="onScoreChange(match)"
               placeholder="-"
               class="score-input">
-            <span class="separator">-</span>
-            <input 
-              type="tel" 
-              maxlength="2" 
+            <span class="score-separator">-</span>
+            <input
+              type="number"
+              min="0"
+              max="99"
               [(ngModel)]="match.awayScore"
-              (input)="onScoreChange(match)"
+              (ngModelChange)="onScoreChange(match)"
               placeholder="-"
               class="score-input">
           </div>
-          
-          <div class="team-name">{{ getShortTeamName(match.awayTeam) }}</div>
+          <div class="team away">{{ match.awayTeam }}</div>
         </div>
       </div>
     </div>
 
     <!-- Submit Button -->
-    <ion-button expand="block" class="submit-button" [disabled]="!canSubmit || isSubmitting" (click)="onSubmitPredictions()">
-      Submit Predictions
-    </ion-button>
+    <div class="submit-container">
+      <ion-button expand="block" class="submit-button" [disabled]="!canSubmit || isSubmitting" (click)="onSubmitPredictions()">
+        Submit Predictions
+      </ion-button>
+    </div>
   </div>
 
   <!-- All Predictions Tab - Keep existing -->
