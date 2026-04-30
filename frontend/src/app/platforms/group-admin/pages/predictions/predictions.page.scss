@@ -131,7 +131,36 @@ ion-toolbar {
   text-align: center;
   color: var(--ion-color-medium);
   font-size: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+
+.joker-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ion-color-warning-shade);
+  margin-bottom: 8px;
+
+  ion-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.joker-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  ion-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ion-color-dark);
+  }
 }
 
 // Match cards
