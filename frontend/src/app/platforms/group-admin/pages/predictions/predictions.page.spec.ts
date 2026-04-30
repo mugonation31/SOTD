@@ -47,6 +47,11 @@ describe('PredictionsPage (Task 3.3.3 — All Predictions tab visibility)', () =
       getGroupPredictions: jest.fn().mockResolvedValue([]),
       getMatches: jest.fn().mockResolvedValue([]),
       getGameweeks: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest
+        .fn()
+        .mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      markJokerUsed: jest.fn().mockResolvedValue(undefined),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -303,6 +308,11 @@ describe('PredictionsPage (Task 4.2.11 — Supabase-backed matches + gameweeks)'
       getGroupPredictions: jest.fn().mockResolvedValue([]),
       getMatches: jest.fn().mockResolvedValue([]),
       getGameweeks: jest.fn().mockResolvedValue([]),
+      getJokerUsage: jest
+        .fn()
+        .mockResolvedValue({ usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null }),
+      submitPredictions: jest.fn().mockResolvedValue([]),
+      markJokerUsed: jest.fn().mockResolvedValue(undefined),
     };
 
     mockToast = { present: jest.fn().mockResolvedValue(undefined) };
@@ -402,5 +412,199 @@ describe('PredictionsPage (Task 4.2.11 — Supabase-backed matches + gameweeks)'
     await component.loadMatches();
 
     expect(component.historicalGameweeks).toEqual([5, 3, 1]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 9 — Joker toggle & real Supabase submission
+  // -------------------------------------------------------------------------
+
+  describe('Phase 9 — canUseJoker()', () => {
+    it('returns true when deadline has not passed, jokers remain, and not a special gameweek', async () => {
+      await component.ngOnInit();
+      component.predictionsLocked = false;
+      component.jokersRemaining = 2;
+      component.currentGameWeek = { ...component.currentGameWeek, isSpecial: false };
+      expect(component.canUseJoker()).toBe(true);
+    });
+
+    it('returns false on a special gameweek', async () => {
+      await component.ngOnInit();
+      component.predictionsLocked = false;
+      component.jokersRemaining = 2;
+      component.currentGameWeek = { ...component.currentGameWeek, isSpecial: true };
+      expect(component.canUseJoker()).toBe(false);
+    });
+
+    it('returns false when jokersRemaining is 0', async () => {
+      await component.ngOnInit();
+      component.predictionsLocked = false;
+      component.jokersRemaining = 0;
+      component.currentGameWeek = { ...component.currentGameWeek, isSpecial: false };
+      expect(component.canUseJoker()).toBe(false);
+    });
+
+    it('returns false when predictionsLocked is true', async () => {
+      await component.ngOnInit();
+      component.predictionsLocked = true;
+      component.jokersRemaining = 2;
+      component.currentGameWeek = { ...component.currentGameWeek, isSpecial: false };
+      expect(component.canUseJoker()).toBe(false);
+    });
+  });
+
+  describe('Phase 9 — joker state initialised from getJokerUsage()', () => {
+    it('sets jokersRemaining=2 when usedCount=0', async () => {
+      mockSupabaseDataService.getJokerUsage.mockResolvedValue({
+        usedCount: 0, firstJokerGameweek: null, secondJokerGameweek: null,
+      });
+      await component.ngOnInit();
+      expect(component.jokersRemaining).toBe(2);
+    });
+
+    it('sets jokersRemaining=1 when usedCount=1', async () => {
+      mockSupabaseDataService.getJokerUsage.mockResolvedValue({
+        usedCount: 1, firstJokerGameweek: 5, secondJokerGameweek: null,
+      });
+      mockSupabaseDataService.getGameweeks.mockResolvedValue([
+        { id: 'gw-uuid-7', gameweek_number: 7, deadline: '2099-01-01T00:00:00Z', is_special: false },
+      ]);
+      await component.ngOnInit();
+      expect(component.jokersRemaining).toBe(1);
+    });
+
+    it('sets jokersRemaining=2 and does not crash when getJokerUsage rejects', async () => {
+      mockSupabaseDataService.getJokerUsage.mockRejectedValue(new Error('DB err'));
+      await expect(component.ngOnInit()).resolves.not.toThrow();
+      expect(component.jokersRemaining).toBe(2);
+    });
+  });
+
+  describe('Phase 9 — toMatchViewModel preserves matchUuid', () => {
+    it('sets matchUuid from row.id (the UUID string)', async () => {
+      const uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      mockSupabaseDataService.getMatches.mockResolvedValue([
+        {
+          id: uuid,
+          gameweek: 7,
+          home_team: 'Arsenal',
+          away_team: 'Chelsea',
+          kickoff_time: '2024-08-17T14:00:00Z',
+          home_score: null,
+          away_score: null,
+          status: 'scheduled',
+          external_id: 123,
+        },
+      ]);
+      mockSupabaseDataService.getGameweeks.mockResolvedValue([
+        { id: 'gw-uuid-7', gameweek_number: 7, deadline: '2099-01-01T00:00:00Z', is_special: false },
+      ]);
+      await component.ngOnInit();
+      const match = component.currentGameWeek.matches[0];
+      expect((match as any).matchUuid).toBe(uuid);
+    });
+  });
+
+  describe('Phase 9 — onSubmitPredictions() real Supabase submission', () => {
+    const gwUuid = 'gw-uuid-7';
+    const matchUuid = 'match-uuid-1';
+
+    beforeEach(async () => {
+      mockSupabaseDataService.getGameweeks.mockResolvedValue([
+        { id: gwUuid, gameweek_number: 7, deadline: '2099-01-01T00:00:00Z', is_special: false },
+      ]);
+      mockSupabaseDataService.getMatches.mockResolvedValue([
+        {
+          id: matchUuid,
+          gameweek: 7,
+          home_team: 'Arsenal',
+          away_team: 'Chelsea',
+          kickoff_time: '2024-08-17T14:00:00Z',
+          home_score: null,
+          away_score: null,
+          status: 'scheduled',
+          external_id: 456,
+        },
+      ]);
+      await component.ngOnInit();
+      // Fill in a valid prediction on the first match
+      component.currentGameWeek.matches[0].homeScore = 2;
+      component.currentGameWeek.matches[0].awayScore = 1;
+      component.canSubmit = true;
+      component.currentGameweekId = gwUuid;
+    });
+
+    it('calls submitPredictions with correct match_id UUID and scores', async () => {
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.submitPredictions).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            match_id: matchUuid,
+            gameweek_id: gwUuid,
+            gameweek_number: 7,
+            home_score: 2,
+            away_score: 1,
+            joker_used: false,
+          }),
+        ]),
+      );
+    });
+
+    it('sets joker_used:true in the payload when jokerUsedThisGameweek is on', async () => {
+      component.jokerUsedThisGameweek = true;
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.submitPredictions).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ joker_used: true }),
+        ]),
+      );
+    });
+
+    it('calls markJokerUsed when joker is active', async () => {
+      component.jokerUsedThisGameweek = true;
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.markJokerUsed).toHaveBeenCalledWith(7);
+    });
+
+    it('does NOT call markJokerUsed when joker is off', async () => {
+      component.jokerUsedThisGameweek = false;
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.markJokerUsed).not.toHaveBeenCalled();
+    });
+
+    it('decrements jokersRemaining by 1 after a successful joker submission', async () => {
+      component.jokersRemaining = 2;
+      component.jokerUsedThisGameweek = true;
+      await component.onSubmitPredictions();
+      expect(component.jokersRemaining).toBe(1);
+    });
+
+    it('double-submit guard: second call while isSubmitting is a no-op', async () => {
+      // Simulate in-flight first call
+      let resolveFirst!: () => void;
+      mockSupabaseDataService.submitPredictions.mockReturnValueOnce(
+        new Promise<void>((resolve) => { resolveFirst = resolve; }),
+      );
+      const first = component.onSubmitPredictions();
+      expect(component.isSubmitting).toBe(true);
+      // Second call while first is still in flight
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.submitPredictions).toHaveBeenCalledTimes(1);
+      resolveFirst();
+      await first;
+    });
+
+    it('shows error toast and does NOT crash when submitPredictions rejects', async () => {
+      mockSupabaseDataService.submitPredictions.mockRejectedValue(new Error('Network error'));
+      await expect(component.onSubmitPredictions()).resolves.not.toThrow();
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({ color: 'danger' }),
+      );
+    });
+
+    it('is a no-op when currentGameweekId is null', async () => {
+      component.currentGameweekId = null;
+      await component.onSubmitPredictions();
+      expect(mockSupabaseDataService.submitPredictions).not.toHaveBeenCalled();
+    });
   });
 });

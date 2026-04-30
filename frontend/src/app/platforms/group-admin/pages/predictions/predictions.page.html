@@ -65,6 +65,18 @@
       Make any 3 predictions for this game week
     </div>
 
+    <!-- Joker indicator -->
+    <div class="joker-indicator" *ngIf="!predictionsLocked">
+      <ion-icon name="star-outline"></ion-icon>
+      <span>{{ jokersRemaining }}/2 jokers remaining</span>
+    </div>
+
+    <!-- Joker toggle -->
+    <div class="joker-toggle-row" *ngIf="canUseJoker()">
+      <ion-label>Play Joker this gameweek</ion-label>
+      <ion-toggle [(ngModel)]="jokerUsedThisGameweek"></ion-toggle>
+    </div>
+
     <!-- Match Cards -->
     <div class="match-cards">
       <div class="match-card" *ngFor="let match of currentGameWeek.matches">
@@ -106,7 +118,7 @@
     </div>
 
     <!-- Submit Button -->
-    <ion-button expand="block" class="submit-button" [disabled]="!canSubmit" (click)="onSubmitPredictions()">
+    <ion-button expand="block" class="submit-button" [disabled]="!canSubmit || isSubmitting" (click)="onSubmitPredictions()">
       Submit Predictions
     </ion-button>
   </div>

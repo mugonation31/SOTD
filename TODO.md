@@ -1,18 +1,70 @@
 # Predict3 - Task Tracking
 
-> **Last Updated:** 2026-01-05
-> **Current Phase:** Phase 1.6 - MVP V1 Simplification (Prize Money Removal)
-> **Status:** Ready for Implementation
+> **Last Updated:** 2026-05-01
+> **Current Phase:** Phase 9 - Group Admin Predictions: Joker + Real Submission
+> **Status:** 🟢 Implementation Complete — Pending review + deploy
 > **MVP V1 Spec:** Simplified - Pure prediction gaming without financial transactions
 
 ---
 
 ## Current Position
-- **Last Completed Phase:** Phase 1 (Project Setup & Documentation)
-- **Current Phase:** Phase 1.6 (MVP V1 Simplification - Prize Money Removal)
-- **MVP V1 Readiness:** 70% (UI/UX Complete, awaiting simplification + business logic)
-- **Next Phase:** Phase 2 (Critical Business Logic Enforcement)
-- **Progress:** Simplification plan ready, implementation pending
+- **Last Completed Phase:** Production deployment (Cloudflare + Supabase V2 wired)
+- **Current Phase:** Phase 9 (Group Admin Predictions — Joker & Real Supabase Submission)
+- **MVP V1 Readiness:** 90% (backend wired, auth solid, deadline enforced)
+- **Next Phase:** TDD implementation of Phase 9
+- **Progress:** Analysis complete, implementation pending
+
+---
+
+## Phase 9: Group Admin Predictions — Joker Toggle & Real Submission
+
+**Status:** 🟢 Completed (pending review + prod deploy)
+**Goal:** Wire the group admin "Make Predictions" tab to Supabase (currently mocked) and add the missing joker toggle so admins can play their seasonal joker
+**Priority:** 🔴 CRITICAL — predictions made by group admins are silently discarded today
+**Complexity:** Medium
+**Analysis Doc:** `docs/analysis/group-admin-predictions-joker-and-submission.md`
+
+### Design
+- [x] Audit existing code to confirm mock submission and missing joker state
+- [x] Design solution mirroring player matches.page.ts pattern
+- [x] Document risks (UUID loss, joker write failure, null gameweekId)
+
+### Implementation
+- [ ] Add `matchUuid: string` to `Match` interface — preserve UUID from `row.id`
+- [ ] Fix `toMatchViewModel`: set `matchUuid: row.id` instead of `id: Number(row.id)`
+- [ ] Add `currentGameweekId: string | null` component property
+- [ ] Add `jokersRemaining: number` and `jokerUsedThisGameweek: boolean` properties
+- [ ] Add `isSubmitting: boolean` double-submit guard
+- [ ] In `hydrateGameweekView`: extract gameweek `id` → `currentGameweekId`
+- [ ] In `hydrateGameweekView`: call `getJokerUsage()` → set `jokersRemaining`
+- [ ] Add `canUseJoker()` method (special GW / no jokers left / locked)
+- [ ] Replace mocked `onSubmitPredictions()` with real Supabase submission
+- [ ] Wire `markJokerUsed()` after successful joker submission
+- [ ] Add `showSuccessToast()` helper matching error toast pattern
+- [ ] Add `IonToggle` + `AlertController` to imports
+- [ ] Add `starOutline` icon to `addIcons()`
+- [ ] Template: add joker indicator (x/2 remaining) above match cards
+- [ ] Template: add joker toggle row (shown via `canUseJoker()`)
+- [ ] Template: update submit button `[disabled]` to include `isSubmitting`
+
+### Testing
+- [ ] Unit: `canUseJoker()` returns false on special gameweek
+- [ ] Unit: `canUseJoker()` returns false when `jokersRemaining === 0`
+- [ ] Unit: `canUseJoker()` returns false when `predictionsLocked === true`
+- [ ] Unit: `onSubmitPredictions()` calls `submitPredictions` with correct rows including `match_id` UUID
+- [ ] Unit: `onSubmitPredictions()` sets `joker_used: true` when toggle is on
+- [ ] Unit: `onSubmitPredictions()` calls `markJokerUsed` only when joker was used
+- [ ] Unit: double-submit guard — second call is a no-op while `isSubmitting`
+- [ ] Unit: `toMatchViewModel` preserves `matchUuid` from `row.id`
+- [ ] Unit: `jokersRemaining` decrements after joker submission
+- [ ] Manual QA: joker toggle visible and functional in production
+
+### Deployment
+- [ ] Run `npm test` — all tests pass
+- [ ] `/review` — code review pass
+- [ ] `/security-scan` — no new vulnerabilities
+- [ ] Push to main → Cloudflare auto-deploys
+- [ ] Manual QA on production: submit prediction with joker, verify Supabase rows
 
 ### Gap Analysis Summary
 **What's Working (70%):**

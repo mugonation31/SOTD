@@ -29,6 +29,7 @@ import {
   IonBadge,
   IonAlert,
   IonSpinner,
+  IonToggle,
   ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgIf, NgFor, TitleCasePipe } from '@angular/common';
@@ -51,6 +52,7 @@ import {
   informationCircleOutline,
   checkmarkCircleOutline,
   lockClosedOutline,
+  starOutline,
 } from 'ionicons/icons';
 import { GroupService } from '@core/services/group.service';
 import { SeasonService } from '@core/services/season.service';
@@ -71,6 +73,7 @@ interface GameWeek {
 
 interface Match {
   id: number;
+  matchUuid?: string;
   gameweek: number;
   homeTeam: string;
   awayTeam: string;
@@ -147,6 +150,7 @@ interface PredictionWithResult extends Match {
     IonBadge,
     IonAlert,
     IonSpinner,
+    IonToggle,
   ],
 })
 export class PredictionsPage implements OnInit {
@@ -165,6 +169,10 @@ export class PredictionsPage implements OnInit {
   canSubmit = false;
   selectedPredictionCount = 0;
   currentGameweek: number;
+  currentGameweekId: string | null = null;
+  jokersRemaining: number = 2;
+  jokerUsedThisGameweek: boolean = false;
+  isSubmitting: boolean = false;
   currentMatches: Match[] = [];
   historicalMatches: Match[] = [];
   selectedHistoryGameweek = 14;
@@ -192,7 +200,7 @@ export class PredictionsPage implements OnInit {
     private toastController: ToastController,
     private logger: LoggerService,
   ) {
-    addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,lockClosedOutline,});
+    addIcons({footballOutline,personOutline,chevronBackOutline,chevronForwardOutline,timeOutline,refreshOutline,chevronBack,star,starOutline,chevronForward,informationCircleOutline,checkmarkCircleOutline,checkmarkCircle,closeCircle,alertCircleOutline,closeCircleOutline,lockClosedOutline,});
 
     // Task 4.2.11: seed sane defaults synchronously so the template can render
     // immediately. Real values are hydrated asynchronously from SupabaseData /
@@ -248,8 +256,8 @@ export class PredictionsPage implements OnInit {
    * `currentMatches`, so the fields must move together).
    */
   private async hydrateGameweekView(gameweekNumber: number): Promise<void> {
-    // Find the gameweek row so we can read deadline + is_special.
-    let gameweekRow: { deadline?: string; is_special?: boolean } | null = null;
+    // Find the gameweek row so we can read deadline + is_special + UUID.
+    let gameweekRow: { id?: string; deadline?: string; is_special?: boolean } | null = null;
     try {
       const gameweeks = await this.supabaseDataService.getGameweeks();
       gameweekRow =
@@ -257,8 +265,18 @@ export class PredictionsPage implements OnInit {
           (gw: { gameweek_number: number }) =>
             gw.gameweek_number === gameweekNumber
         ) || null;
+      this.currentGameweekId = gameweekRow?.id ?? null;
     } catch (err) {
       this.logger.error('group-admin-predictions.hydrateGameweekView.gw', err);
+    }
+
+    // Load joker state; fail-open (default jokersRemaining=2) on error.
+    try {
+      const usage = await this.supabaseDataService.getJokerUsage();
+      this.jokersRemaining = Math.max(0, 2 - (usage?.usedCount ?? 0));
+    } catch (err) {
+      this.logger.error('group-admin-predictions.hydrateGameweekView.joker', err);
+      this.jokersRemaining = 2;
     }
 
     // Fetch matches for this gameweek.
@@ -289,6 +307,7 @@ export class PredictionsPage implements OnInit {
         : new Date(0),
       matches,
     };
+    this.jokerUsedThisGameweek = false;
   }
 
   async tabChanged() {
@@ -381,6 +400,16 @@ export class PredictionsPage implements OnInit {
       message,
       duration: 3000,
       color: 'danger',
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  private async showSuccessToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000,
+      color: 'success',
       position: 'top',
     });
     await toast.present();
@@ -545,47 +574,48 @@ export class PredictionsPage implements OnInit {
     };
   }
 
-  onSubmitPredictions() {
-    // Get only the matches that have predictions
-    const predictedMatches = this.currentGameWeek.matches
-      .filter((match) => match.homeScore !== null && match.awayScore !== null)
-      .map((match) => ({
-        ...match,
-        points: 0,
-        isCorrectScore: false,
-        isCorrectResult: false,
-      }));
+  canUseJoker(): boolean {
+    if (this.currentGameWeek.isSpecial) return false;
+    if (this.jokersRemaining <= 0) return false;
+    if (this.predictionsLocked) return false;
+    return true;
+  }
 
-    // Create a prediction entry for the current user
-    const currentUserPrediction: PlayerPrediction = {
-      playerName: 'You (Group Admin)', // This should come from auth service in real implementation
-      isCurrentUser: true,
-      totalPoints: 0,
-      jokerUsed: false,
-      predictions: predictedMatches,
-    };
+  async onSubmitPredictions(): Promise<void> {
+    if (this.isSubmitting || !this.canSubmit || !this.currentGameweekId) return;
+    this.isSubmitting = true;
+    try {
+      const rows = this.currentGameWeek.matches
+        .filter((m) => m.homeScore !== null && m.awayScore !== null && m.matchUuid)
+        .map((m) => ({
+          match_id: m.matchUuid!,
+          gameweek_id: this.currentGameweekId!,
+          gameweek_number: this.currentGameWeek.number,
+          home_score: Number(m.homeScore),
+          away_score: Number(m.awayScore),
+          joker_used: this.jokerUsedThisGameweek,
+        }));
 
-    // Add to all predictions if not exists, or update if exists
-    const existingUserIndex = this.allPredictions.findIndex(
-      (p) => p.isCurrentUser
-    );
-    if (existingUserIndex >= 0) {
-      this.allPredictions[existingUserIndex] = currentUserPrediction;
-    } else {
-      this.allPredictions.unshift(currentUserPrediction);
+      await this.supabaseDataService.submitPredictions(rows);
+
+      if (this.jokerUsedThisGameweek) {
+        await this.supabaseDataService.markJokerUsed(this.currentGameWeek.number);
+        this.jokersRemaining = Math.max(0, this.jokersRemaining - 1);
+        this.jokerUsedThisGameweek = false;
+      }
+
+      this.resetPredictions();
+      await this.showSuccessToast('Predictions saved!');
+    } catch (err) {
+      this.logger.error('group-admin-predictions.submit', err);
+      const msg =
+        err instanceof SupabaseError
+          ? err.userMessage
+          : 'Unable to save predictions. Please try again.';
+      await this.showErrorToast(msg);
+    } finally {
+      this.isSubmitting = false;
     }
-
-    // Store the predictions in pastPredictions
-    this.pastPredictions = [...predictedMatches];
-
-    // Reset all match scores
-    this.currentGameWeek.matches.forEach((match) => {
-      match.homeScore = null;
-      match.awayScore = null;
-    });
-
-    // Reset submit button state
-    this.canSubmit = false;
   }
 
   resetPredictions() {
@@ -820,7 +850,8 @@ export class PredictionsPage implements OnInit {
           ? 'live'
           : 'scheduled';
     return {
-      id: Number(row.id) || 0,
+      id: (row as any).external_id ?? 0,
+      matchUuid: row.id,
       gameweek: row.gameweek,
       homeTeam: row.home_team,
       awayTeam: row.away_team,
