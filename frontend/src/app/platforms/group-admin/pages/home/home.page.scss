@@ -19,8 +19,27 @@ ion-card-title {
   }
 }
 
-.loading-state {
-  margin-top: 40px;
+.skeleton-state {
+  .skeleton-card {
+    margin-bottom: 16px;
+  }
+
+  .skel-title {
+    width: 60%;
+    height: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .skel-subtitle {
+    width: 40%;
+    height: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .skel-body {
+    width: 80%;
+    height: 0.9rem;
+  }
 }
 
 // Admin block

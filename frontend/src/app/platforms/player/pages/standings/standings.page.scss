@@ -147,6 +147,30 @@ ion-list {
   }
 }
 
+// Skeleton loading state (sub-task 10.4)
+.skeleton-state {
+  .skeleton-card {
+    margin-bottom: 16px;
+  }
+
+  .skel-title {
+    width: 60%;
+    height: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .skel-subtitle {
+    width: 40%;
+    height: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .skel-body {
+    width: 80%;
+    height: 0.9rem;
+  }
+}
+
 // All old styles removed - using clean list design
 
 // Logo Styles

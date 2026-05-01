@@ -22,10 +22,15 @@
     <p *ngIf="groupStandings.length > 0">{{ groupStandings.length }} group{{ groupStandings.length === 1 ? '' : 's' }} joined</p>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="isLoading" class="loading-state ion-text-center ion-padding">
-    <ion-spinner name="dots"></ion-spinner>
-    <p>Loading standings…</p>
+  <!-- Skeleton Loading State (replaces ion-spinner — sub-task 10.4) -->
+  <div *ngIf="isLoading" data-testid="standings-skeleton" class="skeleton-state">
+    <ion-card *ngFor="let _ of [1, 2, 3]" class="skeleton-card">
+      <ion-card-content>
+        <ion-skeleton-text [animated]="true" class="skel-title"></ion-skeleton-text>
+        <ion-skeleton-text [animated]="true" class="skel-subtitle"></ion-skeleton-text>
+        <ion-skeleton-text [animated]="true" class="skel-body"></ion-skeleton-text>
+      </ion-card-content>
+    </ion-card>
   </div>
 
   <!-- No Groups Message -->

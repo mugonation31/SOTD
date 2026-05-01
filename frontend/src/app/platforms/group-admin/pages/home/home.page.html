@@ -5,9 +5,20 @@
 </ion-header>
 
 <ion-content class="ion-padding home-content">
-  <div *ngIf="isLoading" class="loading-state ion-text-center ion-padding">
-    <ion-spinner name="dots"></ion-spinner>
-    <p>Loading…</p>
+  <div *ngIf="isLoading" data-testid="home-skeleton" class="skeleton-state">
+    <ion-card class="skeleton-card">
+      <ion-card-content>
+        <ion-skeleton-text [animated]="true" class="skel-title"></ion-skeleton-text>
+        <ion-skeleton-text [animated]="true" class="skel-subtitle"></ion-skeleton-text>
+        <ion-skeleton-text [animated]="true" class="skel-body"></ion-skeleton-text>
+      </ion-card-content>
+    </ion-card>
+    <ion-card class="skeleton-card">
+      <ion-card-content>
+        <ion-skeleton-text [animated]="true" class="skel-title"></ion-skeleton-text>
+        <ion-skeleton-text [animated]="true" class="skel-body"></ion-skeleton-text>
+      </ion-card-content>
+    </ion-card>
   </div>
 
   <ng-container *ngIf="!isLoading">

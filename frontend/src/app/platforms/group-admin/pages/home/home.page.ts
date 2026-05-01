@@ -13,7 +13,7 @@ import {
   IonButton,
   IonIcon,
   IonBadge,
-  IonSpinner,
+  IonSkeletonText,
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -64,7 +64,7 @@ interface NextGameweekCard {
     IonButton,
     IonIcon,
     IonBadge,
-    IonSpinner,
+    IonSkeletonText,
     CountdownTimerComponent,
   ],
 })

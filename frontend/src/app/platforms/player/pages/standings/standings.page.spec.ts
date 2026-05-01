@@ -332,4 +332,68 @@ describe('StandingsPage (Task 4.1.4 — leaderboard read path + states)', () => 
       expect(findJoinAnotherButton()).toBeNull();
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Sub-task 10.4 — Skeleton loading (replaces ion-spinner on Standings)
+  // The implementation must:
+  //   1. Add ion-skeleton-text cards inside a [data-testid="standings-skeleton"] wrapper
+  //   2. Remove the ion-spinner from the template entirely (replaced by skeleton)
+  // -----------------------------------------------------------------------
+  describe('Task 10.4 — skeleton loading state', () => {
+    // Selectors
+    const skeletonSelector = '[data-testid="standings-skeleton"]';
+    const skeletonTextSelector = 'ion-skeleton-text';
+    const spinnerSelector  = 'ion-spinner';
+    const listSelector     = 'ion-list';
+
+    // -----------------------------------------------------------------------
+    // Test 6: skeleton container visible when isLoading=true
+    // -----------------------------------------------------------------------
+    it('should render the ion-skeleton-text skeleton when isLoading is true', () => {
+      component.isLoading = true;
+      fixture.detectChanges();
+
+      const skeleton = fixture.nativeElement.querySelector(skeletonSelector);
+      expect(skeleton).not.toBeNull();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 7: ion-skeleton-text rendered inside skeleton wrapper when loading
+    // -----------------------------------------------------------------------
+    it('should contain ion-skeleton-text elements inside the skeleton wrapper when isLoading is true', () => {
+      component.isLoading = true;
+      fixture.detectChanges();
+
+      const skeletonText = fixture.nativeElement.querySelector(skeletonTextSelector);
+      expect(skeletonText).not.toBeNull();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 8: ion-spinner NOT rendered when isLoading=true (replaced by skeleton)
+    // -----------------------------------------------------------------------
+    it('should NOT render ion-spinner when isLoading is true (spinner replaced by skeleton)', () => {
+      component.isLoading = true;
+      fixture.detectChanges();
+
+      const spinner = fixture.nativeElement.querySelector(spinnerSelector);
+      expect(spinner).toBeNull();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 9: skeleton hidden and real list visible after successful fetch
+    // -----------------------------------------------------------------------
+    it('should hide skeleton and show group list after a successful fetch', async () => {
+      mockGroupService.getUserGroupsWithStandings.mockResolvedValue([
+        buildGroupWithStandings(),
+      ]);
+
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const skeleton = fixture.nativeElement.querySelector(skeletonSelector);
+      const list     = fixture.nativeElement.querySelector(listSelector);
+      expect(skeleton).toBeNull();
+      expect(list).not.toBeNull();
+    });
+  });
 });

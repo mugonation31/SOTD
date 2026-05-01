@@ -19,7 +19,7 @@ import {
   IonAvatar,
   IonButtons,
   IonButton,
-  IonSpinner,
+  IonSkeletonText,
   ToastController,
 } from '@ionic/angular/standalone';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
@@ -63,7 +63,7 @@ import { GroupService, Standing, GroupWithStandings } from '@core/services/group
     FormsModule,
     IonButtons,
     IonButton,
-    IonSpinner,
+    IonSkeletonText,
   ],
 })
 export class StandingsPage implements OnInit {
