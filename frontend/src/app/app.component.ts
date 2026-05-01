@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
+import { ToastController } from '@ionic/angular/standalone';
+import { Subscription } from 'rxjs';
 import { SupabaseService } from './services/supabase.service';
 import { AuthService } from './core/services/auth.service';
 import { DeepLinkService } from './core/services/deep-link.service';
+import { NetworkService } from './core/services/network.service';
 import { Capacitor } from '@capacitor/core';
 
 @Component({
@@ -11,17 +14,36 @@ import { Capacitor } from '@capacitor/core';
   imports: [RouterOutlet],
   template: '<router-outlet></router-outlet>',
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   private isNative = Capacitor.isNativePlatform();
+  private networkSub?: Subscription;
+  private offlineToast?: HTMLIonToastElement;
 
   constructor(
     private supabaseService: SupabaseService,
     private authService: AuthService,
     private deepLinkService: DeepLinkService,
-    private router: Router
+    private router: Router,
+    private networkService: NetworkService,
+    private toastController: ToastController,
   ) {}
 
   async ngOnInit() {
+    this.networkSub = this.networkService.isOnline$.subscribe(async (online) => {
+      if (!online) {
+        if (this.offlineToast) return; // already showing — prevent stacked toasts
+        this.offlineToast = await this.toastController.create({
+          message: 'No internet connection — please check your network',
+          color: 'danger',
+          icon: 'wifi-outline',
+          position: 'bottom',
+        });
+        await this.offlineToast.present();
+      } else if (this.offlineToast) {
+        await this.offlineToast.dismiss();
+        this.offlineToast = undefined;
+      }
+    });
     console.log('🚀 App initializing...');
     
     // Initialize deep link service (this will set up listeners for native platforms)
@@ -79,6 +101,12 @@ export class AppComponent implements OnInit {
     } catch (error) {
       console.error('❌ Error initializing session:', error);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.networkSub?.unsubscribe();
+    this.offlineToast?.dismiss();
+    this.offlineToast = undefined;
   }
 
   /**
