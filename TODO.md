@@ -1,18 +1,60 @@
 # Predict3 - Task Tracking
 
 > **Last Updated:** 2026-05-01
-> **Current Phase:** Phase 10 - App Resilience
+> **Current Phase:** Phase 11 - Shared LeaderboardComponent
 > **Status:** Analysis Complete — Ready for Implementation
 > **MVP V1 Spec:** Simplified - Pure prediction gaming without financial transactions
 
 ---
 
 ## Current Position
-- **Last Completed Phase:** Phase 9 (Group Admin Predictions — Joker & Real Supabase Submission)
-- **Current Phase:** Phase 10 (App Resilience — No hangs, no alerts, offline detection, skeletons)
-- **MVP V1 Readiness:** 92% — final resilience layer before launch
-- **Next Phase:** Implement Phase 10 sub-tasks sequentially
+- **Last Completed Phase:** Phase 10 (App Resilience — all 4 sub-tasks shipped)
+- **Current Phase:** Phase 11 (Shared LeaderboardComponent)
+- **MVP V1 Readiness:** 95% — consistency and polish before launch
+- **Next Phase:** Implement Phase 11
 - **Progress:** Analysis complete, implementation pending
+
+---
+
+## Phase 11: Shared LeaderboardComponent
+
+**Status:** ⚪ Not Started
+**Goal:** Single leaderboard component used everywhere — all 7 columns (POS, NAME, PLAYED, SCORES, RESULTS, JOKER, POINTS), YOU badge, current-user row highlight, "Your Position" badge. Player group-standings is the reference and stays unchanged.
+**Priority:** 🟡 HIGH — visual consistency, professionalism
+**Complexity:** Medium
+**Analysis Doc:** `docs/analysis/shared-leaderboard-component.md`
+
+### Design
+- [x] Audit all leaderboard surfaces (player group-standings = reference; admin home + group = targets)
+- [x] Design component interface: standings[], currentUserId, userPosition, maxRows
+- [x] Plan maxRows + user-below-cutoff separator logic
+
+### Implementation
+- [ ] Create `shared/components/leaderboard/leaderboard.component.ts` with @Input() properties
+- [ ] Create `shared/components/leaderboard/leaderboard.component.html` — all 7 columns, YOU badge, row highlight
+- [ ] Create `shared/components/leaderboard/leaderboard.component.scss` — exact reference styles, responsive
+- [ ] Wire into `group-admin/pages/home/home.page.ts` — import, expose currentUserId + userPosition
+- [ ] Wire into `group-admin/pages/home/home.page.html` — replace leaderboard-row divs with `<app-leaderboard>`
+- [ ] Clean up `group-admin/pages/home/home.page.scss` — remove old leaderboard row styles
+- [ ] Wire into `group-admin/pages/group/group.page.ts` — import, expose currentUserId + userPosition
+- [ ] Wire into `group-admin/pages/group/group.page.html` — replace leaderboard card content
+- [ ] Clean up `group-admin/pages/group/group.page.scss`
+
+### Testing
+- [ ] Unit: renders all 7 column headers
+- [ ] Unit: YOU badge shown on current user row, hidden on others
+- [ ] Unit: `.current-user` class applied to current user row
+- [ ] Unit: "Your Position: #X" badge shown when userPosition provided
+- [ ] Unit: maxRows limits visible rows
+- [ ] Unit: user row shown below separator when beyond maxRows
+- [ ] Unit: empty state rendered when standings is empty
+- [ ] Integration: `<app-leaderboard>` renders on admin home page
+- [ ] Integration: `<app-leaderboard>` renders on admin group page
+
+### Deployment
+- [ ] Run `npm test` — no regressions
+- [ ] Push → Cloudflare deploys
+- [ ] Manual QA: admin home, admin group, player group-standings all look identical
 
 ---
 

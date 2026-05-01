@@ -35,6 +35,7 @@ import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { AuthService } from '@core/services/auth.service';
 import { LoggerService } from '@core/services/logger.service';
 import { SupabaseError } from '@core/errors/supabase-error';
+import { LeaderboardComponent } from '../../../../shared/components/leaderboard/leaderboard.component';
 
 interface ViewMember {
   membershipId: string;
@@ -69,6 +70,7 @@ interface ViewMember {
     IonInput,
     IonItem,
     IonLabel,
+    LeaderboardComponent,
   ],
 })
 export class GroupAdminGroupPage implements OnInit {
@@ -87,6 +89,10 @@ export class GroupAdminGroupPage implements OnInit {
   // group-standings page; admin home's "View full leaderboard" button
   // routes here now.
   leaderboard: Standing[] = [];
+
+  // Shared LeaderboardComponent inputs
+  currentUserId: string | null = null;
+  userPosition: number | null = null;
 
   // Empty-state form fields.
   newGroupName = '';
@@ -168,10 +174,12 @@ export class GroupAdminGroupPage implements OnInit {
       // Pull the full Standing[] for the leaderboard card. Reuses the
       // same group.service.getUserGroupsWithStandings pipeline as the
       // player home so badges (ADMIN, YOU) are computed identically.
+      this.currentUserId = callerId || null;
       try {
         const standings = await this.groupService.getUserGroupsWithStandings();
         const matched = standings.find((s) => s.group.id === this.groupId);
         this.leaderboard = matched ? matched.leaderboard : [];
+        this.userPosition = this.leaderboard.find(s => s.userId === callerId)?.position ?? null;
       } catch (lbErr) {
         this.logger.warn('group-admin-group.loadLeaderboard', lbErr);
         this.leaderboard = [];
@@ -188,15 +196,7 @@ export class GroupAdminGroupPage implements OnInit {
     return this.members.filter((m) => m.isAdmin).length;
   }
 
-  positionSuffix(position: number): string {
-    if (position > 3 && position < 21) return 'th';
-    switch (position % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
-    }
-  }
+
 
   get atAdminCap(): boolean {
     return this.adminCount >= this.MAX_ADMINS;

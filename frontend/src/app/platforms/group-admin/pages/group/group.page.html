@@ -139,20 +139,12 @@
       </ion-card-content>
     </ion-card>
 
-    <ion-card class="leaderboard-card" *ngIf="leaderboard.length > 0">
-      <ion-card-header>
-        <ion-card-title>Leaderboard</ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <div *ngFor="let entry of leaderboard" class="leaderboard-row">
-          <span class="position">{{ entry.position }}{{ positionSuffix(entry.position) }}</span>
-          <span class="name">
-            {{ entry.name }}
-            <ion-badge *ngIf="entry.isAdmin" color="warning" class="role-badge">ADMIN</ion-badge>
-          </span>
-          <span class="points">{{ entry.points }}</span>
-        </div>
-      </ion-card-content>
-    </ion-card>
+    <app-leaderboard
+      *ngIf="leaderboard.length > 0"
+      [standings]="leaderboard"
+      [currentUserId]="currentUserId"
+      [userPosition]="userPosition"
+      [maxRows]="null">
+    </app-leaderboard>
   </ng-container>
 </ion-content>

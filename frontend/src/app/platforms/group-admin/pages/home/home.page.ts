@@ -32,6 +32,7 @@ import { SupabaseDataService } from '@core/services/supabase-data.service';
 import { AuthService } from '@core/services/auth.service';
 import { LoggerService } from '@core/services/logger.service';
 import { CountdownTimerComponent } from '../../../../shared/components/countdown-timer/countdown-timer.component';
+import { LeaderboardComponent } from '../../../../shared/components/leaderboard/leaderboard.component';
 
 interface LastWeekRecap {
   gameweekNumber: number;
@@ -66,6 +67,7 @@ interface NextGameweekCard {
     IonBadge,
     IonSkeletonText,
     CountdownTimerComponent,
+    LeaderboardComponent,
   ],
 })
 export class GroupAdminHomePage implements OnInit {
@@ -73,9 +75,12 @@ export class GroupAdminHomePage implements OnInit {
 
   // Player-facing cards (admin is also a competitor).
   lastWeek: LastWeekRecap | null = null;
-  leaderboardPreview: Standing[] = [];
-  callerStanding: Standing | null = null;
   nextGameweek: NextGameweekCard | null = null;
+
+  // Shared LeaderboardComponent inputs
+  leaderboardStandings: Standing[] = [];
+  currentUserId: string | null = null;
+  userPosition: number | null = null;
 
   // Admin-only block.
   groupId: string | null = null;
@@ -142,11 +147,9 @@ export class GroupAdminHomePage implements OnInit {
       const matched = standings.find((s) => s.group.id === primary.id);
       if (matched) {
         const leaderboard = matched.leaderboard;
-        const top = leaderboard.slice(0, 3);
-        const caller = leaderboard.find((s) => s.userId === userId) ?? null;
-        this.leaderboardPreview = top;
-        this.callerStanding =
-          caller && !top.some((t) => t.userId === userId) ? caller : null;
+        this.leaderboardStandings = leaderboard;
+        this.currentUserId = userId;
+        this.userPosition = matched.userPosition;
       }
 
       // Active gameweek + caller's predictions for it.
@@ -246,17 +249,4 @@ export class GroupAdminHomePage implements OnInit {
     this.router.navigate(['/group-admin/history']);
   }
 
-  positionSuffix(position: number): string {
-    if (position > 3 && position < 21) return 'th';
-    switch (position % 10) {
-      case 1:
-        return 'st';
-      case 2:
-        return 'nd';
-      case 3:
-        return 'rd';
-      default:
-        return 'th';
-    }
-  }
 }

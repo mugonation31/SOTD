@@ -100,47 +100,14 @@
     </ion-card>
 
     <!-- Card 2: Leaderboard preview -->
-    <ion-card class="leaderboard-card" *ngIf="leaderboardPreview.length > 0">
-      <ion-card-header>
-        <ion-card-title>
-          <ion-icon name="trophy-outline" color="primary"></ion-icon>
-          Leaderboard
-        </ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <div *ngFor="let player of leaderboardPreview" class="leaderboard-row">
-          <span class="position">{{ player.position }}{{ positionSuffix(player.position) }}</span>
-          <span class="name">
-            {{ player.name }}
-            <ion-badge
-              *ngIf="player.isAdmin"
-              color="warning"
-              class="admin-badge"
-            >ADMIN</ion-badge>
-          </span>
-          <span class="points">{{ player.points }}</span>
-        </div>
-
-        <div *ngIf="callerStanding" class="leaderboard-row caller-row">
-          <span class="position">{{ callerStanding.position }}{{ positionSuffix(callerStanding.position) }}</span>
-          <span class="name">
-            {{ callerStanding.name }}
-            <ion-badge color="primary" class="you-badge">YOU</ion-badge>
-          </span>
-          <span class="points">{{ callerStanding.points }}</span>
-        </div>
-
-        <ion-button
-          fill="clear"
-          size="small"
-          (click)="goToFullLeaderboard()"
-          class="view-full-link"
-        >
-          View full leaderboard
-          <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
+    <app-leaderboard
+      *ngIf="leaderboardStandings.length > 0"
+      [standings]="leaderboardStandings"
+      [currentUserId]="currentUserId"
+      [userPosition]="userPosition"
+      [maxRows]="3"
+      (viewAllClicked)="goToFullLeaderboard()">
+    </app-leaderboard>
 
     <!-- Card 3: Next gameweek countdown + CTA -->
     <ion-card *ngIf="nextGameweek" class="next-gw-card">

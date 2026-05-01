@@ -1,0 +1,78 @@
+<ion-card class="leaderboard-card">
+  <ion-card-header>
+    <ion-card-title>
+      <ion-icon name="trophy-outline"></ion-icon>
+      Leaderboard
+      <ion-badge *ngIf="userPosition" color="primary" class="position-badge">
+        Your Position: #{{ userPosition }}
+      </ion-badge>
+    </ion-card-title>
+  </ion-card-header>
+  <ion-card-content>
+    <!-- Table Header — only when there are standings -->
+    <div class="table-header" *ngIf="standings.length > 0">
+      <div class="position-col">POS</div>
+      <div class="name-col">NAME</div>
+      <div class="played-col">PLAYED</div>
+      <div class="scores-col">SCORES</div>
+      <div class="results-col">RESULTS</div>
+      <div class="joker-col">JOKER</div>
+      <div class="points-col">POINTS</div>
+    </div>
+
+    <!-- Table Body -->
+    <div class="table-body" *ngIf="standings.length > 0">
+      <ng-container *ngFor="let row of visibleRows">
+        <!-- Separator row -->
+        <div *ngIf="isSeparator(row)" class="separator-row">
+          &bull; &bull; &bull;
+        </div>
+
+        <!-- Standing row -->
+        <div
+          *ngIf="!isSeparator(row)"
+          class="table-row"
+          [ngClass]="{ 'current-user': isCurrentUser($any(row).userId) }">
+
+          <div class="position-col">
+            {{ $any(row).position }}
+            <ion-icon
+              [name]="getPositionIcon(getPositionChange($any(row).position, $any(row).previousPosition))"
+              [color]="getPositionColor(getPositionChange($any(row).position, $any(row).previousPosition))"
+              class="position-change-icon">
+            </ion-icon>
+          </div>
+
+          <div class="name-col">
+            {{ $any(row).name }}
+            <ion-badge
+              *ngIf="isCurrentUser($any(row).userId)"
+              color="primary"
+              class="you-badge">YOU</ion-badge>
+          </div>
+
+          <div class="played-col">{{ $any(row).played }}</div>
+          <div class="scores-col">{{ $any(row).correctScores }}</div>
+          <div class="results-col">{{ $any(row).correctResults }}</div>
+          <div class="joker-col">{{ $any(row).jokerUsed }}/2</div>
+          <div class="points-col">{{ $any(row).points }}</div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="standings.length === 0" class="empty-state">
+      <ion-icon name="people-outline" size="large" color="medium"></ion-icon>
+      <h3>No Standings Available</h3>
+      <p>Standings will appear once predictions are made.</p>
+    </div>
+
+    <!-- View full leaderboard button — only when output is observed -->
+    <button
+      *ngIf="hasViewAllListener()"
+      class="view-full-btn"
+      (click)="onViewAll()">
+      View full leaderboard
+    </button>
+  </ion-card-content>
+</ion-card>
