@@ -1497,3 +1497,162 @@ describe('SupabaseDataService (Task 4.0.5 — admin methods)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sub-task 10.2 — withTimeout helper
+// ---------------------------------------------------------------------------
+
+/** Returns a Promise that never resolves or rejects — simulates a hung network call. */
+function createHangingPromise<T>(): Promise<T> {
+  return new Promise<T>(() => { /* intentionally never settles */ });
+}
+
+describe('withTimeout helper', () => {
+  let service: SupabaseDataService;
+  let mockClient: ReturnType<typeof createMockSupabaseClient>;
+  let mockSupabaseService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockClient = createMockSupabaseClient();
+    mockSupabaseService = { client: mockClient } as any;
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        SupabaseDataService,
+        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    });
+    service = TestBed.inject(SupabaseDataService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('should resolve normally when getGroups() settles before the 8s timeout', async () => {
+    const groups = [{ id: 'g1', name: 'Group A', code: 'ABC', admin_id: 'user-1' }];
+
+    const memberBuilder = createMockQueryBuilder({
+      data: [{ group_id: 'g1' }],
+      error: null,
+    });
+    const groupsBuilder = createMockQueryBuilder({ data: groups, error: null });
+
+    mockClient.from
+      .mockReturnValueOnce(memberBuilder)
+      .mockReturnValueOnce(groupsBuilder);
+
+    const resultPromise = service.getGroups();
+    jest.advanceTimersByTime(1000);
+    const result = await resultPromise;
+
+    expect(result).toEqual(groups);
+  });
+
+  it('should reject with timeout message when the group_members query hangs past 8s', async () => {
+    // auth.getUser resolves immediately; group_members query hangs forever
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    });
+
+    const hangingBuilder: any = {};
+    const methods = [
+      'select', 'insert', 'update', 'delete', 'upsert',
+      'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in',
+      'order', 'limit', 'single', 'maybeSingle',
+      'is', 'filter', 'match', 'range',
+    ];
+    for (const m of methods) {
+      hangingBuilder[m] = jest.fn().mockReturnValue(hangingBuilder);
+    }
+    // The builder never resolves its .then
+    hangingBuilder.then = (_resolve: Function, _reject: Function) => createHangingPromise();
+
+    mockClient.from.mockReturnValueOnce(hangingBuilder);
+
+    const resultPromise = service.getGroups();
+    jest.advanceTimersByTime(9000);
+
+    await expect(resultPromise).rejects.toThrow(
+      'Request timed out. Please check your connection and try again.'
+    );
+  });
+
+  it('should reject with timeout message when auth.getUser hangs in getCurrentUserId past 5s', async () => {
+    mockClient.auth.getUser.mockReturnValue(createHangingPromise());
+
+    const resultPromise = service.getGroups();
+    jest.advanceTimersByTime(6000);
+
+    await expect(resultPromise).rejects.toThrow(
+      'Request timed out. Please check your connection and try again.'
+    );
+  });
+});
+
+describe('submitPredictions timeout', () => {
+  let service: SupabaseDataService;
+  let mockClient: ReturnType<typeof createMockSupabaseClient>;
+  let mockSupabaseService: any;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockClient = createMockSupabaseClient();
+    mockSupabaseService = { client: mockClient } as any;
+    mockLogger = { error: jest.fn(), warn: jest.fn() };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        SupabaseDataService,
+        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: LoggerService, useValue: mockLogger },
+      ],
+    });
+    service = TestBed.inject(SupabaseDataService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('should reject with timeout message when upsert hangs past 15s', async () => {
+    // auth.getUser resolves immediately
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    });
+
+    const hangingBuilder: any = {};
+    const methods = [
+      'select', 'insert', 'update', 'delete', 'upsert',
+      'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in',
+      'order', 'limit', 'single', 'maybeSingle',
+      'is', 'filter', 'match', 'range',
+    ];
+    for (const m of methods) {
+      hangingBuilder[m] = jest.fn().mockReturnValue(hangingBuilder);
+    }
+    hangingBuilder.then = (_resolve: Function, _reject: Function) => createHangingPromise();
+
+    mockClient.from.mockReturnValueOnce(hangingBuilder);
+
+    const predictions = [
+      { match_id: 'm1', home_score: 2, away_score: 1, gameweek_number: 1, gameweek_id: 'gw1' },
+    ];
+
+    const resultPromise = service.submitPredictions(predictions);
+    jest.advanceTimersByTime(16000);
+
+    await expect(resultPromise).rejects.toThrow(
+      'Request timed out. Please check your connection and try again.'
+    );
+  });
+});

@@ -34,8 +34,35 @@ export class SupabaseDataService {
     return new SupabaseError({ context, userMessage, raw });
   }
 
+  /**
+   * Races `promise` against a timer of `ms` milliseconds. If the timer
+   * fires first, rejects with a user-facing timeout message. If the
+   * promise settles first, the timer is cleared and its result propagates.
+   *
+   * Accepts any thenable (including Supabase query builder results) because
+   * the internal `Promise` constructor's executor invokes `.then` directly.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private withTimeout<T = any>(thenable: any, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      let settled = false;
+      const id = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('Request timed out. Please check your connection and try again.'));
+        }
+      }, ms);
+      // Accept any thenable (Supabase builder, native Promise, etc.)
+      // by normalising through Promise.resolve before attaching callbacks.
+      Promise.resolve<T>(thenable).then(
+        (value: T) => { if (!settled) { settled = true; clearTimeout(id); resolve(value); } },
+        (error: unknown) => { if (!settled) { settled = true; clearTimeout(id); reject(error); } }
+      );
+    });
+  }
+
   private async getCurrentUserId(): Promise<string> {
-    const { data, error } = await this.client.auth.getUser();
+    const { data, error } = await this.withTimeout(this.client.auth.getUser(), 5_000);
     if (error || !data.user) {
       throw new Error('Not authenticated');
     }
@@ -45,43 +72,41 @@ export class SupabaseDataService {
   async getGroups(): Promise<PredictionGroup[]> {
     const userId = await this.getCurrentUserId();
 
-    const { data: memberships, error: memberError } = await this.client
+    const membersQuery = this.client
       .from('group_members')
       .select('group_id')
       .eq('user_id', userId);
+    const { data: memberships, error: memberError } = await this.withTimeout(membersQuery, 8_000);
 
     if (memberError) throw this.toSupabaseError('supabase.getGroups', 'Unable to load groups', memberError);
     if (!memberships || memberships.length === 0) return [];
 
     const groupIds = memberships.map((m: any) => m.group_id);
 
-    const { data: groups, error: groupError } = await this.client
+    const groupsQuery = this.client
       .from('groups')
       .select('*')
       .in('id', groupIds);
+    const { data: groups, error: groupError } = await this.withTimeout(groupsQuery, 8_000);
 
     if (groupError) throw this.toSupabaseError('supabase.getGroups', 'Unable to load groups', groupError);
     return groups || [];
   }
 
   async getGroup(groupId: string): Promise<PredictionGroup> {
-    const { data, error } = await this.client
-      .from('groups')
-      .select('*')
-      .eq('id', groupId)
-      .single();
-
+    const query = this.client.from('groups').select('*').eq('id', groupId).single();
+    const { data, error } = await this.withTimeout(query, 8_000);
     if (error) throw this.toSupabaseError('supabase.getGroup', 'Unable to load group', error);
     return data;
   }
 
   async getGroupByCode(code: string): Promise<Partial<PredictionGroup>> {
-    const { data, error } = await this.client
+    const query = this.client
       .from('groups')
       .select('id, name, code, current_members, max_members, is_active')
       .eq('code', code)
       .single();
-
+    const { data, error } = await this.withTimeout(query, 8_000);
     if (error) throw this.toSupabaseError('supabase.getGroupByCode', 'Group not found', error);
     return data;
   }
@@ -90,8 +115,8 @@ export class SupabaseDataService {
     const userId = await this.getCurrentUserId();
 
     // Generate group code using DB function
-    const { data: codeData, error: codeError } = await this.client
-      .rpc('generate_group_code');
+    const { data: codeData, error: codeError } = await this.withTimeout(
+      this.client.rpc('generate_group_code'), 15_000);
     if (codeError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', codeError);
 
     const currentYear = new Date().getFullYear();
@@ -103,24 +128,21 @@ export class SupabaseDataService {
     // trigger will bump it to 1 when we insert the admin's group_members
     // row below. Setting it to 1 here AND inserting the admin double-counts.
     // (Migration 016 backfills any rows that drifted under the old code.)
-    const { data: group, error: groupError } = await this.client
-      .from('groups')
-      .insert([{
+    const { data: group, error: groupError } = await this.withTimeout(
+      this.client.from('groups').insert([{
         ...input,
         admin_id: userId,
         code: codeData,
         season_year: seasonYear,
         current_members: 0,
-      }])
-      .select()
-      .single();
+      }]).select().single(), 15_000);
 
     if (groupError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', groupError);
 
     // Add creator as a member — trigger will increment current_members to 1.
-    const { error: memberError } = await this.client
-      .from('group_members')
-      .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]);
+    const { error: memberError } = await this.withTimeout(
+      this.client.from('group_members')
+        .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]), 15_000);
 
     if (memberError) throw this.toSupabaseError('supabase.createGroup', 'Unable to create group', memberError);
 
@@ -131,11 +153,8 @@ export class SupabaseDataService {
     const userId = await this.getCurrentUserId();
 
     // Find group by code
-    const { data: group, error: findError } = await this.client
-      .from('groups')
-      .select('*')
-      .eq('code', code)
-      .single();
+    const { data: group, error: findError } = await this.withTimeout(
+      this.client.from('groups').select('*').eq('code', code).single(), 8_000);
 
     if (findError) throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', findError);
 
@@ -144,12 +163,9 @@ export class SupabaseDataService {
     // the response was lost), return the existing row instead of throwing
     // the Postgres unique-violation (23505 → HTTP 409) that a second
     // INSERT would produce.
-    const { data: existing } = await this.client
-      .from('group_members')
-      .select('*')
-      .eq('group_id', group.id)
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: existing } = await this.withTimeout(
+      this.client.from('group_members').select('*')
+        .eq('group_id', group.id).eq('user_id', userId).maybeSingle(), 8_000);
 
     if (existing) {
       return existing as GroupMember;
@@ -165,9 +181,9 @@ export class SupabaseDataService {
     // RETURNING phase rejects with 42501 even though the INSERT itself
     // satisfies WITH CHECK. Mirrors the createGroup pattern (no .select)
     // which has worked correctly all along.
-    const { error: joinError } = await this.client
-      .from('group_members')
-      .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]);
+    const { error: joinError } = await this.withTimeout(
+      this.client.from('group_members')
+        .insert([{ group_id: group.id, user_id: userId, total_points: 0 }]), 15_000);
 
     // Race case: another tab / double-fire inserted the row between our
     // SELECT and INSERT. Treat as success — refetch below.
@@ -180,12 +196,9 @@ export class SupabaseDataService {
     // Refetch the membership row in a separate request. Now that we ARE
     // a member, the SELECT policy passes cleanly (is_group_member sees
     // our row in this fresh statement's snapshot).
-    const { data: membership, error: refetchError } = await this.client
-      .from('group_members')
-      .select('*')
-      .eq('group_id', group.id)
-      .eq('user_id', userId)
-      .single();
+    const { data: membership, error: refetchError } = await this.withTimeout(
+      this.client.from('group_members').select('*')
+        .eq('group_id', group.id).eq('user_id', userId).single(), 8_000);
 
     if (refetchError) {
       throw this.toSupabaseError('supabase.joinGroup', 'Unable to join group', refetchError);
@@ -212,18 +225,12 @@ export class SupabaseDataService {
     // member_profiles bug (migration 015) showed embedded selects against
     // RLS-locked tables silently NULL out unrelated rows. Two narrow reads
     // are simpler to reason about and match the rest of this service.
-    const { data: group } = await this.client
-      .from('groups')
-      .select('admin_id')
-      .eq('id', groupId)
-      .single();
+    const { data: group } = await this.withTimeout(
+      this.client.from('groups').select('admin_id').eq('id', groupId).single(), 8_000);
 
-    const { data: membership } = await this.client
-      .from('group_members')
-      .select('is_admin')
-      .eq('group_id', groupId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: membership } = await this.withTimeout(
+      this.client.from('group_members').select('is_admin')
+        .eq('group_id', groupId).eq('user_id', userId).maybeSingle(), 8_000);
 
     const isCreator = !!group && group.admin_id === userId;
     const isPromotedAdmin = !!membership && membership.is_admin === true;
@@ -233,12 +240,9 @@ export class SupabaseDataService {
       );
     }
 
-    const { data, error } = await this.client
-      .from('group_members')
-      .delete()
-      .eq('group_id', groupId)
-      .eq('user_id', userId)
-      .select();
+    const { data, error } = await this.withTimeout(
+      this.client.from('group_members').delete()
+        .eq('group_id', groupId).eq('user_id', userId).select(), 15_000);
 
     if (error) throw this.toSupabaseError('supabase.leaveGroup', 'Unable to leave group', error);
     if (!data || data.length === 0) throw new Error('You are not a member of this group');
@@ -258,10 +262,8 @@ export class SupabaseDataService {
    * Postgres error code P0001 if the group already has 3 admins.
    */
   async promoteMemberToAdmin(memberRowId: string): Promise<void> {
-    const { error } = await this.client
-      .from('group_members')
-      .update({ is_admin: true })
-      .eq('id', memberRowId);
+    const { error } = await this.withTimeout(
+      this.client.from('group_members').update({ is_admin: true }).eq('id', memberRowId), 15_000);
     if (error) {
       // Surface the cap violation as a user-friendly error; everything
       // else gets the generic sanitized message.
@@ -284,10 +286,8 @@ export class SupabaseDataService {
    * preserve the option of a future "transfer ownership" flow.
    */
   async demoteAdminToMember(memberRowId: string): Promise<void> {
-    const { error } = await this.client
-      .from('group_members')
-      .update({ is_admin: false })
-      .eq('id', memberRowId);
+    const { error } = await this.withTimeout(
+      this.client.from('group_members').update({ is_admin: false }).eq('id', memberRowId), 15_000);
     if (error) {
       throw this.toSupabaseError(
         'supabase.demoteAdminToMember',
@@ -302,33 +302,26 @@ export class SupabaseDataService {
   // -----------------------------------------------------------------------
 
   async getGameweeks(): Promise<Gameweek[]> {
-    const { data, error } = await this.client
+    const gameweeksQuery = this.client
       .from('gameweeks')
       .select('*')
       .order('gameweek_number', { ascending: true });
+    const { data, error } = await this.withTimeout(gameweeksQuery, 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getGameweeks', 'Unable to load gameweeks', error);
     return data || [];
   }
 
   async getActiveGameweek(): Promise<Gameweek> {
-    const { data, error } = await this.client
-      .from('gameweeks')
-      .select('*')
-      .eq('is_active', true)
-      .single();
-
+    const { data, error } = await this.withTimeout(
+      this.client.from('gameweeks').select('*').eq('is_active', true).single(), 8_000);
     if (error) throw this.toSupabaseError('supabase.getActiveGameweek', 'Unable to load active gameweek', error);
     return data;
   }
 
   async getGameweek(gameweekId: string): Promise<Gameweek> {
-    const { data, error } = await this.client
-      .from('gameweeks')
-      .select('*')
-      .eq('id', gameweekId)
-      .single();
-
+    const { data, error } = await this.withTimeout(
+      this.client.from('gameweeks').select('*').eq('id', gameweekId).single(), 8_000);
     if (error) throw this.toSupabaseError('supabase.getGameweek', 'Unable to load gameweek', error);
     return data;
   }
@@ -346,11 +339,12 @@ export class SupabaseDataService {
   async getGameweekDeadline(
     gameweekNumber: number
   ): Promise<{ deadline: string; isPast: boolean }> {
-    const { data, error } = await this.client
+    const deadlineQuery = this.client
       .from('gameweeks')
       .select('deadline')
       .eq('gameweek_number', gameweekNumber)
       .single();
+    const { data, error } = await this.withTimeout(deadlineQuery, 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getGameweekDeadline', 'Unable to load deadline', error);
 
@@ -376,23 +370,20 @@ export class SupabaseDataService {
     // exist by that name — and PostgREST silently coerces the unknown
     // filter into `gameweek=eq.X` which matches no row. Same shape as the
     // 4.2.7 alignment fix on the gameweeks table.
-    const { data, error } = await this.client
+    const matchesQuery = this.client
       .from('matches')
       .select('*')
       .eq('gameweek_number', gameweek)
       .order('kickoff_time', { ascending: true });
+    const { data, error } = await this.withTimeout(matchesQuery, 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getMatches', 'Unable to load matches', error);
     return data || [];
   }
 
   async getMatch(matchId: string): Promise<Match> {
-    const { data, error } = await this.client
-      .from('matches')
-      .select('*')
-      .eq('id', matchId)
-      .single();
-
+    const { data, error } = await this.withTimeout(
+      this.client.from('matches').select('*').eq('id', matchId).single(), 8_000);
     if (error) throw this.toSupabaseError('supabase.getMatch', 'Unable to load match', error);
     return data;
   }
@@ -404,11 +395,9 @@ export class SupabaseDataService {
   async getPredictions(gameweekNumber: number): Promise<Prediction[]> {
     const userId = await this.getCurrentUserId();
 
-    const { data, error } = await this.client
-      .from('predictions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('gameweek_number', gameweekNumber);
+    const { data, error } = await this.withTimeout(
+      this.client.from('predictions').select('*')
+        .eq('user_id', userId).eq('gameweek_number', gameweekNumber), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getPredictions', 'Unable to load predictions', error);
     return data || [];
@@ -424,11 +413,12 @@ export class SupabaseDataService {
   async getPredictionsWithMatches(gameweekNumber: number): Promise<PredictionWithMatch[]> {
     const userId = await this.getCurrentUserId();
 
-    const { data, error } = await this.client
+    const predictionsQuery = this.client
       .from('predictions')
       .select('*, matches(*)')
       .eq('user_id', userId)
       .eq('gameweek_number', gameweekNumber);
+    const { data, error } = await this.withTimeout(predictionsQuery, 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getPredictionsWithMatches', 'Unable to load predictions', error);
     return data || [];
@@ -456,10 +446,11 @@ export class SupabaseDataService {
       joker_used: p.joker_used ?? false,
     }));
 
-    const { data, error } = await this.client
+    const upsertQuery = this.client
       .from('predictions')
       .upsert(rows, { onConflict: 'user_id,match_id' })
       .select();
+    const { data, error } = await this.withTimeout(upsertQuery, 15_000);
 
     if (error) throw this.toSupabaseError('supabase.submitPredictions', 'Unable to save predictions', error);
     return data || [];
@@ -467,10 +458,11 @@ export class SupabaseDataService {
 
   async getGroupPredictions(groupId: string, gameweekNumber: number): Promise<Prediction[]> {
     // Get group member user ids
-    const { data: members, error: memberError } = await this.client
+    const membersQuery = this.client
       .from('group_members')
       .select('user_id')
       .eq('group_id', groupId);
+    const { data: members, error: memberError } = await this.withTimeout(membersQuery, 8_000);
 
     if (memberError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', memberError);
     if (!members || members.length === 0) return [];
@@ -478,11 +470,12 @@ export class SupabaseDataService {
     // Client-side deadline check: UX convenience only. The real security
     // boundary is the RLS policy on the predictions table (migration 005)
     // which enforces group membership and deadline constraints at the DB level.
-    const { data: gameweek, error: gwError } = await this.client
+    const gameweekQuery = this.client
       .from('gameweeks')
       .select('*')
       .eq('gameweek_number', gameweekNumber)
       .single();
+    const { data: gameweek, error: gwError } = await this.withTimeout(gameweekQuery, 8_000);
 
     if (gwError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', gwError);
 
@@ -492,11 +485,12 @@ export class SupabaseDataService {
 
     const userIds = members.map((m: any) => m.user_id);
 
-    const { data: predictions, error: predError } = await this.client
+    const predQuery = this.client
       .from('predictions')
       .select('*')
       .in('user_id', userIds)
       .eq('gameweek_number', gameweekNumber);
+    const { data: predictions, error: predError } = await this.withTimeout(predQuery, 8_000);
 
     if (predError) throw this.toSupabaseError('supabase.getGroupPredictions', 'Unable to load group predictions', predError);
     return predictions || [];
@@ -524,10 +518,10 @@ export class SupabaseDataService {
   }> {
     const userId = await this.getCurrentUserId();
 
-    const { data, error } = await this.client
-      .from('group_members')
-      .select('jokers_used, first_joker_gameweek, second_joker_gameweek')
-      .eq('user_id', userId);
+    const { data, error } = await this.withTimeout(
+      this.client.from('group_members')
+        .select('jokers_used, first_joker_gameweek, second_joker_gameweek')
+        .eq('user_id', userId), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getJokerUsage', 'Unable to load joker state', error);
     if (!data || data.length === 0) {
@@ -570,10 +564,10 @@ export class SupabaseDataService {
     beforeBoxingDay: number | null;
     beforeFinalDay: number | null;
   }> {
-    const { data, error } = await this.client
-      .from('gameweeks')
-      .select('gameweek_number, is_special, special_type')
-      .order('gameweek_number', { ascending: true });
+    const { data, error } = await this.withTimeout(
+      this.client.from('gameweeks')
+        .select('gameweek_number, is_special, special_type')
+        .order('gameweek_number', { ascending: true }), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getLastRegularGameweekBeforeSpecial', 'Unable to load gameweeks', error);
 
@@ -622,9 +616,10 @@ export class SupabaseDataService {
    * log them and show a generic toast.
    */
   async markJokerUsed(gameweekNumber: number): Promise<void> {
-    const { error } = await this.client.rpc('mark_joker_used', {
-      p_gameweek_number: gameweekNumber,
-    });
+    const { error } = await this.withTimeout(
+      this.client.rpc('mark_joker_used', { p_gameweek_number: gameweekNumber }),
+      15_000,
+    );
 
     if (error) throw this.toSupabaseError('supabase.markJokerUsed', 'Unable to save joker state', error);
   }
@@ -671,26 +666,27 @@ export class SupabaseDataService {
     for (const [column, opts] of orderBy) {
       membersQuery = membersQuery.order(column, opts);
     }
-    const { data: members, error: membersError } = await membersQuery;
+    const { data: members, error: membersError } = await this.withTimeout(membersQuery, 8_000);
     if (membersError) {
       throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', membersError);
     }
     if (!members || members.length === 0) return [];
 
-    const userIds = members.map(m => m.user_id);
-    const { data: profileRows, error: profilesError } = await this.client
+    const userIds = (members as any[]).map((m: any) => m.user_id);
+    const profilesQuery = this.client
       .from('member_profiles')
       .select('id, username, avatar_url')
       .in('id', userIds);
+    const { data: profileRows, error: profilesError } = await this.withTimeout(profilesQuery, 8_000);
     if (profilesError) {
       throw this.toSupabaseError('supabase.getGroupMembers', 'Unable to load members', profilesError);
     }
 
     const profileById = new Map<string, { username: string; avatar_url: string | undefined }>(
-      (profileRows ?? []).map(p => [p.id, { username: p.username, avatar_url: p.avatar_url }]),
+      ((profileRows ?? []) as any[]).map((p: any) => [p.id, { username: p.username, avatar_url: p.avatar_url }]),
     );
 
-    return members.map(m => ({
+    return (members as any[]).map((m: any) => ({
       ...m,
       profiles: profileById.get(m.user_id) ?? null,
     })) as GroupMemberWithProfile[];
@@ -708,12 +704,10 @@ export class SupabaseDataService {
    */
   async getAdminCounts(): Promise<{ userCount: number; groupCount: number }> {
     const [usersResult, groupsResult] = await Promise.all([
-      this.client
-        .from('profiles')
-        .select('*', { count: 'exact', head: true }),
-      this.client
-        .from('groups')
-        .select('*', { count: 'exact', head: true }),
+      this.withTimeout(
+        this.client.from('profiles').select('*', { count: 'exact', head: true }), 8_000),
+      this.withTimeout(
+        this.client.from('groups').select('*', { count: 'exact', head: true }), 8_000),
     ]);
 
     if (usersResult.error) throw this.toSupabaseError('supabase.getAdminCounts', 'Unable to load admin counts', usersResult.error);
@@ -744,11 +738,11 @@ export class SupabaseDataService {
     is_active: boolean;
     created_at: string;
   }>> {
-    const { data, error } = await this.client
-      .from('profiles')
-      .select('id, email, username, first_name, last_name, role, is_active, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    const { data, error } = await this.withTimeout(
+      this.client.from('profiles')
+        .select('id, email, username, first_name, last_name, role, is_active, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getAllUsers', 'Unable to load users', error);
     return data || [];
@@ -773,11 +767,11 @@ export class SupabaseDataService {
     is_active: boolean;
     created_at: string;
   }>> {
-    const { data, error } = await this.client
-      .from('groups')
-      .select('id, name, code, admin_id, current_members, max_members, is_active, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    const { data, error } = await this.withTimeout(
+      this.client.from('groups')
+        .select('id, name, code, admin_id, current_members, max_members, is_active, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getAllGroups', 'Unable to load groups', error);
     return data || [];
@@ -794,11 +788,8 @@ export class SupabaseDataService {
    * `signOutUser(userId)` after deactivating.
    */
   async toggleUserActive(userId: string, active: boolean): Promise<void> {
-    const { error } = await this.client
-      .from('profiles')
-      .update({ is_active: active })
-      .eq('id', userId);
-
+    const { error } = await this.withTimeout(
+      this.client.from('profiles').update({ is_active: active }).eq('id', userId), 15_000);
     if (error) throw this.toSupabaseError('supabase.toggleUserActive', 'Unable to update user', error);
   }
 
@@ -810,11 +801,8 @@ export class SupabaseDataService {
    * being removed. Super-admin RLS policy required.
    */
   async deleteGroup(groupId: string): Promise<void> {
-    const { error } = await this.client
-      .from('groups')
-      .delete()
-      .eq('id', groupId);
-
+    const { error } = await this.withTimeout(
+      this.client.from('groups').delete().eq('id', groupId), 15_000);
     if (error) throw this.toSupabaseError('supabase.deleteGroup', 'Unable to delete group', error);
   }
 
@@ -835,11 +823,11 @@ export class SupabaseDataService {
   }> {
     const COOLDOWN_SECONDS = 300; // 5 minutes
 
-    const { data, error } = await this.client
-      .from('sync_metadata')
-      .select('last_sync_at, last_sync_status, last_sync_error')
-      .eq('id', 1)
-      .single();
+    const { data, error } = await this.withTimeout(
+      this.client.from('sync_metadata')
+        .select('last_sync_at, last_sync_status, last_sync_error')
+        .eq('id', 1)
+        .single(), 8_000);
 
     if (error) throw this.toSupabaseError('supabase.getLastMatchSync', 'Unable to load sync status', error);
 
