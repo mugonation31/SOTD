@@ -632,7 +632,7 @@ export class AuthService {
       // Add timeout wrapper to prevent hanging on NavigatorLockAcquireTimeoutError
       const signInPromise = this.supabaseService.signIn(loginData.email, loginData.password);
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('SignIn timeout')), 45000); // 45 second timeout to account for lock clearing
+        setTimeout(() => reject(new Error('SignIn timeout')), 10000); // 10 second timeout
       });
       
       let result;

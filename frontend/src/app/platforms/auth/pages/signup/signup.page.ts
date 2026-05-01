@@ -32,6 +32,7 @@ import {
 } from 'ionicons/icons';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../services/supabase.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   validateEmail,
   validatePassword,
@@ -150,7 +151,8 @@ export class SignupPage implements OnInit {
     private authService: AuthService,
     private supabaseService: SupabaseService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private toastService: ToastService
   ) {
     addIcons({footballOutline,eye,eyeOff,checkmarkCircle,ellipseOutline,peopleOutline,personAddOutline});
   }
@@ -292,7 +294,7 @@ export class SignupPage implements OnInit {
       if (this.isLoading) {
         console.error('Signup timeout - taking too long');
         this.isLoading = false;
-        alert('Signup is taking longer than expected. Please try again.');
+        this.toastService.showToast('Signup is taking longer than expected. Please try again.', 'warning');
       }
     }, 30000); // 30 second timeout
     
@@ -320,7 +322,7 @@ export class SignupPage implements OnInit {
         
         // Use the new error handling utility to extract meaningful error messages
         const errorMessage = extractErrorMessage(error);
-        alert(errorMessage);
+        this.toastService.showToast(errorMessage, 'error');
       },
     });
   }

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { SignupPage } from './signup.page';
 import { SignupTestConfig, SignupTestUtils } from './signup.test.config';
 
@@ -11,14 +12,20 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
   let mockRouter: any;
   let mockAuthService: any;
   let mockActivatedRoute: any;
+  let mockToastService: any;
 
   beforeEach(async () => {
+    mockToastService = {
+      showToast: jest.fn().mockResolvedValue(undefined)
+    };
+
     await TestBed.configureTestingModule({
       imports: [FormsModule],
       providers: [
         { provide: Router, useValue: SignupTestConfig.mockRouter },
         { provide: ActivatedRoute, useValue: SignupTestConfig.mockActivatedRoute },
-        { provide: AuthService, useValue: SignupTestConfig.mockAuthService }
+        { provide: AuthService, useValue: SignupTestConfig.mockAuthService },
+        { provide: ToastService, useValue: mockToastService }
       ]
     }).compileComponents();
 
@@ -65,7 +72,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('User already registered');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('User already registered', 'error');
     });
 
     it('should handle "Invalid email" error', async () => {
@@ -93,7 +100,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Invalid email');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Invalid email', 'error');
     });
 
     it('should handle "Password should be at least 6 characters" error', async () => {
@@ -121,7 +128,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Password should be at least 6 characters');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Password should be at least 6 characters', 'error');
     });
 
     it('should handle "Email not confirmed" error', async () => {
@@ -149,7 +156,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Email not confirmed');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Email not confirmed', 'error');
     });
   });
 
@@ -181,7 +188,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Key (username)=(testuser) already exists.');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Key (username)=(testuser) already exists.', 'error');
     });
 
     it('should handle "duplicate key value violates unique constraint" for email', async () => {
@@ -211,7 +218,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Key (email)=(test@example.com) already exists.');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Key (email)=(test@example.com) already exists.', 'error');
     });
 
     it('should handle "violates not-null constraint" error', async () => {
@@ -241,7 +248,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Failing row contains (id, email, role, username, first_name, last_name, avatar_url, created_at, updated_at, first_login) = (uuid, test@example.com, null, testuser, John, Doe, null, 2024-01-01, 2024-01-01, true).');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Failing row contains (id, email, role, username, first_name, last_name, avatar_url, created_at, updated_at, first_login) = (uuid, test@example.com, null, testuser, John, Doe, null, 2024-01-01, 2024-01-01, true).', 'error');
     });
 
     it('should handle "violates check constraint" error', async () => {
@@ -271,7 +278,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Failing row contains (id, email, role, username, first_name, last_name, avatar_url, created_at, updated_at, first_login) = (uuid, test@example.com, invalid-role, testuser, John, Doe, null, 2024-01-01, 2024-01-01, true).');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Failing row contains (id, email, role, username, first_name, last_name, avatar_url, created_at, updated_at, first_login) = (uuid, test@example.com, invalid-role, testuser, John, Doe, null, 2024-01-01, 2024-01-01, true).', 'error');
     });
   });
 
@@ -297,7 +304,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Network Error');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Network Error', 'error');
     });
 
     it('should handle "Failed to fetch" error', async () => {
@@ -321,7 +328,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Failed to fetch');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Failed to fetch', 'error');
     });
 
     it('should handle "Request timeout" error', async () => {
@@ -348,7 +355,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Request timeout');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Request timeout', 'error');
     });
   });
 
@@ -377,7 +384,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Internal Server Error');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Internal Server Error', 'error');
     });
 
     it('should handle "Service Unavailable" (503)', async () => {
@@ -404,7 +411,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Service Unavailable');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Service Unavailable', 'error');
     });
 
     it('should handle "Bad Gateway" (502)', async () => {
@@ -431,7 +438,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Bad Gateway');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Bad Gateway', 'error');
     });
   });
 
@@ -463,7 +470,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Email already exists');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Email already exists', 'error');
     });
 
     it('should handle error with different error message formats', async () => {
@@ -493,7 +500,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Deep nested error message');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Deep nested error message', 'error');
     });
 
     it('should handle error with no message property', async () => {
@@ -519,7 +526,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Signup failed. Please try again.');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Signup failed. Please try again.', 'error');
     });
 
     it('should handle completely empty error object', async () => {
@@ -542,7 +549,7 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(mockAuthService.signup).toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
       expect(component.isLoading).toBe(false);
-      expect(global.alert).toHaveBeenCalledWith('Signup failed. Please try again.');
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Signup failed. Please try again.', 'error');
     });
   });
 
@@ -621,4 +628,4 @@ describe('SignupPage Supabase Error Handling (Phase 4)', () => {
       expect(component.validationErrors.acceptedTerms).toBe('');
     });
   });
-}); 
+});

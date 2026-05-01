@@ -18,6 +18,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { addIcons } from 'ionicons';
 import { footballOutline } from 'ionicons/icons';
 
@@ -54,7 +55,7 @@ export class ForgotPasswordPage {
     return Boolean(this.email && !this.validationError);
   }
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(private authService: AuthService, private router: Router, private toastService: ToastService) {
     addIcons({ footballOutline });
   }
 
@@ -101,7 +102,7 @@ export class ForgotPasswordPage {
         this.validationError = 'Failed to send reset email. Please try again.';
         console.error('Reset error:', error.message);
       } else {
-        alert('Check your inbox for a password reset link!');
+        await this.toastService.showToast('Check your inbox for a password reset link!', 'success');
         this.router.navigate(['/login']); // Adjust if you want a different redirect
       }
     } catch (err) {

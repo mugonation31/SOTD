@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../services/supabase.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { LoginPage } from './login.page';
 import { of } from 'rxjs';
 
@@ -12,6 +13,7 @@ describe('LoginPage', () => {
   let mockRouter: any;
   let mockAuthService: any;
   let mockSupabaseService: any;
+  let mockToastService: any;
 
   beforeEach(async () => {
     mockRouter = {
@@ -44,6 +46,10 @@ describe('LoginPage', () => {
       signInWithGoogle: jest.fn().mockResolvedValue({ provider: 'google', url: 'https://accounts.google.com' })
     };
 
+    mockToastService = {
+      showToast: jest.fn().mockResolvedValue(undefined)
+    };
+
     await TestBed.configureTestingModule({
       imports: [FormsModule],
       providers: [
@@ -57,7 +63,8 @@ describe('LoginPage', () => {
           data: of({})
         }},
         { provide: AuthService, useValue: mockAuthService },
-        { provide: SupabaseService, useValue: mockSupabaseService }
+        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: ToastService, useValue: mockToastService }
       ]
     }).compileComponents();
 
@@ -70,6 +77,45 @@ describe('LoginPage', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('Sub-task 10.1: Toast on login error', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      component.loginData.email = 'test@example.com';
+      component.loginData.password = 'Password123!';
+      component.validationErrors = { email: '', password: '' };
+    });
+
+    afterEach(() => {
+      alertSpy.mockRestore();
+    });
+
+    it('should call toastService.showToast with error message and error type on login error', () => {
+      mockAuthService.login = jest.fn().mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ error }) => {
+          if (error) error({ message: 'Invalid credentials' });
+        })
+      });
+
+      component.onLogin();
+
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Invalid credentials', 'error');
+    });
+
+    it('should NOT call window.alert on login error', () => {
+      mockAuthService.login = jest.fn().mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ error }) => {
+          if (error) error({ message: 'Invalid credentials' });
+        })
+      });
+
+      component.onLogin();
+
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('Google Sign-In', () => {

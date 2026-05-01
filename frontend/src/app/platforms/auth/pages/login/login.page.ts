@@ -24,6 +24,8 @@ import {
   footballOutline, mailOutline } from 'ionicons/icons';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../services/supabase.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { getUserFriendlyErrorMessage } from '../../../../core/utils/error.utils';
 
 interface ValidationErrors {
   email: string;
@@ -98,7 +100,8 @@ export class LoginPage implements OnInit {
     private authService: AuthService,
     private supabaseService: SupabaseService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private toastService: ToastService
   ) {
     addIcons({footballOutline,mailOutline,eye,eyeOff});
   }
@@ -183,11 +186,9 @@ export class LoginPage implements OnInit {
       error: (error) => {
         console.error('❌ Login: Error occurred:', error);
         this.isLoading = false;
-        
-        // TODO: Replace with proper toast service when available
-        // For now, use a simple alert for user feedback
-        const errorMessage = error?.error?.message || error?.message || 'Login failed. Please check your credentials and try again.';
-        alert(errorMessage);
+
+        const errorMessage = getUserFriendlyErrorMessage(error) || 'Login failed. Please check your credentials and try again.';
+        this.toastService.showToast(errorMessage, 'error');
       },
     });
   }

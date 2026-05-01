@@ -3,15 +3,23 @@ import { ForgotPasswordPage } from './forgot-password.page';
 import { ForgotPasswordTestConfig, ForgotPasswordTestUtils } from './forgot-password.test.config';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 describe('ForgotPasswordPage', () => {
   let component: ForgotPasswordPage;
   let fixture: ComponentFixture<ForgotPasswordPage>;
   let mockRouter: any;
   let mockAuthService: any;
+  let mockToastService: any;
 
   beforeEach(async () => {
-    ForgotPasswordTestConfig.configureTestBed();
+    mockToastService = {
+      showToast: jest.fn().mockResolvedValue(undefined)
+    };
+
+    ForgotPasswordTestConfig.configureTestBed([
+      { provide: ToastService, useValue: mockToastService }
+    ]);
 
     // Mock window.alert for JSDOM
     global.alert = jest.fn();
@@ -388,4 +396,37 @@ describe('ForgotPasswordPage', () => {
       expect(component.validationError).toBe('');
     });
   });
-}); 
+
+  describe('Sub-task 10.1: Toast on successful password reset', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      component.email = ForgotPasswordTestUtils.createValidEmail();
+      component.validateEmail();
+    });
+
+    afterEach(() => {
+      alertSpy.mockRestore();
+    });
+
+    it('should call toastService.showToast with success message and success type on reset success', async () => {
+      mockAuthService.resetPassword.mockResolvedValue(ForgotPasswordTestUtils.mockSuccessfulReset());
+
+      await component.onSubmit();
+
+      expect(mockToastService.showToast).toHaveBeenCalledWith(
+        'Check your inbox for a password reset link!',
+        'success'
+      );
+    });
+
+    it('should NOT call window.alert on reset success', async () => {
+      mockAuthService.resetPassword.mockResolvedValue(ForgotPasswordTestUtils.mockSuccessfulReset());
+
+      await component.onSubmit();
+
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+  });
+});

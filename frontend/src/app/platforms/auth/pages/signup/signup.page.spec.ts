@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, UserRole } from '../../../../core/services/auth.service';
 import { SupabaseService } from '../../../../services/supabase.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { SignupPage } from './signup.page';
 import { SignupTestConfig, SignupTestUtils } from './signup.test.config';
 
@@ -13,10 +14,15 @@ describe('SignupPage', () => {
   let mockAuthService: any;
   let mockActivatedRoute: any;
   let mockSupabaseService: any;
+  let mockToastService: any;
 
   beforeEach(async () => {
     mockSupabaseService = {
       signInWithGoogle: jest.fn().mockResolvedValue({ provider: 'google', url: 'https://accounts.google.com' })
+    };
+
+    mockToastService = {
+      showToast: jest.fn().mockResolvedValue(undefined)
     };
 
     await TestBed.configureTestingModule({
@@ -25,7 +31,8 @@ describe('SignupPage', () => {
         { provide: Router, useValue: SignupTestConfig.mockRouter },
         { provide: ActivatedRoute, useValue: SignupTestConfig.mockActivatedRoute },
         { provide: AuthService, useValue: SignupTestConfig.mockAuthService },
-        { provide: SupabaseService, useValue: mockSupabaseService }
+        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: ToastService, useValue: mockToastService }
       ]
     }).compileComponents();
 
@@ -400,6 +407,67 @@ describe('SignupPage', () => {
       await component.signInWithGoogle();
 
       expect(mockSupabaseService.signInWithGoogle).toHaveBeenCalled();
+    });
+  });
+
+  describe('Sub-task 10.1: Toast notifications replace alert', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      Object.assign(component.signupData, SignupTestUtils.createValidSignupData());
+      Object.keys(component.validationErrors).forEach(key => {
+        component.validationErrors[key as keyof typeof component.validationErrors] = '';
+      });
+      component.validatePassword();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      alertSpy.mockRestore();
+    });
+
+    it('should call toastService.showToast with warning type on signup timeout', () => {
+      mockAuthService.signup = jest.fn().mockReturnValue({
+        subscribe: jest.fn()  // never resolves — simulates a hang
+      });
+
+      component.onSignup();
+
+      jest.advanceTimersByTime(30001);
+
+      expect(mockToastService.showToast).toHaveBeenCalledWith(
+        'Signup is taking longer than expected. Please try again.',
+        'warning'
+      );
+    });
+
+    it('should call toastService.showToast with error type on signup error', async () => {
+      mockAuthService.signup = jest.fn().mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ error }) => {
+          if (error) error({ message: 'Email already exists' });
+        })
+      });
+
+      await component.onSignup();
+
+      expect(mockToastService.showToast).toHaveBeenCalledWith(
+        expect.stringContaining('Email already exists'),
+        'error'
+      );
+    });
+
+    it('should NOT call window.alert on signup error', async () => {
+      mockAuthService.signup = jest.fn().mockReturnValue({
+        subscribe: jest.fn().mockImplementation(({ error }) => {
+          if (error) error({ message: 'Email already exists' });
+        })
+      });
+
+      await component.onSignup();
+
+      expect(alertSpy).not.toHaveBeenCalled();
     });
   });
 });

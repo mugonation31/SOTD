@@ -62,13 +62,15 @@ export class ForgotPasswordTestConfig {
 
   /**
    * Configure TestBed with common providers
+   * @param extraProviders optional additional providers to merge in
    */
-  static configureTestBed() {
+  static configureTestBed(extraProviders: any[] = []) {
     return TestBed.configureTestingModule({
       providers: [
         { provide: Router, useValue: this.mockRouter },
         { provide: ActivatedRoute, useValue: this.mockActivatedRoute },
-        { provide: AuthService, useValue: this.mockAuthService }
+        { provide: AuthService, useValue: this.mockAuthService },
+        ...extraProviders
       ]
     });
   }

@@ -1,18 +1,129 @@
 # Predict3 - Task Tracking
 
 > **Last Updated:** 2026-05-01
-> **Current Phase:** Phase 9 - Group Admin Predictions: Joker + Real Submission
-> **Status:** 🟢 Implementation Complete — Pending review + deploy
+> **Current Phase:** Phase 10 - App Resilience
+> **Status:** Analysis Complete — Ready for Implementation
 > **MVP V1 Spec:** Simplified - Pure prediction gaming without financial transactions
 
 ---
 
 ## Current Position
-- **Last Completed Phase:** Production deployment (Cloudflare + Supabase V2 wired)
-- **Current Phase:** Phase 9 (Group Admin Predictions — Joker & Real Supabase Submission)
-- **MVP V1 Readiness:** 90% (backend wired, auth solid, deadline enforced)
-- **Next Phase:** TDD implementation of Phase 9
+- **Last Completed Phase:** Phase 9 (Group Admin Predictions — Joker & Real Supabase Submission)
+- **Current Phase:** Phase 10 (App Resilience — No hangs, no alerts, offline detection, skeletons)
+- **MVP V1 Readiness:** 92% — final resilience layer before launch
+- **Next Phase:** Implement Phase 10 sub-tasks sequentially
 - **Progress:** Analysis complete, implementation pending
+
+---
+
+## Phase 10: App Resilience — Professional Error Handling & No Infinite Hangs
+
+**Status:** ⚪ Not Started
+**Goal:** Eliminate all UX hangs, native browser alerts, and infinite spinners so the app feels like a professional everyday product
+**Priority:** 🔴 CRITICAL — launch blocker (intermittent hangs and alert() dialogs visible in production)
+**Complexity:** Medium (4 sub-tasks, each small and focused)
+**Analysis Doc:** `docs/analysis/app-resilience.md`
+
+---
+
+### Sub-task 10.1 — Replace alert() with ToastService + reduce auth timeout
+
+**Status:** ⚪ Not Started | **Effort:** ~30 min | **Risk:** Low
+
+#### Implementation
+- [ ] `login/login.page.ts:190` — replace `alert(errorMessage)` with `ToastService.showToast(getUserFriendlyErrorMessage(error), 'error')`
+- [ ] `signup/signup.page.ts:295` — replace `alert('Signup is taking...')` with error toast
+- [ ] `signup/signup.page.ts:323` — replace `alert(errorMessage)` with `ToastService.showToast(getUserFriendlyErrorMessage(error), 'error')`
+- [ ] `forgot-password/forgot-password.page.ts:104` — replace `alert('Check your inbox...')` with success toast
+- [ ] `auth.service.ts:635` — reduce timeout from `45000` → `10000` ms
+- [ ] Inject `ToastService` into the 3 auth pages that need it
+- [ ] Import `getUserFriendlyErrorMessage` from `error.utils.ts` in those pages
+
+#### Testing
+- [ ] Unit: login error callback calls `toastService.showToast()` not `alert()`
+- [ ] Unit: signup timeout calls `toastService.showToast()` not `alert()`
+- [ ] Unit: forgot-password success calls `toastService.showToast()` with type 'success'
+- [ ] Unit: auth timeout fires after 10 s, not 45 s
+
+#### Deployment
+- [ ] Run `npm test` — no regressions
+- [ ] Push to main → verify no more native dialogs in production
+
+---
+
+### Sub-task 10.2 — Query timeout wrapper on SupabaseDataService
+
+**Status:** ⚪ Not Started | **Effort:** ~1.5 hrs | **Risk:** Low-Medium
+
+#### Implementation
+- [ ] Add `private withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T>` to `supabase-data.service.ts`
+- [ ] Wrap `getGroups()` with `withTimeout`
+- [ ] Wrap `fetchMembersWithProfiles()` (used by `getLeaderboard`) with `withTimeout`
+- [ ] Wrap `getMatches()` with `withTimeout`
+- [ ] Wrap `getGameweeks()` with `withTimeout`
+- [ ] Wrap `getGameweekDeadline()` with `withTimeout`
+- [ ] Wrap `getPredictionsWithMatches()` with `withTimeout`
+- [ ] Wrap `getGroupPredictions()` with `withTimeout`
+- [ ] Wrap `submitPredictions()` with `withTimeout` (longer: 15 s — write ops)
+- [ ] Wrap `getCurrentUserId()` auth call with `withTimeout` (5 s)
+
+#### Testing
+- [ ] Unit: `withTimeout()` rejects with timeout error after specified ms
+- [ ] Unit: `withTimeout()` resolves normally when promise settles in time
+- [ ] Unit: `getGroups()` rejects after 8 s when query hangs
+- [ ] Unit: standings page `isLoading` clears to false after timeout error
+- [ ] Unit: error toast shown to user after timeout
+
+#### Deployment
+- [ ] Run `npm test` — no regressions
+- [ ] Manual: disconnect network mid-load → verify toast appears and spinner stops
+
+---
+
+### Sub-task 10.3 — Offline detection with persistent banner
+
+**Status:** ⚪ Not Started | **Effort:** ~1 hr | **Risk:** Low
+
+#### Implementation
+- [ ] Create `core/services/network.service.ts` — `BehaviorSubject<boolean>` driven by `navigator.onLine` + window `online`/`offline` events
+- [ ] Subscribe in `app.component.ts` — show persistent `ion-toast` (no duration) on offline, dismiss on reconnect
+- [ ] Show friendly message: "No internet connection — please check your network"
+- [ ] Guard Supabase data calls: if offline, show toast immediately rather than firing request
+
+#### Testing
+- [ ] Unit: `NetworkService` emits `false` when offline event fires
+- [ ] Unit: `NetworkService` emits `true` when online event fires
+- [ ] Unit: starts with `navigator.onLine` value on init
+- [ ] Unit: `AppComponent` shows offline toast when `isOnline$` emits false
+- [ ] Unit: `AppComponent` dismisses offline toast when `isOnline$` emits true
+
+#### Deployment
+- [ ] Run `npm test` — no regressions
+- [ ] Manual: toggle airplane mode → verify banner appears and disappears
+
+---
+
+### Sub-task 10.4 — Skeleton loading on key pages
+
+**Status:** ⚪ Not Started | **Effort:** ~2 hrs | **Risk:** Low
+
+#### Implementation
+- [ ] `player/pages/standings/standings.page.html` — replace `<ion-spinner>` with `<ion-skeleton-text>` card matching real standings layout
+- [ ] `player/pages/standings/standings.page.scss` — skeleton styles
+- [ ] `group-admin/pages/home/home.page.html` — skeleton for stats cards
+- [ ] `group-admin/pages/home/home.page.scss` — skeleton styles
+- [ ] `group-admin/pages/group/group.page.html` — skeleton for member list
+- [ ] `group-admin/pages/group/group.page.scss` — skeleton styles
+- [ ] Add `IonSkeletonText` to imports array in each component
+
+#### Testing
+- [ ] Component: skeleton visible when `isLoading = true`
+- [ ] Component: skeleton hidden when `isLoading = false`
+- [ ] Component: real content renders when `isLoading = false && data.length > 0`
+
+#### Deployment
+- [ ] Run `npm test` — no regressions
+- [ ] Visual QA: slow connection → skeleton appears, fades to content smoothly
 
 ---
 
